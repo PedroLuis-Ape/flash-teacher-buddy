@@ -51,7 +51,7 @@ export function ApeTabBar() {
   return (
     <nav
       className={cn(
-        "space-ui-tabbar ape-content-safe-bottom fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
+        "space-ui-tabbar fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
         "lg:sticky lg:top-[7rem] lg:bottom-auto lg:left-auto lg:right-auto lg:z-30 lg:self-start lg:shrink-0 lg:safe-area-pb-0",
         settings.backdropBlur ? "tab-bar-premium" : "bg-background border-t border-border",
       )}

@@ -719,7 +719,10 @@ All colors MUST be HSL.
   /* Shared shell primitives: visual-only and safe for later screen adoption. */
   .ape-content-safe-bottom {
     --ape-tab-bar-height: 4.5rem;
-    min-height: calc(var(--ape-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(var(--ape-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-area-pb {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
@@ -749,9 +752,20 @@ All colors MUST be HSL.
     }
   }
 
-  @media (min-width: 1024px) {
+  @media (max-width: 1023px) {
     .ape-content-safe-bottom {
-      min-height: 0;
+      padding-bottom: max(6rem, calc(var(--ape-tab-bar-height) + env(safe-area-inset-bottom, 0px))) !important;
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .ape-content-safe-bottom {
+      padding-bottom: max(5rem, calc(var(--ape-tab-bar-height) + env(safe-area-inset-bottom, 0px))) !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .safe-area-pb {
       padding-bottom: 0;
     }
   }

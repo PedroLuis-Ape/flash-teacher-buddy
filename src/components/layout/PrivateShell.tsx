@@ -150,7 +150,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
           </main>
 
           {user && !isFullScreenPage && (
-            <div className="space-ui-footer-wrap pb-24 md:pb-20">
+            <div className="space-ui-footer-wrap ape-content-safe-bottom pb-24 md:pb-20">
               <GlobalFooter />
             </div>
           )}
