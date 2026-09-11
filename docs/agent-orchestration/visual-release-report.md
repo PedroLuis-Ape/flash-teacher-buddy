@@ -87,6 +87,8 @@ Foram concluídos seis blocos incrementais de implementação, uma segunda passa
 
 O projeto Lovable foi aberto em `https://lovable.dev/projects/b6f1ba83-b44c-4a41-8589-b1e5380cf1ea`, mas o próprio editor retornou `You don't have access`: o projeto é privado e a conta conectada (`pedro55luizy@gmail.com`) não tem permissão. Nenhuma solicitação de acesso foi enviada. A aba Chrome publicada foi usada como referência e interação real; o build local foi usado para validar a branch. O merge e a publicação não fazem parte deste relatório e ainda exigem verificação pós-deploy.
 
+Após o usuário relatar que acessou a conta correta, a nova inspeção não encontrou nenhuma aba Chrome exposta à sessão CUA. A tentativa no navegador interno abriu o projeto sem sessão autenticada e exibiu novamente `You don't have access`, com opções de login. A comparação direta do preview permanece pendente de uma aba autenticada acessível à automação.
+
 Durante a navegação repetida da publicação, o console também registrou avisos pré-existentes de `PortalHistorySync`/`EconomyContext` e múltiplas instâncias do GoTrueClient. Como a missão visual proíbe alterações de autenticação, sincronização e backend, esses achados foram mantidos fora do escopo e não foram mascarados.
 
 O preview local não recebeu credenciais nem sessão do usuário. Por isso, o shell do Hub público abriu com os modos renderizados, mas o ID público usado na publicação não foi encontrado pelo runtime local sem configuração de dados; isso limita a validação local do deck, não da composição visual do Hub.
