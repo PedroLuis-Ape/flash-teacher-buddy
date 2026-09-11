@@ -8,6 +8,52 @@
 - Não troque project refs, chaves, Auth, RLS, migrations, RPCs ou fronteiras público/privado sem uma tarefa explícita, testes específicos e evidência de rollback.
 - Nunca crie dados fictícios para mascarar falhas de descoberta pública.
 
+## Segundo Cérebro e aprendizado adaptativo — obrigatório
+
+Todo trabalho significativo de engenharia do App Piteco / APE Education deve
+usar, do início ao fim, as Skills `piteco-second-brain-protocol` e
+`piteco-adaptive-learning-loop`.
+
+O vault operacional único é `docs/brain/`. Git continua sendo a fonte de
+verdade da implementação; o Segundo Cérebro registra contexto, arquitetura,
+decisões, relações, riscos, evidências e handoff. Não criar outra estrutura de
+memória nem manter cópias ativas concorrentes.
+
+Antes de trabalhar:
+
+1. fazer o preflight da Skill `piteco-second-brain-protocol` lendo
+   `docs/brain/01-CURRENT-STATE.md`, a área afetada, decisões, bugs, riscos,
+   handoff e commits recentes;
+2. comparar essas notas com o código/Git atual e marcar informação obsoleta;
+3. pela Skill `piteco-adaptive-learning-loop`, recuperar somente lições,
+   anti-patterns e playbooks relevantes;
+4. para trabalho arriscado ou não trivial, registrar objetivo, hipótese,
+   expectativa, evidência falsificadora, risco e confiança antes da tentativa.
+
+Durante o trabalho, separar fato de hipótese, preferir a menor tentativa
+informativa, registrar evidência externa e manter relações importantes por
+`[[wikilinks]]`.
+
+Depois de uma tentativa significativa, comparar expectativa com resultado
+observado, diagnosticar a causa com evidência, corrigir, repetir o mesmo teste
+e uma regressão relacionada, e extrair uma lição somente quando o escopo e as
+limitações estiverem justificados. Classificar honestamente a aprendizagem;
+anti-patterns, playbooks e mudanças do `SKILL.md` exigem promoção explícita.
+
+Antes de concluir:
+
+1. atualizar área, sessão, bugs/riscos/decisões e `CURRENT-STATE` quando
+   aplicável;
+2. garantir que notas novas não estejam órfãs e que Properties/YAML e
+   wikilinks continuem válidos;
+3. executar `npm run brain:check` e os gates técnicos aplicáveis;
+4. incluir no relatório o checklist do Segundo Cérebro e o bloco
+   `ADAPTIVE LEARNING` com lições usadas, erro de previsão, causa, status,
+   atualização de anti-pattern/playbook e impacto no plano futuro.
+
+O trabalho não é considerado completo enquanto a memória estiver
+materialmente desatualizada em relação ao código.
+
 ## Acordos de trabalho
 
 - Nunca trabalhe diretamente em `main`.

@@ -1,0 +1,23 @@
+{
+  "vault": "App-Piteco-Brain",
+  "project": "APE — App Piteco",
+  "repository": "PedroLuis-Ape/flash-teacher-buddy",
+  "observed_main_head": "798acb5dccfcad8c016b8ce9b7d268dca7601d20",
+  "canonical_domain": "https://www.apeeducation.org/",
+  "supabase": {
+    "production_from_current_AGENTS_md": "ymahldldyxvwjeruaxpr",
+    "admin_migrations_diagnostic": "xrnfhhoxmmstagmelvyi",
+    "production_schema_inspected": false,
+    "admin_schema_inspected_read_only": true
+  },
+  "evidence_labels": [
+    "VERIFICADO-REPO",
+    "VERIFICADO-ADMIN-DB",
+    "HISTÓRICO",
+    "DECISÃO",
+    "REVALIDAR",
+    "DESCONHECIDO"
+  ],
+  "generated_for": "Obsidian project memory and Luna→Astra handoff",
+  "notes": "Do not treat historical audits as current state without revalidation."
+}

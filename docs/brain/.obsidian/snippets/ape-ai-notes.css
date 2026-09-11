@@ -1,0 +1,22 @@
+/* Visual identity for operational notes created by the assistant. */
+.markdown-preview-view.ape-ai-note,
+.markdown-source-view.ape-ai-note {
+  --ape-ai-note-color: #ef4444;
+  color: var(--ape-ai-note-color);
+}
+
+.markdown-preview-view.ape-ai-note :is(h1, h2, h3, h4, h5, h6, p, li, blockquote, strong, em),
+.markdown-source-view.ape-ai-note .cm-line {
+  color: var(--ape-ai-note-color);
+}
+
+.markdown-preview-view.ape-ai-note a,
+.markdown-source-view.ape-ai-note .cm-link,
+.markdown-source-view.ape-ai-note .cm-url {
+  color: #f87171;
+}
+
+.markdown-preview-view.ape-ai-note code,
+.markdown-source-view.ape-ai-note .cm-inline-code {
+  color: #fca5a5;
+}
