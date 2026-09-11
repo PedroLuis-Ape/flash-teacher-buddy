@@ -973,7 +973,7 @@ const ListDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 ape-content-safe-bottom">
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="mb-8">
           <Button
@@ -1018,7 +1018,7 @@ const ListDetail = () => {
             </div>
             
             {/* Action buttons - grid on mobile, flex on desktop */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3">
+            <div className="ape-action-cluster grid grid-cols-2 sm:flex sm:flex-row gap-3">
               {flashcards.length > 0 && (
                 <>
                   <Button
@@ -1080,7 +1080,7 @@ const ListDetail = () => {
                   </p>
                 </Label>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="ape-action-cluster flex items-center gap-2 flex-wrap">
                 {folder.visibility === 'class' && (
                   <Button
                     variant="outline"
@@ -1114,7 +1114,13 @@ const ListDetail = () => {
                 {/* More actions dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label="Mais ações da lista"
+                      title="Mais ações da lista"
+                      className="min-h-11 min-w-11 touch-manipulation"
+                    >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1136,7 +1142,7 @@ const ListDetail = () => {
 
         {/* Export Dialog */}
         <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogContent className="max-w-2xl max-h-[min(90dvh,calc(100svh-1rem))] ape-overlay-scroll">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Download className="h-5 w-5" />
@@ -1148,7 +1154,7 @@ const ListDetail = () => {
                 <span className="font-semibold text-foreground">B ({effectiveSettings.labelsB})</span>
               </p>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-4">
               <Textarea
                 value={exportText}
                 readOnly
@@ -1408,7 +1414,7 @@ const ListDetail = () => {
 
       {/* List Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh]">
+        <DialogContent className="max-w-lg max-h-[min(90dvh,calc(100svh-1rem))] ape-overlay-scroll">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -1418,7 +1424,7 @@ const ListDetail = () => {
               Altere os idiomas e configurações de estudo desta lista.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <ScrollArea className="min-h-0 flex-1 overflow-y-auto pr-4">
             <div className="py-4">
               {listSettings && (
                 <ListStudyTypeSelector
