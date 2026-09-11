@@ -37,9 +37,9 @@ sinal da ação.
 Recomendação: camada CSS-first com tokens compartilhados e um pequeno hook de
 ponteiro somente onde houver benefício real, começando pelo Games Hub. Usar
 `transform` e `opacity`, sem dependência pesada; manter foco visível, teclado,
-toque, `prefers-reduced-motion` e alvos acessíveis. Expandir para Home,
-cards/listas, navegação, overlays, feedback e progresso apenas após validar a
-primeira fatia.
+toque, `prefers-reduced-motion` e alvos acessíveis. A primeira fatia foi
+validada localmente e o usuário aprovou a continuidade até a expansão para
+Home, cards/listas, navegação, overlays, feedback e progresso.
 
 Alternativas consideradas:
 
@@ -103,7 +103,51 @@ mantiveram a navegação para `/study?mode=flip&favorites=false`.
 testes; typecheck passou; lint terminou com 0 erros e 72 avisos preexistentes;
 build Vite passou com avisos existentes de CSS, browserslist e chunks grandes.
 
-Próximo gate: revisar a primeira fatia visual no ambiente autenticado do
-usuário antes de expandir para Home, navegação, menus, progresso ou efeitos
-específicos de cada jogo. O screenshot local está em
+Próximo gate operacional: concluir a expansão compartilhada e revalidar a
+matriz de interação. A revisão autenticada do Lovable continua sendo uma
+limitação de evidência, não uma autorização para inventar dados de produção.
+O screenshot local está em
 `C:\Users\pedro\AppData\Local\Temp\piteco-motion-gameshub-1280.png`.
+
+## Continuação aprovada — 2026-09-11
+
+- O usuário confirmou que a especificação está aprovada e pediu a
+  implementação completa do Motion System.
+- O escopo de execução foi ampliado para aplicar os mesmos tokens e guardrails
+  às superfícies reais de Home, cards/listas/coleções, navegação, overlays,
+  feedback de estudo e progresso, sem alterar dados, rotas ou lógica de jogo.
+- A regra de registro contínuo está ativa: cada fatia deve atualizar esta
+  nota, [[07-TESTS]], [[08-RISKS]] e [[12-PROCESS-LOG-2026-09-11]], além de uma
+  tentativa adaptativa quando houver hipótese, falha, correção e reteste.
+
+## Expansão compartilhada — 2026-09-11
+
+- A fatia aprovada foi implementada em `MotionButton`, `index.css`, Home,
+  `ApeCardList`, `ApeCardFolder`, `CollectionCard`, atalhos de turma, tab bar,
+  sidebar, `Progress`, feedback de estudo e primitivos Radix de overlay.
+- O comportamento permanece visual: handlers, rotas, dados, progresso real,
+  acessibilidade e preferências existentes foram preservados.
+- Os seis modos reais do Games Hub agora expõem `data-motion-game` para
+  microinterações específicas, com assinatura limitada e sem adicionar o modo
+  inexistente `Race`.
+- Contratos focados passaram: 10/10 nesta fatia. Typecheck, suite completa,
+  lint, build e preview responsivo ainda são o gate de fechamento.
+- A inspeção dos seis cards encontrou uma colisão de especificidade entre a
+  regra genérica do ícone e as assinaturas por modo; a correção elevou apenas a
+  especificidade dos seletores `[data-motion-game]`, preservando o movimento
+  limitado e a acessibilidade.
+
+## Fechamento técnico local — 2026-09-11
+
+- TypeScript app e node passaram sem erros.
+- Vitest completo passou: 257 arquivos e 1.574 testes.
+- ESLint passou com 0 erros e 72 avisos já existentes.
+- Build Vite passou; permanecem apenas avisos já conhecidos de browserslist,
+  CSS legado e chunks grandes.
+- Preview local confirmou 1280x720 com tilt, seis assinaturas de ícone sem
+  deslocamento estrutural e sem overflow; 390x844/coarse e reduced motion
+  ficaram neutros e sem overflow.
+- Artefatos visuais: `C:\Users\pedro\AppData\Local\Temp\piteco-motion-expanded-1280.png`
+  e `C:\Users\pedro\AppData\Local\Temp\piteco-motion-expanded-390.png`.
+- O resultado é verificado localmente. A comparação no preview Lovable
+  autenticado continua pendente por falta de uma aba acessível nesta sessão.

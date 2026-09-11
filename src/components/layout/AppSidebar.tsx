@@ -110,7 +110,7 @@ export function AppSidebar() {
                     key={item.path}
                     variant={isActive ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start gap-3 transition-all",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                       isActive && "bg-primary/10 text-primary font-medium"
                     )}
                     onMouseEnter={() => prefetchRoute(item.path)}
@@ -136,7 +136,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/notes' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/notes' && "bg-primary/10 text-primary font-medium"
                 )}
                 onClick={() => {
@@ -150,7 +150,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/search' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/search' && "bg-primary/10 text-primary font-medium"
                 )}
                 onClick={() => {
@@ -164,7 +164,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/reportar-problema' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/reportar-problema' && "bg-primary/10 text-primary font-medium"
                 )}
                 onMouseEnter={() => prefetchRoute('/reportar-problema')}
@@ -180,7 +180,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/special-cards' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/special-cards' && "bg-primary/10 text-primary font-medium"
                 )}
                 onClick={() => {
@@ -194,7 +194,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/import/super' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/import/super' && "bg-primary/10 text-primary font-medium"
                 )}
                 onMouseEnter={() => prefetchRoute('/import/super')}
@@ -210,7 +210,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname.startsWith('/turmas') ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname.startsWith('/turmas') && "bg-primary/10 text-primary font-medium"
                 )}
                 onClick={() => {
@@ -224,7 +224,7 @@ export function AppSidebar() {
               <Button
                 variant={location.pathname === '/trash' ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3",
+                      "ape-motion-menu-item w-full justify-start gap-3",
                   location.pathname === '/trash' && "bg-primary/10 text-primary font-medium"
                 )}
                 onClick={() => {

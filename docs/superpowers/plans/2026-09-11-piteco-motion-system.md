@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the first production slice of the approved Piteco motion language to the Games Hub without changing product behavior, data flow, or study logic.
+**Goal:** Implement the approved Piteco motion language across the real product surfaces without changing product behavior, data flow, or study logic.
 
-**Architecture:** Keep interaction motion in a shared CSS token/class layer and isolate the only pointer calculation in a small, pure helper used by a hook. `GameCardMotion` owns presentation-only pointer variables and forwards normal button behavior; GamesHub keeps ownership of navigation, preferences, labels, and launch handlers.
+**Architecture:** Keep interaction motion in a shared CSS token/class layer and isolate the only pointer calculation in a small, pure helper used by a hook. `GameCardMotion` owns presentation-only pointer variables and forwards normal button behavior; `MotionButton` provides a reusable native-button surface; existing screens keep ownership of navigation, preferences, labels, data, and study handlers.
 
 **Tech Stack:** React 18, TypeScript, Vite, Tailwind CSS, Vitest, CSS custom properties, `requestAnimationFrame`.
 
@@ -272,7 +272,54 @@ Run: `npm run test`, `npm run build`
 Expected: no new failures; existing warnings are recorded without broadening
 the scope.
 
-- [ ] **Step 5: Request review before further expansion**
+- [x] **Step 5: Request review before further expansion**
 
 Review the diff and evidence. Stop before adding Home, navigation, progress,
 menus or game-specific signatures until the Games Hub slice is accepted.
+
+> The original stop gate above was superseded by the user's explicit approval
+> to implement the complete Motion System. Tasks 5–8 below are the approved
+> continuation and must be executed with the same TDD and brain-update gates.
+
+### Task 5: Expand shared motion roles to Home and content surfaces
+
+Apply `.ape-interactive-card` to Home's clickable cards and resume surface;
+apply `.ape-motion-row` to class shortcuts; apply the shared card role to
+list, folder, and collection cards. Preserve handlers, route targets,
+loading/data behavior, keyboard/touch affordances, and existing layout.
+
+### Task 6: Expand navigation, overlays, and progress safely
+
+Apply `.ape-motion-menu-item` to the tab bar and sidebar items, keeping active
+state and route semantics intact. Add reduced-motion-safe utility classes to
+Radix dialog/popover/tooltip primitives. Keep progress animation attached to
+the real Radix value and animate only the indicator transform.
+
+### Task 7: Add local study feedback and game-mode signatures
+
+Use existing feedback status to select a short success pulse or error shake;
+do not add fake state, timers, layout movement, or change answer flow. Give
+each of the six real Games Hub visual keys a bounded icon response through
+`data-motion-game`; do not invent modes absent from `gameOptions`.
+
+### Task 8: Revalidate the complete surface matrix and close the brain record
+
+Run focused contracts, full Vitest, typecheck, lint, build, and `brain:check`.
+Reopen the local preview at the specified desktop/mobile/tablet sizes and
+exercise hover, press, focus, keyboard, touch, reduced motion, overlays,
+feedback, and progress. Record evidence and residual Lovable/auth limitations
+in [[areas/motion-system]], [[07-TESTS]], [[08-RISKS]], and the process and
+adaptive-learning notes before any completion claim.
+
+## Execução registrada — 2026-09-11
+
+- [x] Tasks 1–4: helper, superfície do Games Hub, testes e primeira QA.
+- [x] Task 5: Home, cards/listas/coleções e atalhos de turma.
+- [x] Task 6: navegação, overlays e progresso real.
+- [x] Task 7: feedback de estudo e assinaturas dos seis modos reais.
+- [x] Task 8: typecheck, 257/257 arquivos de teste, 1.574/1.574 testes,
+  lint 0 erros, build, brain-check e QA local responsiva.
+
+Residual de release: comparar no preview Lovable autenticado e publicar no
+ambiente de destino quando essa aba estiver acessível; isso não foi inferido
+a partir do preview local.

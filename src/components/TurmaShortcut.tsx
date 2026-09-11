@@ -90,12 +90,12 @@ export function TurmaShortcut({ isTeacher }: Props) {
                 key={turma.id}
                 className={cn(
                   "group flex min-h-[4.1rem] min-w-0 items-center gap-2 rounded-xl border border-primary/15 bg-background/80 px-2.5 py-2 text-left",
-                  "transition-all duration-200 hover:border-primary/35 hover:bg-primary/[0.05] active:scale-[0.98]",
+                  "ape-motion-row hover:border-primary/35 hover:bg-primary/[0.05] active:scale-[0.98]",
                   "sm:min-h-[5rem] sm:gap-3 sm:px-3 sm:py-3",
                 )}
                 onClick={() => navigate(`/turmas/${turma.id}`)}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 sm:h-10 sm:w-10 sm:rounded-xl">
+                <span data-motion-icon="class" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 sm:h-10 sm:w-10 sm:rounded-xl">
                   <Icon className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
                 </span>
 

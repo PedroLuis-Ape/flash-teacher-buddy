@@ -76,8 +76,7 @@ export function ApeTabBar() {
               key={tab.id}
               onClick={() => navigate(tab.path)}
               className={cn(
-                "space-ui-tab ape-interactive-surface relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
-                settings.animations && "transition-all duration-200",
+                "space-ui-tab ape-interactive-surface ape-motion-menu-item relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
                 settings.visualFeedback && "active:scale-95",
                 active ? "space-ui-tab-active text-foreground" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
               )}
@@ -87,7 +86,6 @@ export function ApeTabBar() {
               <div
                 className={cn(
                   "relative z-10",
-                  settings.animations && "transition-transform duration-200",
                   active && settings.visualFeedback && "scale-110",
                 )}
               >
@@ -99,7 +97,6 @@ export function ApeTabBar() {
               <span
                 className={cn(
                   "relative z-10 text-[11px] sm:text-xs",
-                  settings.animations && "transition-all duration-200",
                   active ? "font-semibold" : "font-normal",
                 )}
               >

@@ -44,4 +44,15 @@ describe("GamesHub visual hierarchy contract", () => {
     expect(hubSource).toContain('data-motion-surface="game-card"');
     expect(hubSource).not.toContain("hover:-translate-y-0.5");
   });
+
+  it("keeps a bounded motion signature for every real game mode", () => {
+    expect(hubSource).toContain("data-motion-game={visualKey}");
+    expect(hubSource).toContain('data-motion-icon="game-card"');
+    expect(visualsSource).toContain("flip:");
+    expect(visualsSource).toContain("write:");
+    expect(visualsSource).toContain("multiple:");
+    expect(visualsSource).toContain("unscramble:");
+    expect(visualsSource).toContain("mixed:");
+    expect(visualsSource).toContain("pronunciation:");
+  });
 });

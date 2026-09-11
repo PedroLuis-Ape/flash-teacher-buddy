@@ -450,6 +450,7 @@ const GamesHub = () => {
                   aria-label={`${title}: ${visual.description}`}
                   aria-pressed={isConfigured}
                   data-motion-surface="game-card"
+                  data-motion-game={visualKey}
                   data-recommended={recommended ? "true" : undefined}
                   data-configured={isConfigured ? "true" : undefined}
                   className={cn(

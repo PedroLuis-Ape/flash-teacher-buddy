@@ -69,6 +69,33 @@ related:
   transform 3D e sem overflow; mobile/coarse 390×844 e reduced motion ficaram
   sem transform e sem overflow; foco + Enter preservaram a rota de estudo.
 
+## Motion System — expansão aprovada e validada localmente
+
+- O usuário aprovou a especificação completa após a validação da primeira
+  fatia do Games Hub.
+- A expansão foi implementada em Home, cards, navegação, overlays, feedback e
+  progresso; os contratos cobrem a presença dos papéis compartilhados.
+
+## Motion System — expansão compartilhada implementada
+
+- TDD: o novo contrato começou vermelho em 4/4 por arquivos/classes ausentes;
+  após a implementação e um ajuste de expectativa do contrato de `type`,
+  passou em 4/4.
+- O contrato do Games Hub passou em 6/6 após a inclusão de `data-motion-game`.
+- Total focado da fatia: 10/10 testes.
+- A expansão global passou os gates técnicos de typecheck, suite e lint/build;
+  a confirmação visual no preview Lovable autenticado continua pendente.
+
+- QA visual intermediário: os seis cards responderam ao hover em desktop,
+  cada ícone recebeu a regra de modo após o ajuste de especificidade, mobile
+  390x844 permaneceu sem overflow e reduced motion permaneceu neutro.
+
+- Fechamento técnico local: 257 arquivos/1.574 testes, typecheck app/node,
+  lint 0 erros/72 avisos preexistentes e build Vite passaram.
+- Matriz de runtime exercitada no preview: 1280x720 desktop com tilt, 390x844
+  coarse sem transformação e 1280x720 reduced motion neutro; todos sem
+  overflow horizontal.
+
 ## Limitações da evidência
 
 O preview Lovable não estava disponível na sessão; a verificação visual foi feita na aba Chrome do app publicado e o build foi validado pelo preview smoke local. A validação de produção após merge/publicação ainda deve ser repetida no ambiente final.

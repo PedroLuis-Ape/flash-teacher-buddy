@@ -45,4 +45,20 @@ related:
   interação. Ver [[areas/motion-system]].
 - A primeira fatia do Motion System passou no preview local, mas ainda não foi
   comparada no preview Lovable autenticado. Não expandir para Home, menus,
-  progresso ou assinaturas específicas sem essa revisão visual.
+  progresso ou assinaturas específicas sem essa revisão visual. A expansão
+  local foi autorizada e implementada; a comparação externa continua sendo
+  uma limitação de release, não uma falha dos gates locais.
+- O usuário aprovou a especificação e autorizou a expansão completa. O risco
+  agora é regressão de interação/semântica ao trocar classes de superfícies
+  compartilhadas; manter mudanças pequenas, testes de contrato e exclusão
+  explícita de lógica de dados.
+- A expansão introduziu classes compartilhadas em componentes de alto alcance
+  (`Progress`, Dialog/Popover/Tooltip e navegação). O próximo gate deve
+  verificar overflow, foco, reduced motion e ausência de deslocamento de layout
+  em rotas reais antes do release.
+- Regras específicas de microinteração podem perder para utilitários genéricos
+  de hover; manter contratos por modo e conferir a precedência no CSS compilado
+  quando novos efeitos forem acrescentados.
+- O fechamento técnico local não prova publicação no Lovable: a aba autenticada
+  do preview não ficou acessível nesta sessão. Publicar somente após a
+  sincronização e conferência final no ambiente de destino.
