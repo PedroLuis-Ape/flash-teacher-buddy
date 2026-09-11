@@ -41,6 +41,8 @@ O problema recorrente era de composição responsiva, não de identidade visual:
 
 Nas rotas navegadas em Chrome, todas as medições registraram `hasHOverflow: false`. A passagem privada esperou o carregamento dos dados antes de registrar o resultado.
 
+Uma passagem adicional navegou nominalmente pelas rotas editoriais públicas em português e inglês (`/`, `/landing`, páginas de iniciantes, atividades, flashcards, professores, `/pt-br/*`, `/en/*`, `/about`), pelo `/portal` e por uma rota 404. Todas retornaram título compatível com a rota; `/` redirecionou para `/dashboard` conforme o comportamento de entrada autenticada.
+
 ## Interações reais
 
 - Landing: revelar o cartão demonstrativo e abrir uma pergunta do FAQ.
