@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type MutableRefObject } from "react";
 
 export type DOMRectLike = Pick<DOMRect, "left" | "top" | "width" | "height">;
 
@@ -34,7 +34,7 @@ function setMotionValue(node: HTMLElement, name: string, value: number | string)
 
 export function usePointerTilt<T extends HTMLElement>(
   { maxTilt = 3, disabled = false }: PointerTiltOptions = {},
-): RefObject<T> {
+): MutableRefObject<T | null> {
   const ref = useRef<T>(null);
 
   useEffect(() => {
