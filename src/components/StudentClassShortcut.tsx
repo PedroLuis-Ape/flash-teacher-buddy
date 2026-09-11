@@ -42,10 +42,10 @@ export function StudentClassShortcut() {
           {visibleTurmas.map((turma: any) => (
             <div
               key={turma.id}
-              className="flex items-center gap-4 p-3 rounded-xl bg-background/80 border border-primary/15 cursor-pointer hover:bg-primary/[0.06] hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
+              className="ape-motion-row flex items-center gap-4 p-3 rounded-xl bg-background/80 border border-primary/15 cursor-pointer hover:bg-primary/[0.06] active:scale-[0.98]"
               onClick={() => navigate(`/turmas/${turma.id}`)}
             >
-              <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
+              <div data-motion-icon="class" className="shrink-0 w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
                 <BookOpen className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">

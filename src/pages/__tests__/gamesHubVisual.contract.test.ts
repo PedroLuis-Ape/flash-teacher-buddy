@@ -37,4 +37,22 @@ describe("GamesHub visual hierarchy contract", () => {
     expect(hubSource).toContain("{ scope: launchScope }");
     expect(hubSource).toContain("updateForCurrentScope({ direction: normalizeDirection(value) })");
   });
+
+  it("uses the shared motion surface without changing the launch contract", () => {
+    expect(hubSource).toContain("<GameCardMotion");
+    expect(hubSource).toContain("onClick={() => startGame(mode)}");
+    expect(hubSource).toContain('data-motion-surface="game-card"');
+    expect(hubSource).not.toContain("hover:-translate-y-0.5");
+  });
+
+  it("keeps a bounded motion signature for every real game mode", () => {
+    expect(hubSource).toContain("data-motion-game={visualKey}");
+    expect(hubSource).toContain('data-motion-icon="game-card"');
+    expect(visualsSource).toContain("flip:");
+    expect(visualsSource).toContain("write:");
+    expect(visualsSource).toContain("multiple:");
+    expect(visualsSource).toContain("unscramble:");
+    expect(visualsSource).toContain("mixed:");
+    expect(visualsSource).toContain("pronunciation:");
+  });
 });

@@ -736,6 +736,248 @@ All colors MUST be HSL.
       border-color 140ms ease, box-shadow 140ms ease;
   }
 
+  /* Shared motion language: presentation-only, transform/opacity first. */
+  .ape-game-card-motion {
+    --ape-motion-tilt-x: 0deg;
+    --ape-motion-tilt-y: 0deg;
+    --ape-motion-pointer-x: 50%;
+    --ape-motion-pointer-y: 50%;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transform: translate3d(0, 0, 0)
+      rotateX(var(--ape-motion-tilt-x))
+      rotateY(var(--ape-motion-tilt-y));
+    transform-origin: center;
+    transition:
+      transform var(--ape-motion-normal) var(--ape-motion-ease-out),
+      border-color var(--ape-motion-fast) ease,
+      box-shadow var(--ape-motion-normal) var(--ape-motion-ease-out);
+    will-change: transform;
+  }
+
+  .ape-motion-button,
+  .ape-interactive-card,
+  .ape-motion-row,
+  .ape-motion-menu-item,
+  .ape-motion-progress {
+    --ape-motion-transition: var(--ape-motion-normal) var(--ape-motion-ease-out);
+  }
+
+  .ape-motion-button {
+    transition: transform var(--ape-motion-transition),
+      background-color var(--ape-motion-fast) ease,
+      border-color var(--ape-motion-fast) ease,
+      box-shadow var(--ape-motion-normal) var(--ape-motion-ease-out),
+      color var(--ape-motion-fast) ease;
+    will-change: transform;
+  }
+
+  .ape-motion-button:active {
+    transform: scale(var(--ape-motion-press-scale));
+  }
+
+  .ape-motion-button:focus-visible,
+  .ape-interactive-card:focus-visible,
+  .ape-motion-row:focus-visible,
+  .ape-motion-menu-item:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  .ape-interactive-card,
+  .ape-motion-row,
+  .ape-motion-menu-item {
+    transition: transform var(--ape-motion-transition),
+      background-color var(--ape-motion-fast) ease,
+      border-color var(--ape-motion-fast) ease,
+      box-shadow var(--ape-motion-normal) var(--ape-motion-ease-out),
+      color var(--ape-motion-fast) ease;
+  }
+
+  .ape-motion-progress {
+    transition: opacity var(--ape-motion-fast) ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ape-motion-button:hover:not(:disabled) {
+      transform: translateY(calc(var(--ape-motion-lift) * -0.5));
+      box-shadow: 0 8px 18px -14px hsl(var(--primary) / 0.7);
+    }
+
+    .ape-interactive-card:hover,
+    .ape-motion-row:hover,
+    .ape-motion-menu-item:hover {
+      transform: translateY(calc(var(--ape-motion-lift) * -1));
+      border-color: hsl(var(--primary) / 0.3);
+      box-shadow: 0 9px 22px -18px hsl(var(--primary) / 0.6);
+    }
+
+    .ape-interactive-card:hover [data-motion-icon],
+    .ape-motion-row:hover [data-motion-icon],
+    .ape-motion-menu-item:hover [data-motion-icon] {
+      transform: scale(1.04);
+    }
+
+    .ape-game-card-motion[data-motion-game="flip"]:hover [data-motion-icon="game-card"] {
+      transform: rotate(8deg) scale(1.06);
+    }
+
+    .ape-game-card-motion[data-motion-game="write"]:hover [data-motion-icon="game-card"] {
+      transform: translateY(-2px) rotate(-3deg) scale(1.05);
+    }
+
+    .ape-game-card-motion[data-motion-game="multiple"]:hover [data-motion-icon="game-card"] {
+      transform: scale(1.1);
+    }
+
+    .ape-game-card-motion[data-motion-game="unscramble"]:hover [data-motion-icon="game-card"] {
+      transform: translateX(2px) rotate(3deg) scale(1.05);
+    }
+
+    .ape-game-card-motion[data-motion-game="mixed"]:hover [data-motion-icon="game-card"] {
+      transform: translateY(-2px) rotate(5deg) scale(1.06);
+    }
+
+    .ape-game-card-motion[data-motion-game="pronunciation"]:hover [data-motion-icon="game-card"] {
+      transform: scale(1.06);
+    }
+  }
+
+  .ape-interactive-card [data-motion-icon],
+  .ape-motion-row [data-motion-icon],
+  .ape-motion-menu-item [data-motion-icon] {
+    transition: transform var(--ape-motion-fast) var(--ape-motion-ease-out);
+  }
+
+  .ape-feedback-success,
+  .ape-feedback-error {
+    animation-duration: var(--ape-motion-fast);
+    animation-timing-function: var(--ape-motion-ease-out);
+    animation-fill-mode: both;
+  }
+
+  .ape-feedback-success {
+    animation-name: ape-feedback-pulse;
+  }
+
+  .ape-feedback-error {
+    animation-name: ape-feedback-shake;
+  }
+
+  @keyframes ape-feedback-pulse {
+    from { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+    50% { box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12); }
+    to { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  }
+
+  @keyframes ape-feedback-shake {
+    0%, 100% { transform: translateX(0); }
+    35% { transform: translateX(-2px); }
+    70% { transform: translateX(2px); }
+  }
+
+  [data-perf-no-anim] .ape-motion-button,
+  [data-perf-no-anim] .ape-interactive-card,
+  [data-perf-no-anim] .ape-motion-row,
+  [data-perf-no-anim] .ape-motion-menu-item,
+  [data-perf-no-animations] .ape-motion-button,
+  [data-perf-no-animations] .ape-interactive-card,
+  [data-perf-no-animations] .ape-motion-row,
+  [data-perf-no-animations] .ape-motion-menu-item,
+  [data-perf-no-animations] .ape-feedback-success,
+  [data-perf-no-animations] .ape-feedback-error {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ape-motion-button,
+    .ape-interactive-card,
+    .ape-motion-row,
+    .ape-motion-menu-item,
+    .ape-feedback-success,
+    .ape-feedback-error {
+      animation: none !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+
+  .ape-game-card-motion::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--ape-motion-pointer-x) var(--ape-motion-pointer-y),
+      hsl(var(--primary-glow) / 0.16),
+      transparent 42%
+    );
+    opacity: 0;
+    transition: opacity var(--ape-motion-normal) ease;
+  }
+
+  .ape-game-card-motion:active {
+    transform: translate3d(0, 0, 0) scale(var(--ape-motion-press-scale));
+  }
+
+  .ape-game-card-motion:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ape-game-card-motion:hover {
+      transform: translate3d(0, calc(var(--ape-motion-lift) * -1), 0)
+        scale(var(--ape-motion-hover-scale))
+        rotateX(var(--ape-motion-tilt-x))
+        rotateY(var(--ape-motion-tilt-y));
+      border-color: hsl(var(--primary) / 0.42);
+      box-shadow: 0 10px 24px -16px hsl(var(--primary) / 0.55);
+    }
+
+    .ape-game-card-motion:hover::before,
+    .ape-game-card-motion:focus-visible::before {
+      opacity: 1;
+    }
+
+    .ape-game-card-motion:hover [data-motion-icon="game-card"] {
+      transform: scale(1.06);
+    }
+  }
+
+  [data-perf-no-anim] .ape-game-card-motion,
+  [data-perf-no-hover] .ape-game-card-motion,
+  [data-perf-no-anim] .ape-game-card-motion:hover,
+  [data-perf-no-hover] .ape-game-card-motion:hover {
+    transform: none !important;
+    transition: none !important;
+    box-shadow: var(--shadow-card) !important;
+  }
+
+  [data-perf-no-anim] .ape-game-card-motion::before,
+  [data-perf-no-hover] .ape-game-card-motion::before {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ape-game-card-motion,
+    .ape-game-card-motion:hover,
+    .ape-game-card-motion:active {
+      transform: none !important;
+      transition: none !important;
+    }
+
+    .ape-game-card-motion::before {
+      opacity: 0 !important;
+      transition: none !important;
+    }
+  }
+
   .ape-interactive-surface:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 3px;
@@ -768,6 +1010,18 @@ All colors MUST be HSL.
     .safe-area-pb {
       padding-bottom: 0;
     }
+  }
+}
+
+@layer base {
+  :root {
+    --ape-motion-fast: 120ms;
+    --ape-motion-normal: 190ms;
+    --ape-motion-emphasis: 300ms;
+    --ape-motion-ease-out: cubic-bezier(.2, .8, .2, 1);
+    --ape-motion-lift: 3px;
+    --ape-motion-hover-scale: 1.015;
+    --ape-motion-press-scale: .985;
   }
 }
 

@@ -137,6 +137,7 @@ export function StudyFeedbackPanel({
       data-feedback-status={status}
       className={cn(
         "relative w-full overflow-hidden rounded-2xl bg-card p-4 shadow-sm motion-safe:animate-fade-in motion-reduce:animate-none sm:p-5",
+        status === "incorrect" ? "ape-feedback-error" : "ape-feedback-success",
         config.panelClass,
         className,
       )}

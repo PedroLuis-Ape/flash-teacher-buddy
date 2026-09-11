@@ -61,7 +61,7 @@ export const CollectionCard = ({
   };
 
   return (
-    <Card ref={revealRef} className="scroll-reveal card-3d p-6 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)] transition-all duration-300">
+    <Card ref={revealRef} className="scroll-reveal card-3d ape-interactive-card p-6 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" />

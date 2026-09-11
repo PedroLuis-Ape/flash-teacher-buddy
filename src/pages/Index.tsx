@@ -157,7 +157,7 @@ const Index = () => {
       <div className="max-w-[1600px] mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
         {/* Profile Header — premium welcome banner */}
         <Card
-          className="welcome-banner cursor-pointer border-0"
+          className="welcome-banner ape-interactive-card cursor-pointer border-0"
           onClick={() => navigate("/profile")}
         >
           <CardContent className="relative p-5 sm:p-6">
@@ -315,7 +315,7 @@ const Index = () => {
         <>
           <Card
             aria-label="Abrir Reforço"
-            className="ape-interactive-surface p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
+            className="ape-interactive-card p-5 cursor-pointer border-primary/30 bg-primary/5 h-full"
             onClick={() => navigate('/reinforcement')}
           >
             <div className="flex items-center gap-4">
@@ -335,7 +335,7 @@ const Index = () => {
 
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
+            className="ape-interactive-card p-5 cursor-pointer border-border h-full"
             onClick={() => navigate('/painel-professor')}
           >
             <div className="flex items-center gap-4">
@@ -357,7 +357,7 @@ const Index = () => {
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
+            className="ape-interactive-card p-5 cursor-pointer border-border h-full"
             onClick={() => navigate('/my-teachers')}
           >
             <div className="flex items-center gap-4">
@@ -377,7 +377,7 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {safeLast && (
-          <Card className="overflow-hidden border-border h-full">
+          <Card className="ape-interactive-card overflow-hidden border-border h-full">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -404,7 +404,7 @@ const Index = () => {
               <Button
                 onClick={handleContinueStudy}
                 disabled={isOpeningResume || !resumeRoute}
-                className="w-full mt-4 min-h-[44px]"
+                className="ape-motion-button w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
                 {isOpeningResume ? t("home.resume.opening") : t("home.resume.continue")}
@@ -437,7 +437,7 @@ const Index = () => {
               </div>
               <Button
                 onClick={() => navigate("/folders")}
-                className="w-full mt-4 min-h-[44px]"
+                className="ape-motion-button w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
                 {safeRecents.length > 0 || myFolders.length > 0
@@ -564,7 +564,7 @@ const Index = () => {
           <ApeSectionTitle>{t("home.shortcuts")}</ApeSectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/folders")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -581,7 +581,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/folders?action=new-list")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -598,7 +598,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/goals")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -615,7 +615,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/notes")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -632,7 +632,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/store")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -649,7 +649,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-interactive-card p-5 cursor-pointer border-border"
               onClick={() => navigate("/search")}
             >
               <div className="flex flex-col items-center text-center gap-3">

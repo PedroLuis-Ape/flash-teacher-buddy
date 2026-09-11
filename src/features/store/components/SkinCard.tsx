@@ -43,7 +43,7 @@ export function SkinCard({
         role="button"
         tabIndex={0}
         aria-label={`Abrir detalhes de ${skin.name}`}
-        className="group h-full cursor-pointer overflow-hidden border transition-[transform,box-shadow,border-color] duration-150 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hover:-translate-y-0.5"
+        className="group ape-interactive-card h-full cursor-pointer overflow-hidden border hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         onClick={() => setShowDetail(true)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -52,7 +52,7 @@ export function SkinCard({
           }
         }}
       >
-        <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-muted/30 to-muted">
+          <div data-motion-icon="store" className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-muted/30 to-muted">
           <img
             src={skin.card_final}
             alt={skin.name}
