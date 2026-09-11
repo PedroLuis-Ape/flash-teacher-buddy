@@ -750,7 +750,7 @@ const Folder = () => {
                       Nova Lista
                     </Button>
                   </DialogTrigger>
-                   <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+                   <DialogContent className="max-w-lg max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
                     <DialogHeader>
                       <DialogTitle>{t("library.folder.createList")}</DialogTitle>
                       <DialogDescription>
@@ -788,8 +788,8 @@ const Folder = () => {
                           />
                         </div>
                       </div>
-                      <DialogFooter className="mt-2 pt-2 border-t flex-shrink-0">
-                        <Button type="submit" className="w-full sm:w-auto">{t("library.folder.createListAction")}</Button>
+                      <DialogFooter className="mt-2 flex-shrink-0 border-t pt-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+                        <Button type="submit" className="min-h-11 w-full touch-manipulation sm:w-auto">{t("library.folder.createListAction")}</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>
@@ -1223,7 +1223,7 @@ const Folder = () => {
         </Tabs>
 
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
             <DialogHeader>
               <DialogTitle>{t("library.folder.editList")}</DialogTitle>
               <DialogDescription>
@@ -1231,8 +1231,8 @@ const Folder = () => {
               </DialogDescription>
             </DialogHeader>
             {editingList && (
-              <form onSubmit={handleUpdateList}>
-                <div className="space-y-4 py-4">
+              <form onSubmit={handleUpdateList} className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 overflow-y-auto space-y-4 py-4 ape-overlay-scroll">
                   <div className="space-y-2">
                     <Label htmlFor="edit-list-title">{t("library.folder.titleLabel")}</Label>
                     <Input
@@ -1253,8 +1253,8 @@ const Folder = () => {
                     />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit">{t("library.folder.saveChanges")}</Button>
+                <DialogFooter className="border-t pt-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+                  <Button type="submit" className="min-h-11 touch-manipulation">{t("library.folder.saveChanges")}</Button>
                 </DialogFooter>
               </form>
             )}
@@ -1285,7 +1285,7 @@ const Folder = () => {
 
         {/* Folder Language Settings Dialog */}
         <Dialog open={folderSettingsOpen} onOpenChange={setFolderSettingsOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh]">
+          <DialogContent className="max-w-lg max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
@@ -1295,7 +1295,7 @@ const Folder = () => {
                 Defina o idioma padrão para novas listas criadas nesta pasta.
               </DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-[60vh] pr-4">
+            <ScrollArea className="min-h-0 flex-1 overflow-y-auto pr-4 ape-overlay-scroll">
               <div className="py-4">
                 <ListStudyTypeSelector
                   value={folderSettings}
@@ -1303,11 +1303,11 @@ const Folder = () => {
                 />
               </div>
             </ScrollArea>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setFolderSettingsOpen(false)}>
+            <DialogFooter className="border-t pt-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+              <Button variant="outline" className="min-h-11 touch-manipulation" onClick={() => setFolderSettingsOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveFolderSettings} disabled={isSavingFolderSettings}>
+              <Button className="min-h-11 touch-manipulation" onClick={handleSaveFolderSettings} disabled={isSavingFolderSettings}>
                 {isSavingFolderSettings ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>

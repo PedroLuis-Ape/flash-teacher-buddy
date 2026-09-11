@@ -107,12 +107,12 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Flashcard</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 py-4 ape-overlay-scroll">
           <div className="space-y-2">
             <Label htmlFor="edit-term">{labelA || "Lado A"}</Label>
             <Input
@@ -200,11 +200,11 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+        <DialogFooter className="border-t pt-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+          <Button variant="outline" className="min-h-11 touch-manipulation" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving || !term.trim() || !translation.trim()}>
+          <Button className="min-h-11 touch-manipulation" onClick={handleSave} disabled={saving || !term.trim() || !translation.trim()}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
