@@ -89,6 +89,8 @@ O projeto Lovable foi aberto em `https://lovable.dev/projects/b6f1ba83-b44c-4a41
 
 Após o usuário relatar que acessou a conta correta, a nova inspeção não encontrou nenhuma aba Chrome exposta à sessão CUA. A tentativa no navegador interno abriu o projeto sem sessão autenticada e exibiu novamente `You don't have access`, com opções de login. A comparação direta do preview permanece pendente de uma aba autenticada acessível à automação.
 
+Também foi tentado o controle direto do Windows pela habilidade Computer Use, mas a ponte retornou `Trusted RPC service is not configured: sky` antes de listar janelas. Nenhuma ação foi executada no desktop.
+
 Durante a navegação repetida da publicação, o console também registrou avisos pré-existentes de `PortalHistorySync`/`EconomyContext` e múltiplas instâncias do GoTrueClient. Como a missão visual proíbe alterações de autenticação, sincronização e backend, esses achados foram mantidos fora do escopo e não foram mascarados.
 
 O preview local não recebeu credenciais nem sessão do usuário. Por isso, o shell do Hub público abriu com os modos renderizados, mas o ID público usado na publicação não foi encontrado pelo runtime local sem configuração de dados; isso limita a validação local do deck, não da composição visual do Hub.
