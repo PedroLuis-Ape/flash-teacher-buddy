@@ -40,6 +40,9 @@ related:
 - O contrato de runtime está correto no core, mas consumidores auxiliares ainda
   leem `VITE_SUPABASE_*` diretamente; auditar antes de prometer imunidade total
   a configuração divergente. Ver [[areas/supabase-runtime]].
-- O Motion System é uma proposta arquitetural sem implementação ou QA visual;
-  não declarar sua entrega pronta antes do gate de design e da matriz de
+- A primeira fatia do Motion System tem implementação e QA local, mas não deve
+  ser tratada como entrega global antes da revisão autenticada e da matriz de
   interação. Ver [[areas/motion-system]].
+- A primeira fatia do Motion System passou no preview local, mas ainda não foi
+  comparada no preview Lovable autenticado. Não expandir para Home, menus,
+  progresso ou assinaturas específicas sem essa revisão visual.

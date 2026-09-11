@@ -53,9 +53,21 @@ related:
   `ymahldldyxvwjeruaxpr` como runtime de dados de produção.
 - A confirmação acima é `[VERIFIED-REPO]`, não `[VERIFIED-DB]`: nenhum schema,
   RPC, RLS ou dado remoto foi inspecionado nesta sessão.
-- A validação do futuro Motion System ainda não começou; não há evidência de
-  screenshot, interação ou performance para esse escopo. Ver
+- A validação da expansão do Motion System para outras superfícies ainda não
+  começou; a primeira fatia do Games Hub está coberta na seção abaixo. Ver
   [[areas/motion-system]].
+
+## Motion System — primeira fatia
+
+- Vitest focado: 4 arquivos, 15 testes, passou.
+- Suite completa: 256 arquivos, 1.569 testes, passou.
+- TypeScript app e node: passou sem erros.
+- ESLint: 0 erros e 72 avisos já existentes.
+- Build Vite: passou; avisos existentes de CSS, browserslist e chunks grandes
+  permanecem documentados.
+- Preview local: seis cards no Games Hub; desktop 1280×720 respondeu com
+  transform 3D e sem overflow; mobile/coarse 390×844 e reduced motion ficaram
+  sem transform e sem overflow; foco + Enter preservaram a rota de estudo.
 
 ## Limitações da evidência
 

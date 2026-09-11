@@ -3,7 +3,7 @@ cssclasses:
   - ape-ai-note
 type: area
 domain: ui-motion
-status: proposed
+status: active
 priority: medium
 last_reviewed: 2026-09-11
 related:
@@ -21,9 +21,8 @@ related:
 [DECISION] O usuário forneceu uma especificação para uma camada de motion,
 hover e microinterações, principalmente desktop, preservando a identidade
 visual e a estrutura atual. O design foi detalhado em
-`docs/superpowers/specs/2026-09-11-piteco-motion-system-design.md`; a
-implementação não começou e depende da revisão/aprovação antes do plano e do
-código.
+`docs/superpowers/specs/2026-09-11-piteco-motion-system-design.md` e aprovado;
+a primeira fatia foi implementada no Games Hub.
 
 ## Intenção de produto
 
@@ -80,12 +79,31 @@ Faixa inicial sugerida, sujeita a ajuste visual: fast 100–140 ms, normal
 máximo 2–4 graus. Os valores não são contrato de implementação até a revisão
 visual.
 
+## Primeira fatia implementada — 2026-09-11
+
+- `src/hooks/usePointerTilt.ts` calcula tilt limitado e atualiza somente
+  variáveis CSS em `requestAnimationFrame`, desativando-se para pointer coarse
+  e reduced motion.
+- `src/components/ape/GameCardMotion.tsx` encapsula um botão nativo, preserva
+  refs/ARIA/eventos e fornece a superfície de motion do card.
+- `src/index.css` recebeu tokens fast/normal/emphasis, lift, escala, glow,
+  foco, press, reduced motion e kill-switches de performance.
+- `src/pages/GamesHub.tsx` usa a superfície compartilhada sem modificar
+  `startGame`, query keys, preferências ou rotas.
+
 ## Evidência e próximo gate
 
-[UNKNOWN] Nenhum screenshot ou teste de interação do novo sistema foi
-produzido nesta sessão. A validação futura deve seguir
-OPEN → SCREENSHOT → INTERACT → IMPLEMENT → BUILD → REOPEN → COMPARE → TEST →
-REFINE, cobrindo 1366×768, 1440×900, 1920×1080, 1280×720 e a matriz mobile.
+[VERIFIED-RUNTIME] Preview local em `http://127.0.0.1:4321` renderizou seis
+cards. Em 1280×720, hover no card produziu transform 3D limitado e não houve
+overflow horizontal. Em 390×844 com touch/coarse e em desktop com reduced
+motion, o transform permaneceu neutro e não houve overflow. Foco + Enter
+mantiveram a navegação para `/study?mode=flip&favorites=false`.
 
-Próximo gate: o usuário aprovar ou ajustar a abordagem recomendada; depois
-escrever a especificação revisada e o plano antes de tocar no código.
+[VERIFIED-REPO] Vitest focado passou 15/15; suite passou 256 arquivos e 1.569
+testes; typecheck passou; lint terminou com 0 erros e 72 avisos preexistentes;
+build Vite passou com avisos existentes de CSS, browserslist e chunks grandes.
+
+Próximo gate: revisar a primeira fatia visual no ambiente autenticado do
+usuário antes de expandir para Home, navegação, menus, progresso ou efeitos
+específicos de cada jogo. O screenshot local está em
+`C:\Users\pedro\AppData\Local\Temp\piteco-motion-gameshub-1280.png`.

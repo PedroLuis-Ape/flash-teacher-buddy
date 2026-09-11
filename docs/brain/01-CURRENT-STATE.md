@@ -45,7 +45,8 @@ Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio,
   `ymahldldyxvwjeruaxpr`; consumidores auxiliares que leem variáveis de
   ambiente diretamente ficaram como `[REVALIDATE]`.
 - A especificação de motion/hover foi registrada em [[areas/motion-system]],
-  mas a implementação está pendente de aprovação da abordagem arquitetural.
+  foi aprovada e a primeira fatia do Games Hub foi implementada; a expansão
+  para outras superfícies aguarda revisão visual autenticada.
 
 ## Worktree autoritativo
 
