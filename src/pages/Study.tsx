@@ -2485,6 +2485,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={masteryProgressActive ? undefined : navigateNext}
@@ -2521,6 +2524,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               isSavingAttentionPoint={isSystemCollection ? false : setSpecialLayer.isPending}
               onSaveAttentionPoint={userId && !isSystemCollection ? handleSaveAttentionPoint : undefined}
               onCorrect={() => handleNext(true)}
@@ -2550,6 +2556,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2576,6 +2585,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2601,6 +2613,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}

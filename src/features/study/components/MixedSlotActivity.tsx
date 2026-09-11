@@ -28,6 +28,9 @@ interface MixedSlotActivityProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip?: () => void;
@@ -57,6 +60,9 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
+        isDifficult={props.isDifficult}
+        onToggleDifficulty={props.onToggleDifficulty}
+        difficultyPending={props.difficultyPending}
         onNext={props.onCorrect}
         onCorrect={props.onCorrect}
         onIncorrect={props.onIncorrect}
@@ -86,6 +92,9 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
       onToggleRedList={props.onToggleRedList}
       isSpecial={props.isSpecial}
       onToggleSpecial={props.onToggleSpecial}
+      isDifficult={props.isDifficult}
+      onToggleDifficulty={props.onToggleDifficulty}
+      difficultyPending={props.difficultyPending}
       onCorrect={props.onCorrect}
       onIncorrect={props.onIncorrect}
       onSkip={props.onSkip ?? props.onIncorrect}

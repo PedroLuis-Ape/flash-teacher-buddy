@@ -32,6 +32,9 @@ interface UnscrambleStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   onCorrect: () => void;
@@ -81,13 +84,14 @@ export const UnscrambleStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isDifficult = false,
+  onToggleDifficulty,
+  difficultyPending = false,
   onRestartRound,
   onRestartJourney,
   onCorrect,
   onIncorrect,
   onSkip,
-  onPrevious: _onPrevious,
-  canGoPrevious: _canGoPrevious,
 }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
@@ -198,6 +202,9 @@ export const UnscrambleStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            isDifficult={isDifficult}
+            onToggleDifficulty={onToggleDifficulty}
+            difficultyPending={difficultyPending}
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />

@@ -71,6 +71,9 @@ interface WriteStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   isSavingAttentionPoint?: boolean;
   onSaveAttentionPoint?: (flashcardId: string, focus: SpecialFocusContext) => Promise<void> | void;
   onRestartRound?: () => void;
@@ -108,6 +111,9 @@ export const WriteStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isDifficult = false,
+  onToggleDifficulty,
+  difficultyPending = false,
   isSavingAttentionPoint = false,
   onSaveAttentionPoint,
   onRestartRound,
@@ -115,8 +121,6 @@ export const WriteStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
-  onPrevious: _onPrevious,
-  canGoPrevious: _canGoPrevious,
   layerCount = 1,
   layersVisitedCount = 0,
   onOpenLayers,
@@ -343,6 +347,9 @@ export const WriteStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            isDifficult={isDifficult}
+            onToggleDifficulty={onToggleDifficulty}
+            difficultyPending={difficultyPending}
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />

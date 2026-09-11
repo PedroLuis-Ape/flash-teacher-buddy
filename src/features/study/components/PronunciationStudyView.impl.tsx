@@ -33,6 +33,9 @@ interface PronunciationStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   onNext?: () => void;
   onCorrect?: () => void;
   onIncorrect?: () => void;
@@ -57,12 +60,13 @@ export function PronunciationStudyView({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isDifficult = false,
+  onToggleDifficulty,
+  difficultyPending = false,
   onNext,
   onCorrect,
   onIncorrect,
   onSkip,
-  onPrevious: _onPrevious,
-  canGoPrevious: _canGoPrevious,
 }: PronunciationStudyViewProps) {
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -184,6 +188,9 @@ export function PronunciationStudyView({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            isDifficult={isDifficult}
+            onToggleDifficulty={onToggleDifficulty}
+            difficultyPending={difficultyPending}
           />
         </div>
 
