@@ -40,6 +40,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
+  const submitUnlockTimerRef = useRef(0);
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
   const glossaryHints = useResolvedStudyGlossaryHints({
