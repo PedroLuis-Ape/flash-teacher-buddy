@@ -52,7 +52,7 @@ describe("Reforço separation contract", () => {
    expect(page).toContain("Estudar agora");
    expect(page).toContain("somente leitura");
     expect(page).toContain("items.length === 1 ? \"card\" : \"cards\"");
-    expect(study).toContain("Marcar como difícil");
+    expect(study).toContain("Reforço");
     expect(study).toContain("isSystemCollection");
     expect(study).toContain("onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}");
     expect(study).toContain("onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}");

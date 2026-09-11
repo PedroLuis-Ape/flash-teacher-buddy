@@ -102,3 +102,15 @@ related:
 ## Limitações da evidência
 
 O preview Lovable não estava disponível na sessão; a verificação visual foi feita na aba Chrome do app publicado e o build foi validado pelo preview smoke local. A validação de produção após merge/publicação ainda deve ser repetida no ambiente final.
+
+## Pós-merge no main — 2026-09-11
+
+- Vitest: `257/257` arquivos e `1576/1576` testes.
+- TypeScript: app e node passaram sem erros.
+- ESLint: `0` erros e `72` avisos preexistentes.
+- Build: Vite passou; validadores editoriais, prerender, bundle e SEO também
+  passaram. Permanecem apenas avisos conhecidos de CSS, browserslist e chunks.
+- Memória: `node scripts/brain-check.mjs` passou (`35` notas, `224` wikilinks,
+  `1` ID canônico).
+
+Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]]

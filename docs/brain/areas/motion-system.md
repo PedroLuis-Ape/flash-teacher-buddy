@@ -156,3 +156,16 @@ O screenshot local está em
   e `C:\Users\pedro\AppData\Local\Temp\piteco-motion-expanded-390.png`.
 - O resultado é verificado localmente. A comparação no preview Lovable
   autenticado continua pendente por falta de uma aba acessível nesta sessão.
+
+## Estado integrado ao main — 2026-09-11
+
+[VERIFIED-REPO] O Motion System e a memória operacional estão integrados ao
+`main` no merge `e4f36f44`, que também incorpora o `origin/main` atualizado em
+`2b477d80`.
+
+[VERIFIED-REPO] A verificação pós-merge passou: `257` arquivos Vitest e `1576`
+testes, typecheck app/node, lint sem erros, build Vite, validadores editoriais,
+prerender, bundle e SEO. O preview Lovable autenticado continua fora da
+evidência disponível.
+
+Related: [[12-PROCESS-LOG-2026-09-11]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/adaptive-learning]]

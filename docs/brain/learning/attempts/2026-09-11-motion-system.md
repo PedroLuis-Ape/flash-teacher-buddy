@@ -80,3 +80,36 @@ ampla foi promovida ainda; a observação permanece específica desta tentativa.
 - A correção foi mínima e o contrato passou 5/5. A expectativa é que os
   mesmos guards de hover, foco e reduced motion se apliquem sem alterar as
   ações existentes; o reteste completo é o próximo gate.
+
+## Integração e aprendizado pós-merge
+
+### Intended
+
+Integrar o Motion System ao `main` preservando os oito commits remotos que
+chegaram depois do ponto de divergência e mantendo o arquivo Supabase local
+fora do escopo.
+
+### Actual
+
+O `origin/main` avançou para `2b477d80`; o `main` foi atualizado por
+fast-forward e recebeu o merge `e4f36f44`. A primeira suíte pós-merge encontrou
+um teste stale (`Marcar como difícil`) embora o runtime já usasse `Reforço`.
+Após alinhar a expectativa do contrato, a suíte passou `257/257` arquivos e
+`1576/1576` testes.
+
+### Why
+
+A divergência entre o rótulo e o teste veio do avanço remoto de reforço, não
+da implementação visual. O comportamento continuou delegado aos componentes
+de estudo e o contrato de apresentação não acompanhou a renomeação.
+
+### Reusable lesson
+
+Ao mesclar branches que alteram rótulos de UI, executar a suíte no resultado
+mesclado antes do push e distinguir contrato textual stale de regressão de
+runtime. Atualizar o contrato para a linguagem vigente é preferível a inserir
+texto morto no componente apenas para satisfazer o teste.
+
+Status: VALIDATED_LESSON, escopo restrito a contratos textuais de UI.
+
+Related: [[areas/motion-system]] · [[07-TESTS]] · [[08-RISKS]] · [[12-PROCESS-LOG-2026-09-11]]

@@ -65,3 +65,16 @@ related:
 - A extensão a cards de loja e sala de aula mantém interações de compra e
   navegação existentes; retestar essas rotas é obrigatório porque o papel
   compartilhado tem alcance visual transversal.
+
+## Estado de integração — 2026-09-11
+
+- [VERIFIED-REPO] O `main` local recebeu a branch de Motion por merge
+  `e4f36f44` após incorporar o `origin/main` em `2b477d80`.
+- [VERIFIED-REPO] O contrato textual de reforço foi alinhado ao rótulo atual
+  `Reforço`; a suíte pós-merge passou.
+- [REVALIDATE] Merge no GitHub e sincronização/publicação do Lovable só podem
+  ser tratados como confirmados após a resposta do push e a leitura do remoto.
+- [REVALIDATE] `supabase/functions/mcp/index.ts` continua com mudança local
+  pré-existente e deliberadamente não foi incluído.
+
+Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[areas/supabase-runtime]]
