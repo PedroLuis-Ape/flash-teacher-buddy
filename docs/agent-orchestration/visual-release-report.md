@@ -83,7 +83,7 @@ Executada na branch com os binários versionados em `node_modules`:
 
 Foram concluídos seis blocos incrementais de implementação, uma segunda passagem global de rotas, uma rodada dedicada de viewport, recalibração do DPR do Chrome e uma re-inspeção visual de landing, Hub e estudo. O número de ciclos não foi contado individualmente por cada rota; os registros acima são a contagem confiável disponível.
 
-O preview Lovable não estava disponível na sessão. A aba Chrome publicada foi usada como referência e interação real; o build local foi usado para validar a branch. O merge e a publicação não fazem parte deste relatório e ainda exigem verificação pós-deploy.
+O projeto Lovable foi aberto em `https://lovable.dev/projects/b6f1ba83-b44c-4a41-8589-b1e5380cf1ea`, mas o próprio editor retornou `You don't have access`: o projeto é privado e a conta conectada (`pedro55luizy@gmail.com`) não tem permissão. Nenhuma solicitação de acesso foi enviada. A aba Chrome publicada foi usada como referência e interação real; o build local foi usado para validar a branch. O merge e a publicação não fazem parte deste relatório e ainda exigem verificação pós-deploy.
 
 Durante a navegação repetida da publicação, o console também registrou avisos pré-existentes de `PortalHistorySync`/`EconomyContext` e múltiplas instâncias do GoTrueClient. Como a missão visual proíbe alterações de autenticação, sincronização e backend, esses achados foram mantidos fora do escopo e não foram mascarados.
 
