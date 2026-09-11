@@ -76,7 +76,7 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).not.toContain("insertAdjacentElement");
     expect(writeBoundarySource).not.toContain("findRewriteInstruction");
     expect(writeBoundarySource).not.toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
-    expect(writeBoundarySource).toContain('const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`');
+    expect(writeBoundarySource).toContain('`${props.rewriteSnapshotScope ?? "local"}|${props.flashcardId ?? "card"}|${props.front}|${props.back}`');
     expect(writeBoundarySource).toContain("key={rewriteLayerKey}");
   });
 
