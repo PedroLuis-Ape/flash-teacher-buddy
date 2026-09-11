@@ -126,7 +126,7 @@ export const MergeIntoLayersDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
@@ -134,7 +134,7 @@ export const MergeIntoLayersDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto py-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain py-2 ape-overlay-scroll">
           <div className="space-y-2">
             <Label htmlFor="merge-title">Título do card principal</Label>
             <Input
@@ -182,7 +182,7 @@ export const MergeIntoLayersDialog = ({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6"
+                      className="min-h-11 min-w-11 touch-manipulation"
                       onClick={() => move(idx, -1)}
                       disabled={idx === 0}
                       aria-label="Mover camada para cima"
@@ -193,7 +193,7 @@ export const MergeIntoLayersDialog = ({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6"
+                      className="min-h-11 min-w-11 touch-manipulation"
                       onClick={() => move(idx, 1)}
                       disabled={idx === order.length - 1}
                       aria-label="Mover camada para baixo"
@@ -211,11 +211,11 @@ export const MergeIntoLayersDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="sticky bottom-0 bg-background pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="sticky bottom-0 border-t bg-background pt-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+          <Button variant="outline" className="min-h-11 touch-manipulation" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={saving || order.length < 2}>
+          <Button className="min-h-11 touch-manipulation" onClick={handleConfirm} disabled={saving || order.length < 2}>
             {saving ? "Mesclando..." : `Mesclar ${order.length} cards`}
           </Button>
         </DialogFooter>

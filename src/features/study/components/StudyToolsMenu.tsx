@@ -293,7 +293,7 @@ export function StudyToolsMenu({
     <Dialog open={specialFocusOpen} onOpenChange={handleSpecialDialogOpenChange}>
       <DialogContent
         hideClose
-        className="bottom-0 top-auto flex max-h-[86vh] max-w-none translate-y-0 flex-col gap-0 overflow-hidden rounded-t-2xl p-0 sm:bottom-auto sm:top-[50%] sm:max-w-lg sm:translate-y-[-50%] sm:rounded-lg"
+        className="bottom-0 top-auto flex max-h-[min(90dvh,calc(100svh-1rem))] max-w-none translate-y-0 flex-col gap-0 overflow-hidden rounded-t-2xl p-0 ape-overlay-scroll sm:bottom-auto sm:top-[50%] sm:max-w-lg sm:translate-y-[-50%] sm:rounded-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <DialogHeader className="border-b px-4 pb-3 pt-4 text-left sm:px-5">
@@ -354,7 +354,7 @@ export function StudyToolsMenu({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t bg-background px-4 py-3 sm:flex-row sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom,0px))] sm:flex-row sm:justify-between sm:px-5">
           {isSpecial ? (
             <Button type="button" variant="destructive" size="sm" onClick={handleRemoveSpecial} disabled={specialPending}>
               Remover

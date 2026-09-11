@@ -26,7 +26,7 @@ export function SmartPromptDialog({ open, onOpenChange, value, onChange }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,820px)] max-w-3xl flex-col overflow-hidden">
+      <DialogContent className="flex h-[min(90dvh,820px)] max-h-[min(90dvh,calc(100svh-1rem))] max-w-3xl flex-col overflow-hidden ape-overlay-scroll">
         <DialogHeader>
           <DialogTitle>Configurar prompt inteligente</DialogTitle>
           <DialogDescription>Somente os recursos ativados serão solicitados à IA.</DialogDescription>
@@ -63,9 +63,9 @@ export function SmartPromptDialog({ open, onOpenChange, value, onChange }: Props
           </div>
           <Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs" />
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-          <Button onClick={copy}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar prompt</Button>
+        <DialogFooter className="pb-[max(.75rem,env(safe-area-inset-bottom,0px))]">
+          <Button variant="outline" className="min-h-11 touch-manipulation" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button className="min-h-11 touch-manipulation" onClick={copy}><ClipboardCopy className="mr-2 h-4 w-4" />Copiar prompt</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

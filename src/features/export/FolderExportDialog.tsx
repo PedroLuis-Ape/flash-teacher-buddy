@@ -189,7 +189,7 @@ export function FolderExportDialog({
       </DialogTrigger>
 
       <DialogContent
-        className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-3xl flex-col"
+        className="flex max-h-[min(90dvh,calc(100svh-1rem))] w-[calc(100vw-2rem)] max-w-3xl flex-col ape-overlay-scroll"
         onClick={(event) => event.stopPropagation()}
       >
         <DialogHeader>
@@ -276,15 +276,15 @@ export function FolderExportDialog({
           <FolderExportHistoryPanel entries={history} onClear={clearHistory} />
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
-          <Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button>
-          <Button variant="outline" onClick={copyCurrent} disabled={!currentText || loading}>
+        <DialogFooter className="flex-col gap-2 pb-[max(.75rem,env(safe-area-inset-bottom,0px))] sm:flex-row">
+          <Button variant="outline" className="min-h-11 touch-manipulation" onClick={() => setOpen(false)}>Fechar</Button>
+          <Button variant="outline" className="min-h-11 touch-manipulation" onClick={copyCurrent} disabled={!currentText || loading}>
             <Copy className="mr-2 h-4 w-4" />Copiar
           </Button>
-          <Button variant="secondary" onClick={downloadText} disabled={!result?.plainText || loading}>
+          <Button variant="secondary" className="min-h-11 touch-manipulation" onClick={downloadText} disabled={!result?.plainText || loading}>
             <Download className="mr-2 h-4 w-4" />Baixar TXT
           </Button>
-          <Button onClick={downloadJson} disabled={!result?.jsonText || loading}>
+          <Button className="min-h-11 touch-manipulation" onClick={downloadJson} disabled={!result?.jsonText || loading}>
             <FileJson className="mr-2 h-4 w-4" />Baixar JSON
           </Button>
         </DialogFooter>

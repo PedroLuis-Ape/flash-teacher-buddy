@@ -100,7 +100,7 @@ export function AttentionPointSheet({
                     aria-pressed={active}
                     onClick={() => setSelectedIndex(active ? null : token.index)}
                     className={
-                      "rounded-full border px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
+                      "min-h-11 touch-manipulation rounded-full border px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 " +
                       (active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background hover:border-primary/60 hover:bg-primary/5")
@@ -127,7 +127,7 @@ export function AttentionPointSheet({
                   type="button"
                   variant={selectedTag === tag.value ? "default" : "outline"}
                   size="sm"
-                  className="h-9 min-w-0 px-2 text-xs"
+                  className="min-h-11 min-w-0 px-2 text-xs touch-manipulation"
                   aria-pressed={selectedTag === tag.value}
                   onClick={() => setSelectedTag((current) => (current === tag.value ? null : tag.value))}
                 >
@@ -152,11 +152,11 @@ export function AttentionPointSheet({
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2 border-t bg-background px-4 py-3 sm:px-5">
+        <DialogFooter className="flex-row gap-2 border-t bg-background px-4 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom,0px))] sm:px-5">
           <Button
             type="button"
             variant="ghost"
-            className="flex-1 sm:flex-none"
+            className="min-h-11 flex-1 touch-manipulation sm:flex-none"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
@@ -164,7 +164,7 @@ export function AttentionPointSheet({
           </Button>
           <Button
             type="button"
-            className="flex-1 sm:flex-none"
+            className="min-h-11 flex-1 touch-manipulation sm:flex-none"
             onClick={() => void handleSave()}
             disabled={isSaving || tokens.length === 0}
           >

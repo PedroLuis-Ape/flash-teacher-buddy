@@ -2291,7 +2291,7 @@ const Study = () => {
         </div>
 
         {/* Mobile: Sticky bottom button */}
-        {!showNextRound && <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
+        {!showNextRound && <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] backdrop-blur md:hidden">
           <Button 
             variant="default" 
             size="lg" 

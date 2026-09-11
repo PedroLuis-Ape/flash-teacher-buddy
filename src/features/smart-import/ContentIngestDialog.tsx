@@ -469,7 +469,7 @@ export function ContentIngestDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />Importar para esta lista</Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex h-[min(90dvh,calc(100svh-1rem))] max-h-[min(90dvh,calc(100svh-1rem))] max-w-5xl flex-col overflow-hidden p-0 ape-overlay-scroll">
         <DialogHeader className="border-b px-5 py-4">
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle>Importar para esta lista</DialogTitle>
@@ -620,19 +620,19 @@ export function ContentIngestDialog({
           </div>}
         </div>
 
-        <DialogFooter className="border-t p-4">
+        <DialogFooter className="border-t px-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4">
           <div className="flex w-full flex-wrap justify-between gap-2">
-            <Button variant="ghost" disabled={busy || undoing} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as Step)}>
+            <Button variant="ghost" className="min-h-11 touch-manipulation" disabled={busy || undoing} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as Step)}>
               <ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}
             </Button>
             <div className="flex flex-wrap gap-2">
-              {step > 1 && !report && <Button variant="outline" disabled={busy || undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Recomeçar</Button>}
-              {report && <Button variant="secondary" disabled={undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Preparar nova importação</Button>}
-              {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
-              {step === 1 && <Button disabled={!raw.trim() || loadingTarget || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              {step === 2 && <Button disabled={Boolean(prepared?.errors.length) || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length) || duplicatePolicyBlocked || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
-              {report && <Button onClick={() => setOpen(false)}>Concluir</Button>}
+              {step > 1 && !report && <Button variant="outline" className="min-h-11 touch-manipulation" disabled={busy || undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Recomeçar</Button>}
+              {report && <Button variant="secondary" className="min-h-11 touch-manipulation" disabled={undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Preparar nova importação</Button>}
+              {report && <Button variant="outline" className="min-h-11 touch-manipulation" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
+              {step === 1 && <Button className="min-h-11 touch-manipulation" disabled={!raw.trim() || loadingTarget || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 2 && <Button className="min-h-11 touch-manipulation" disabled={Boolean(prepared?.errors.length) || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 3 && !report && <Button className="min-h-11 touch-manipulation" disabled={busy || Boolean(prepared?.errors.length) || duplicatePolicyBlocked || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
+              {report && <Button className="min-h-11 touch-manipulation" onClick={() => setOpen(false)}>Concluir</Button>}
             </div>
           </div>
         </DialogFooter>
