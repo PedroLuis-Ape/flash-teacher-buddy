@@ -81,6 +81,9 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
+        isDifficult={props.isDifficult}
+        onToggleDifficulty={props.onToggleDifficulty}
+        difficultyPending={props.difficultyPending}
         onCorrect={onCorrect}
         onIncorrect={onIncorrect}
         onSkip={onSkip ?? onIncorrect}
