@@ -545,7 +545,7 @@ export const WriteStudyView = ({
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={() => advance.requestAdvance({ source: "next_button" })}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
@@ -566,7 +566,7 @@ export const WriteStudyView = ({
             onAction={() => advance.requestAdvance({ source: "next_button" })}
             secondaryActionLabel="Tentar corrigir"
             onSecondaryAction={handleRetry}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
@@ -592,7 +592,7 @@ export const WriteStudyView = ({
             }
             secondaryActionLabel={effectiveCorrectionMode === "hard" ? undefined : "Tentar corrigir"}
             onSecondaryAction={effectiveCorrectionMode === "hard" ? undefined : handleRetry}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
             tertiaryActionLabel="Marcar dificuldade"
             tertiaryActionHint="Guarde uma palavra sem sair do estudo."
