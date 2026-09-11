@@ -1848,8 +1848,8 @@ const Study = () => {
   // layer cycling, and restarting the session. Disabled while a modal is open
   // so it doesn't fight with dialog focus / Escape handling.
   // Track whether the active Write view is still waiting for a first
-  // submission — while true, suppress global next/prev/next-layer shortcuts
-  // so they don't conflict with typing or bypass the Advance Gate.
+  // submission — while true, suppress forward/layer shortcuts so they cannot
+  // bypass the Advance Gate. Previous remains available to revisit a card.
   const [writeShortcutsLocked, setWriteShortcutsLocked] = useState<boolean>(() => isWriteAnswerLocked());
   useEffect(() => {
     setWriteShortcutsLocked(isWriteAnswerLocked());
@@ -1864,7 +1864,6 @@ const Study = () => {
         if (currentCard) requestSkip();
       },
       prevCard: () => {
-        if (writeShortcutsLocked) return;
         goToPrevious();
       },
       nextLayer: () => {
@@ -2533,7 +2532,7 @@ const Study = () => {
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
               onPrevious={navigatePrevious}
-              canGoPrevious={canGoPrevious && !writeShortcutsLocked}
+              canGoPrevious={canGoPrevious}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
@@ -2639,8 +2638,7 @@ const Study = () => {
             <Button
               variant="ghost"
               onClick={goToPrevious}
-              disabled={writeShortcutsLocked}
-              title={writeShortcutsLocked ? "Responda ou pule este card antes de voltar" : "Card anterior"}
+              title="Card anterior"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao anterior
