@@ -736,6 +736,99 @@ All colors MUST be HSL.
       border-color 140ms ease, box-shadow 140ms ease;
   }
 
+  /* Shared motion language: presentation-only, transform/opacity first. */
+  .ape-game-card-motion {
+    --ape-motion-tilt-x: 0deg;
+    --ape-motion-tilt-y: 0deg;
+    --ape-motion-pointer-x: 50%;
+    --ape-motion-pointer-y: 50%;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transform: translate3d(0, 0, 0)
+      rotateX(var(--ape-motion-tilt-x))
+      rotateY(var(--ape-motion-tilt-y));
+    transform-origin: center;
+    transition:
+      transform var(--ape-motion-normal) var(--ape-motion-ease-out),
+      border-color var(--ape-motion-fast) ease,
+      box-shadow var(--ape-motion-normal) var(--ape-motion-ease-out);
+    will-change: transform;
+  }
+
+  .ape-game-card-motion::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--ape-motion-pointer-x) var(--ape-motion-pointer-y),
+      hsl(var(--primary-glow) / 0.16),
+      transparent 42%
+    );
+    opacity: 0;
+    transition: opacity var(--ape-motion-normal) ease;
+  }
+
+  .ape-game-card-motion:active {
+    transform: translate3d(0, 0, 0) scale(var(--ape-motion-press-scale));
+  }
+
+  .ape-game-card-motion:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ape-game-card-motion:hover {
+      transform: translate3d(0, calc(var(--ape-motion-lift) * -1), 0)
+        scale(var(--ape-motion-hover-scale))
+        rotateX(var(--ape-motion-tilt-x))
+        rotateY(var(--ape-motion-tilt-y));
+      border-color: hsl(var(--primary) / 0.42);
+      box-shadow: 0 10px 24px -16px hsl(var(--primary) / 0.55);
+    }
+
+    .ape-game-card-motion:hover::before,
+    .ape-game-card-motion:focus-visible::before {
+      opacity: 1;
+    }
+
+    .ape-game-card-motion:hover [data-motion-icon="game-card"] {
+      transform: scale(1.06);
+    }
+  }
+
+  [data-perf-no-anim] .ape-game-card-motion,
+  [data-perf-no-hover] .ape-game-card-motion,
+  [data-perf-no-anim] .ape-game-card-motion:hover,
+  [data-perf-no-hover] .ape-game-card-motion:hover {
+    transform: none !important;
+    transition: none !important;
+    box-shadow: var(--shadow-card) !important;
+  }
+
+  [data-perf-no-anim] .ape-game-card-motion::before,
+  [data-perf-no-hover] .ape-game-card-motion::before {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ape-game-card-motion,
+    .ape-game-card-motion:hover,
+    .ape-game-card-motion:active {
+      transform: none !important;
+      transition: none !important;
+    }
+
+    .ape-game-card-motion::before {
+      opacity: 0 !important;
+      transition: none !important;
+    }
+  }
+
   .ape-interactive-surface:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 3px;
@@ -768,6 +861,18 @@ All colors MUST be HSL.
     .safe-area-pb {
       padding-bottom: 0;
     }
+  }
+}
+
+@layer base {
+  :root {
+    --ape-motion-fast: 120ms;
+    --ape-motion-normal: 190ms;
+    --ape-motion-emphasis: 300ms;
+    --ape-motion-ease-out: cubic-bezier(.2, .8, .2, 1);
+    --ape-motion-lift: 3px;
+    --ape-motion-hover-scale: 1.015;
+    --ape-motion-press-scale: .985;
   }
 }
 
