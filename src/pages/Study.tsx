@@ -2197,6 +2197,12 @@ const Study = () => {
 
             {/* Desktop buttons */}
             <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
+              {masteryProgressActive && canGoPrevious && (
+                <Button variant="outline" size="lg" onClick={goToPrevious}>
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Voltar ao último card
+                </Button>
+              )}
               {!showNextRound && (
                 <Button 
                   variant="default" 
@@ -2259,6 +2265,12 @@ const Study = () => {
 
             {/* Mobile buttons */}
             <div className="flex md:hidden flex-wrap gap-3 justify-center pt-4">
+              {masteryProgressActive && canGoPrevious && (
+                <Button variant="outline" size="sm" onClick={goToPrevious}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Último card
+                </Button>
+              )}
               {showNextRound && (
                 <Button variant="secondary" size="sm" onClick={startNextRound}>
                   <RefreshCcw className="mr-2 h-4 w-4" />
