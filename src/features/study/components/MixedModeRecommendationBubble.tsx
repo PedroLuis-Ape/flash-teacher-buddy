@@ -66,7 +66,7 @@ export function MixedModeRecommendationBubble() {
       className={cn(
         "fixed right-2 z-40 w-[min(15.5rem,calc(100vw-1rem))] rounded-xl border border-primary/25",
         "bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] bg-background/95 p-2.5 shadow-lg backdrop-blur-md",
-        "animate-in slide-in-from-bottom-2 fade-in duration-200",
+        "max-h-[min(12rem,calc(100dvh-7rem))] overflow-y-auto overscroll-contain ape-overlay-scroll motion-safe:animate-in motion-safe:slide-in-from-bottom-2 motion-safe:fade-in motion-safe:duration-200 motion-reduce:animate-none",
         "sm:bottom-6 sm:right-6 sm:w-[320px] sm:rounded-2xl sm:p-4 sm:shadow-xl",
       )}
       aria-label="Recomendação de modo de estudo"
@@ -89,7 +89,7 @@ export function MixedModeRecommendationBubble() {
             <button
               type="button"
               onClick={() => setDismissed(true)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground touch-manipulation transition hover:bg-muted hover:text-foreground"
               aria-label="Fechar recomendação"
             >
               <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -98,7 +98,7 @@ export function MixedModeRecommendationBubble() {
 
           <Button
             size="sm"
-            className="mt-2 h-8 w-full rounded-lg px-3 text-xs sm:mt-3 sm:h-9"
+            className="mt-2 min-h-11 w-full rounded-lg px-3 text-xs touch-manipulation sm:mt-3 sm:h-9"
             onClick={handleAction}
           >
             Começar Prática Mista

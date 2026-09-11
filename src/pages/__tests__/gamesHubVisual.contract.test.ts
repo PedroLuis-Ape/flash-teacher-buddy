@@ -28,6 +28,7 @@ describe("GamesHub visual hierarchy contract", () => {
     expect(hubSource).toContain("sm:flex-col");
     expect(hubSource).toContain("sm:min-h-[136px]");
     expect(hubSource).toContain("gap-3 sm:gap-4");
+    expect(hubSource).toContain("ape-content-safe-bottom");
   });
 
   it("keeps the existing launch and preference contracts in the visual tile", () => {

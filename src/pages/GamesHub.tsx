@@ -294,7 +294,7 @@ const GamesHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="ape-content-safe-bottom min-h-screen bg-background">
       <div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6">
         <Button variant="ghost" size="sm" onClick={handleBack} className="mb-3 sm:mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
