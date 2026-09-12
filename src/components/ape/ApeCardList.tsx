@@ -59,27 +59,32 @@ export function ApeCardList({
         className,
       )}
     >
-      <div data-motion-icon="card" className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl border border-secondary/25 bg-secondary/20 flex items-center justify-center shadow-sm transition-colors duration-200 group-hover:bg-secondary/30">
-        <span aria-hidden className="text-2xl leading-none transition-transform group-hover:scale-110">
+      <div data-motion-icon="card" className="space-ui-card-icon relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-secondary/25 bg-secondary/20 shadow-sm transition-colors duration-200 group-hover:bg-secondary/30 sm:h-12 sm:w-12">
+        <span aria-hidden className="text-xl leading-none transition-transform group-hover:scale-110 sm:text-2xl">
           {"\u{1F3AE}"}
         </span>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <ScrollingTitle text={title} className="ape-card-title flex-1 min-w-0" />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <ScrollingTitle text={title} className="ape-card-title min-w-0 flex-1" />
           {badge && (
-            <Badge variant="secondary" className="space-ui-card-badge text-xs shrink-0">
+            <Badge
+              variant="secondary"
+              title={badge}
+              className="space-ui-card-badge hidden max-w-[9rem] shrink truncate text-xs md:inline-flex"
+            >
               {badge}
             </Badge>
           )}
         </div>
-        {(subtitle || cardCount !== undefined || language) && (
-          <p className="text-xs text-muted-foreground truncate mt-1">
+        {(subtitle || cardCount !== undefined || language || badge) && (
+          <p className="mt-1 truncate text-xs text-muted-foreground">
             {[
               subtitle,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? "card" : "cards"}`,
               language,
+              badge,
             ].filter(Boolean).join(" • ")}
           </p>
         )}
@@ -89,7 +94,7 @@ export function ApeCardList({
         <Button
           variant="ghost"
           size="icon"
-          className="space-ui-play-button shrink-0 h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary"
+          className="space-ui-play-button h-9 w-9 shrink-0 rounded-xl hover:bg-primary/10 hover:text-primary sm:h-10 sm:w-10"
           onPointerEnter={prefetchStudyRouteChunks}
           onFocus={prefetchStudyRouteChunks}
           onTouchStart={prefetchStudyRouteChunks}
