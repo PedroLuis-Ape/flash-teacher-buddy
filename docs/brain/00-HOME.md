@@ -7,6 +7,8 @@ cssclasses:
 
 > Regra ativa: alimentar este vault continuamente com contexto relevante; anotações do agente usam a cor vermelha.
 
+> **Entrada obrigatória para agentes:** [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]]
+
 Memória operacional do trabalho no App Piteco. Esta pasta é um índice de contexto, decisões, riscos e checkpoints; o código continua no repositório principal e no worktree isolado indicado em [[01-CURRENT-STATE]].
 
 ## Estado atual
@@ -19,6 +21,9 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[07-TESTS]] — evidências de validação e lacunas.
 - [[08-RISKS]] — riscos de integração e publicação.
 - [[09-ASTRA-HANDOFF]] — resumo para retomada por outro agente.
+- [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]] — regra
+  permanente para recuperar somente o subgrafo relevante e reconectar
+  conhecimento durável.
 - [[11-ARCHIVE-IMPORT-2026-09-11]] — conteúdo completo importado do ZIP.
 - [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]] — regras para manter o vault conectado.
 - [[README]] — declaração do vault canônico, proveniência e fonte de verdade.
@@ -44,4 +49,6 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 
 ## Regra de retomada
 
-Ler primeiro [[01-CURRENT-STATE]] e o checkpoint da sessão. Confirmar o worktree e o diff antes de editar. Não declarar publicação pronta sem validação visual real.
+Ler primeiro [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
+depois [[01-CURRENT-STATE]] e o checkpoint da sessão. Confirmar o worktree e o
+diff antes de editar. Não declarar publicação pronta sem validação visual real.

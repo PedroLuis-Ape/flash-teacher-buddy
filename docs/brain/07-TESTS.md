@@ -46,6 +46,22 @@ related:
 - `node scripts/brain-check.mjs` no vault migrado: `BRAIN_CHECK_PASS`, 32 notas
   ativas e 162 wikilinks considerados, com `imports/` preservado como histórico.
 
+## QA do preview Lovable autenticado — Reforço e Ponto de atenção — 2026-09-12
+
+- [VERIFIED-CUA] No preview autenticado, `Everyday Collocations` abriu com 50
+  cards e o modo `Virar Cartas` iniciou normalmente.
+- [VERIFIED-CUA] O toggle in-game `Reforço` ativou, mudou para `No Reforço ✓`,
+  elevou a Home de `0` para `1 card para revisar`, abriu o mesmo card em
+  `/reinforcement` e permitiu removê-lo por essa área.
+- [VERIFIED-CUA] A remoção pela área automática atualizou imediatamente o item,
+  o contador e a Home para `0`; a lista original permaneceu com 50 cards.
+- [VERIFIED-CUA] `Ponto de atenção` abriu o modal e ficou reversível no próprio
+  card, mas sua marcação não aumentou o contador de Reforço nem criou item em
+  `/reinforcement`.
+- [IMPORTANT-FINDING] Se o contrato exige que Ponto de atenção também alimente
+  a pasta automática Reforço, essa integração ainda está pendente de correção
+  e reteste. O ciclo terminou limpo, sem dados temporários ativos.
+
 ## Contrato de ambiente
 
 - `node scripts/check-platform.mjs`: passou neste worktree e confirmou
@@ -114,3 +130,19 @@ O preview Lovable não estava disponível na sessão; a verificação visual foi
   `1` ID canônico).
 
 Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]]
+## Fechamento — ações icon-only no mobile — 2026-09-12
+
+- TDD red/green no contrato focado: sem a correção, `2` falhas; com ela, `8/8`.
+- Suíte completa: `258` arquivos e `1583` testes passando.
+- `tsc --noEmit`: exit `0`.
+- ESLint: `0` erros e `72` avisos preexistentes.
+- `vite build`: concluído; permanecem apenas os avisos conhecidos de chunk.
+- Mecanismo: `tailwind-merge` descarta `w-full` quando `w-auto` é declarado no
+  mesmo `className`.
+- Layout real: Chrome headless com container de `390 px` mediu botão `358 px` /
+  texto `0 px` antes e botão `48 px` / texto `298 px` depois; em `>= 640 px` o
+  resultado é idêntico antes e depois.
+- Integração: commit `eea3261c` enviado a `origin/main`.
+- Pendente: QA visual no preview autenticado do Lovable para essa revisão.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]

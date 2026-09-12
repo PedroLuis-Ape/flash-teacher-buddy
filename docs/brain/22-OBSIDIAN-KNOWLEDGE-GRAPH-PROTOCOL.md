@@ -14,11 +14,12 @@ related:
   - "[[12-PROCESS-LOG-2026-09-11]]"
   - "[[README]]"
   - "[[areas/adaptive-learning]]"
+  - "[[10-CONTEXT-FEEDING-RULE]]"
 ---
 
 # Protocolo do grafo de conhecimento do App Piteco
 
-O segundo cérebro é uma rede de conhecimento, não uma coleção de arquivos isolados. O ponto de entrada é [[00-HOME]]; o mapa factual é [[01-CURRENT-STATE]]; detalhes devem permanecer nas notas de área, decisão, bug, risco, teste e sessão.
+O segundo cérebro é uma rede de conhecimento, não uma coleção de arquivos isolados. A entrada operacional obrigatória é [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]]; o índice é [[00-HOME]]; o mapa factual é [[01-CURRENT-STATE]]; detalhes devem permanecer nas notas de área, decisão, bug, risco, teste e sessão.
 
 ## Regras operacionais
 
@@ -28,6 +29,12 @@ O segundo cérebro é uma rede de conhecimento, não uma coleção de arquivos i
 - Session logs devem apontar para a área trabalhada, bugs, decisões, arquitetura, testes e handoff.
 - [[01-CURRENT-STATE]] deve continuar curto e apontar para notas profundas, sem duplicar todo o conhecimento.
 - Antes de alterar uma decisão ou arquitetura, consultar os backlinks e os riscos relacionados.
+- Antes de qualquer implementação, correção, investigação ou refatoração,
+  recuperar somente o contexto conectado à tarefa por meio de
+  [[10-CONTEXT-FEEDING-RULE]].
+- Ao terminar uma etapa importante, devolver conhecimento durável à nota-fonte
+  correta e conectar a alteração ao grafo; não criar notas isoladas nem
+  duplicar versões contraditórias.
 - Ao renomear notas, preservar os wikilinks e evitar operações cegas que deixem referências quebradas.
 
 ## Checklist de encerramento

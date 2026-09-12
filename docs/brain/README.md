@@ -6,15 +6,18 @@ status: active
 area: knowledge-management
 related:
   - "[[00-HOME]]"
+  - "[[10-CONTEXT-FEEDING-RULE]]"
   - "[[01-CURRENT-STATE]]"
   - "[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]"
   - "[[learning/00-LEARNING-HUB]]"
   - "[[areas/adaptive-learning]]"
 ---
 
-# Segundo Cérebro canônico do App Piteco
+# Segundo Cérebro do App Piteco
 
-Este é o vault operacional versionado do App Piteco. A cópia em
+Este é o espelho versionado e sincronizado do App Piteco. A entrada operacional
+oficial do Obsidian fica em
+`C:\Users\pedro\Documents\App-Piteco-Brain`. A cópia em
 `docs/brain/` foi migrada de `C:\Users\pedro\Documents\App-Piteco-Brain` em
 2026-09-11, preservando Properties/YAML, wikilinks, `.obsidian`, áreas,
 sessões e o histórico importado.
@@ -22,11 +25,11 @@ sessões e o histórico importado.
 ## Fonte de verdade
 
 - Git e o código atual são a fonte de verdade da implementação.
-- Este vault é a fonte de verdade de contexto operacional, decisões,
-  relações, riscos, evidências e handoff.
-- A pasta externa `C:\Users\pedro\Documents\App-Piteco-Brain` fica como
-  ponte histórica congelada após esta migração; não manter duas memórias
-  ativas nem escrever seletivamente em ambas.
+- O vault externo é a entrada operacional oficial do Obsidian para contexto,
+  decisões, relações, riscos, evidências e handoff.
+- Esta cópia em `docs/brain/` é a versão reconciliada e versionada no Git;
+  mudanças materiais devem ser reconciliadas com o vault externo oficial, sem
+  criar duas explicações concorrentes.
 - A aparência e a classe `ape-ai-note` continuam preservadas para manter as
   anotações do agente em vermelho no Obsidian.
 
@@ -35,7 +38,8 @@ sessões e o histórico importado.
 - `C:\Users\pedro\.codex\skills\piteco-second-brain-protocol\SKILL.md`
 - `C:\Users\pedro\.codex\skills\piteco-adaptive-learning-loop\SKILL.md`
 
-O fluxo começa em [[00-HOME]], passa pelo preflight de [[01-CURRENT-STATE]],
+O fluxo começa em [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
+passa por [[00-HOME]] e pelo preflight de [[01-CURRENT-STATE]],
 recupera aprendizagem relevante em [[learning/00-LEARNING-HUB]] e encerra
 com evidência, atualização de memória e handoff conectado.
 

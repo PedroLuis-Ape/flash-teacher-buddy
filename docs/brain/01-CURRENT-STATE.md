@@ -5,6 +5,7 @@ type: current-state
 status: merged
 area: visual-polish
 related:
+  - "[[10-CONTEXT-FEEDING-RULE]]"
   - "[[areas/visual-polish]]"
   - "[[07-TESTS]]"
   - "[[08-RISKS]]"
@@ -96,3 +97,37 @@ Os gates técnicos e a matriz visual do escopo passaram. A branch `main` foi sin
 ## Estado Git conhecido
 
 O worktree isolado mantém uma alteração pré-existente em `supabase/functions/mcp/index.ts` e artefatos/documentos não relacionados. Não incluir essa alteração de Supabase nos commits visuais.
+
+## Novo programa de auditoria — 2026-09-12
+
+O usuário forneceu quatro frentes relacionadas: mobile-first, progressão
+persistente, Reforço e retomada entre dispositivos. O preflight foi registrado
+em [[12-PROCESS-LOG-2026-09-12]]. A fase mudou de polimento visual isolado para
+auditoria arquitetural controlada; o texto histórico que dizia que persistência
+e Supabase estavam fora do escopo agora está marcado como contexto anterior,
+não como limite desta nova solicitação.
+
+- [VERIFIED-REPO] Já existem `useEconomy`, `useReinforcement`,
+  `useLatestStudyResume`, repository/outbox de sessões e migrations relacionadas.
+- [REVALIDATE] A consulta autoritativa da Home ainda precisa ser alinhada com
+  a consulta de retomada e com status/descartes reais de `study_sessions`.
+- [UNKNOWN] Schema, RLS e RPCs efetivamente aplicados no Supabase de produção
+  ainda não foram verificados nesta rodada.
+
+## Estado da etapa Reforço — fechamento 2026-09-12
+
+- A correção de layout da tela Reforço foi finalizada no commit `eea3261c`,
+  integrada ao `main` e enviada ao GitHub (`c1769c3b..eea3261c`).
+- Causa-raiz: o `Button` compartilhado aplica `w-full` abaixo de `sm`; ações
+  icon-only sem largura intrínseca ocupavam a linha inteira e colapsavam o
+  texto ao lado. Corrigido com `w-auto` em `src/pages/Reinforcement.tsx` e
+  `src/pages/ListDetail.tsx`, protegido por dois contratos de regressão. Ver
+  [[06-BUGS]] e [[07-TESTS]].
+- A branch `fix/reinforcement-layout-20260912` ficou superada pela reescrita da
+  tela no `main`; permanece apenas como histórico local.
+- O contrato de dados segue inalterado: Pontos de atenção e Reforço não foram
+  fundidos nesta etapa. Unificar continua sendo decisão de produto pendente.
+- [REVALIDATE] A conferência visual no preview autenticado do Lovable para a
+  revisão `eea3261c` ainda não foi feita.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]

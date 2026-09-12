@@ -10,14 +10,18 @@
 
 ## Segundo Cérebro e aprendizado adaptativo — obrigatório
 
+O primeiro passo padrão é consultar [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]] na cópia sincronizada de `docs/brain/` e recuperar somente o contexto conectado à tarefa. A entrada operacional oficial do Obsidian fica em `C:\Users\pedro\Documents\App-Piteco-Brain`; `docs/brain/` é a cópia versionada que deve permanecer reconciliada, sem uma segunda memória concorrente.
+
 Todo trabalho significativo de engenharia do App Piteco / APE Education deve
 usar, do início ao fim, as Skills `piteco-second-brain-protocol` e
 `piteco-adaptive-learning-loop`.
 
-O vault operacional único é `docs/brain/`. Git continua sendo a fonte de
-verdade da implementação; o Segundo Cérebro registra contexto, arquitetura,
-decisões, relações, riscos, evidências e handoff. Não criar outra estrutura de
-memória nem manter cópias ativas concorrentes.
+O vault operacional oficial do Obsidian é
+`C:\Users\pedro\Documents\App-Piteco-Brain`. `docs/brain/` é a cópia
+versionada e reconciliada no Git; Git continua sendo a fonte de verdade da
+implementação, e o Segundo Cérebro registra contexto, arquitetura, decisões,
+relações, riscos, evidências e handoff. Não criar outra estrutura de memória
+nem manter explicações ativas concorrentes.
 
 Antes de trabalhar:
 
@@ -32,7 +36,7 @@ Antes de trabalhar:
 
 Durante o trabalho, separar fato de hipótese, preferir a menor tentativa
 informativa, registrar evidência externa e manter relações importantes por
-`[[wikilinks]]`.
+links internos em formato `[[Nome-da-nota]]`.
 
 Depois de uma tentativa significativa, comparar expectativa com resultado
 observado, diagnosticar a causa com evidência, corrigir, repetir o mesmo teste
