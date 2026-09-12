@@ -209,6 +209,14 @@ BEGIN
   FROM public.skins_catalog
   WHERE id = p_skin_id;
 
+  -- Nem todo item da loja existe em skins_catalog: o restante vem do catalogo
+  -- publicado, que e a fonte que o cliente usa para exibir o preco.
+  IF v_catalog_price IS NULL THEN
+    SELECT price_pitecoin INTO v_catalog_price
+    FROM public.public_catalog
+    WHERE id = p_skin_id OR sku = p_skin_id;
+  END IF;
+
   IF v_catalog_price IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'SKIN_NOT_FOUND');
   END IF;
@@ -290,4 +298,3 @@ GRANT EXECUTE ON FUNCTION public.swap_list_sides(uuid) TO authenticated, service
 -- ---------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.purge_expired_trash() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purge_expired_trash() TO service_role;
-

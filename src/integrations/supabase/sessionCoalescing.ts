@@ -10,29 +10,34 @@ export function installSessionReadCoalescing<T extends SessionClientLike>(
   ttlMs = 1_000,
   now: () => number = Date.now,
 ): T {
-  const original = client.auth.getSession.bind(client.auth);
-  let cached: { expiresAt: number; value: any } | null = null;
-  let inflight: Promise<any> | null = null;
+const original = client.auth.getSession.bind(client.auth);
+let cached: { expiresAt: number; value: any } | null = null;
+let inflight: Promise<any> | null = null;
+// Incrementa a cada mudanca de autenticacao para que respostas antigas em voo
+// nao repovoem o cache com a sessao anterior (troca de conta / logout).
+let generation = 0;
 
-  (client.auth as any).getSession = async () => {
-    if (cached && cached.expiresAt > now()) return cached.value;
-    if (inflight) return inflight;
+(client.auth as any).getSession = async () => {
+  if (cached && cached.expiresAt > now()) return cached.value;
+  if (inflight) return inflight;
 
-    inflight = original()
-      .then((value) => {
-        cached = { expiresAt: now() + ttlMs, value };
-        return value;
-      })
-      .finally(() => {
-        inflight = null;
-      });
-    return inflight;
-  };
+  const startedAt = generation;
+  inflight = original()
+    .then((value) => {
+      if (startedAt === generation) cached = { expiresAt: now() + ttlMs, value };
+      return value;
+    })
+    .finally(() => {
+      if (startedAt === generation) inflight = null;
+    });
+  return inflight;
+};
 
-  client.auth.onAuthStateChange?.(() => {
-    cached = null;
-    inflight = null;
-  });
+client.auth.onAuthStateChange?.(() => {
+  generation += 1;
+  cached = null;
+  inflight = null;
+});
 
   return client;
 }

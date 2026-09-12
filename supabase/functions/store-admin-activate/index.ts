@@ -17,6 +17,35 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Exige usuario autenticado com papel developer_admin (mesmo gate de
+    // store-admin-batch-import). O segredo de ingest continua obrigatorio.
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'UNAUTHORIZED', message: 'Autenticação obrigatória' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: roleRow } = await authClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!roleRow || roleRow.role !== 'developer_admin') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'FORBIDDEN', message: 'Requer developer_admin' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify ingest secret
     const ingestSecret = req.headers.get('X-Ingest-Secret');
     const envSecret = Deno.env.get('INGEST_SECRET');

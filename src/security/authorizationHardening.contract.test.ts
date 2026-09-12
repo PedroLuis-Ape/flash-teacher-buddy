@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const migration = readFileSync(
-  new URL("../../supabase/migrations/20260912233000_authorization_hardening_v1.sql", import.meta.url),
-  "utf8",
-);
+const read = (name: string) =>
+  readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), "utf8");
+
+const migration = [
+  read("20260912233000_authorization_hardening_v1.sql"),
+  read("20260912234500_authorization_hardening_v2.sql"),
+  read("20260913000000_authorization_hardening_v3.sql"),
+].join("\n");
 
 const wrapped = [
   ["soft_delete_folder", "(uuid, uuid)"],
@@ -18,7 +22,9 @@ const wrapped = [
   ["equip_skin_atomic", "(uuid, uuid, text, text)"],
   ["process_exchange", "(uuid, uuid, integer)"],
   ["process_skin_purchase", "(uuid, uuid, text, integer)"],
+	["get_exchange_quote", "(uuid, integer)"],
   ["swap_list_sides", "(uuid)"],
+	["swap_flashcards_sides", "(uuid)"],
 ];
 
 describe("endurecimento de autorizacao das RPCs (2026-09-12)", () => {
@@ -46,6 +52,7 @@ describe("endurecimento de autorizacao das RPCs (2026-09-12)", () => {
   it("usa o preco do catalogo na compra em vez do valor enviado pelo cliente", () => {
     expect(migration).toContain("SELECT price_pitecoin INTO v_catalog_price");
     expect(migration).toContain("FROM public.skins_catalog");
+	  expect(migration).toContain("FROM public.public_catalog");
     expect(migration).toContain("IF p_price IS DISTINCT FROM v_catalog_price THEN");
     expect(migration).toContain("PRICE_MISMATCH");
   });
@@ -57,4 +64,3 @@ describe("endurecimento de autorizacao das RPCs (2026-09-12)", () => {
     expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.purge_expired_trash() TO service_role;");
   });
 });
-
