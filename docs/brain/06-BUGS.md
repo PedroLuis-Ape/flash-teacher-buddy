@@ -54,7 +54,9 @@ Nenhum bug de dados foi comprovado por esta auditoria visual. Problemas de persi
 - [REGRESSION-CONTRACT] `src/hooks/useReinforcement.contract.test.ts` e
   `src/pages/__tests__/listDetailResponsive.contract.test.ts`.
 - [INTEGRADO] Commit `eea3261c` em `origin/main` (`c1769c3b..eea3261c`).
-- [REVALIDATE] Falta a conferência visual no preview autenticado do Lovable em
-  320/360/375/390/412/430 e desktop.
+- [VERIFIED-RUNTIME] Conferido no preview autenticado do Lovable em 2026-09-12,
+  modo mobile (393 px), rodando o commit `f522aea7`: ação de remover 48x44 px,
+  título do card 252 px, CTA `Estudar agora` 312 px e `scrollWidth` 378 sem
+  overflow horizontal. Em modo desktop as ações permaneceram 48x44 px.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]] · [[areas/adaptive-learning]]

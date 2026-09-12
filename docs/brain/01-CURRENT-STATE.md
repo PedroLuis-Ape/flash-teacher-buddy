@@ -127,7 +127,8 @@ não como limite desta nova solicitação.
   tela no `main`; permanece apenas como histórico local.
 - O contrato de dados segue inalterado: Pontos de atenção e Reforço não foram
   fundidos nesta etapa. Unificar continua sendo decisão de produto pendente.
-- [REVALIDATE] A conferência visual no preview autenticado do Lovable para a
-  revisão `eea3261c` ainda não foi feita.
+- [VERIFIED-RUNTIME] A revisão `f522aea7` foi conferida no preview autenticado
+  do Lovable em modo mobile (393 px): ações compactas de 48x44 px, título com
+  252 px e nenhum overflow horizontal.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]

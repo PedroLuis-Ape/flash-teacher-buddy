@@ -143,6 +143,9 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
   texto `0 px` antes e botão `48 px` / texto `298 px` depois; em `>= 640 px` o
   resultado é idêntico antes e depois.
 - Integração: commit `eea3261c` enviado a `origin/main`.
-- Pendente: QA visual no preview autenticado do Lovable para essa revisão.
+- QA visual no preview autenticado do Lovable (modo mobile, 393 px, commit
+  `f522aea7`): ação de remover `48x44 px`, título do card `252 px`, CTA
+  `Estudar agora` `312 px` e `scrollWidth` `378` — sem overflow horizontal.
+  Em modo desktop as ações permaneceram `48x44 px`.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
