@@ -41,11 +41,9 @@ function buildStudyRoute(input: {
     return `${isPortal ? "/portal/" : "/"}${base}/games${suffix}`;
   }
 
-  if (!isPortal) {
-    return "/dashboard";
-  }
-
   if (isListRoute) {
+    if (!isPortal) return `/list/${resolvedId}`;
+
     const params = new URLSearchParams(input.searchParams ?? undefined);
     for (const key of ["mode", "dir", "direction", "from_goal", "from_step"]) {
       params.delete(key);
@@ -54,5 +52,7 @@ function buildStudyRoute(input: {
     return `/portal/list/${resolvedId}/games${query ? `?${query}` : ""}`;
   }
 
-  return `/portal/collection/${resolvedId}`;
+  return isPortal
+    ? `/portal/collection/${resolvedId}`
+    : `/collection/${resolvedId}`;
 }
