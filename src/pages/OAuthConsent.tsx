@@ -5,6 +5,20 @@
  */
 
 import { useEffect, useState } from "react";
+
+/**
+ * Somente http(s): a URL vem do servidor de autorizacao e nunca deve virar
+ * `javascript:`/`data:` no `window.location.href`.
+ */
+function safeRedirectUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -54,7 +68,7 @@ export default function OAuthConsent() {
         setError(error.message);
         return;
       }
-      const immediate = data?.redirect_url ?? data?.redirect_to;
+      const immediate = safeRedirectUrl(data?.redirect_url ?? data?.redirect_to);
       if (immediate && !data?.client) {
         window.location.href = immediate;
         return;
@@ -78,10 +92,10 @@ export default function OAuthConsent() {
       setError(error.message);
       return;
     }
-    const target = data?.redirect_url ?? data?.redirect_to;
+    const target = safeRedirectUrl(data?.redirect_url ?? data?.redirect_to);
     if (!target) {
       setBusy(false);
-      setError("O servidor de autorização não retornou uma URL de redirecionamento.");
+      setError("O servidor de autorização não retornou uma URL de redirecionamento válida.");
       return;
     }
     window.location.href = target;
