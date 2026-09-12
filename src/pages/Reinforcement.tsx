@@ -31,7 +31,7 @@ export default function Reinforcement() {
       <ApeAppBar title="Reforço" variant="home" />
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-5 lg:px-8">
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-start gap-4 p-5">
+          <CardContent className="flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-start">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <RefreshCcw className="h-6 w-6" />
             </div>
@@ -52,7 +52,7 @@ export default function Reinforcement() {
             </div>
             {area && items.length > 0 && (
               <Button
-                className="min-h-11 shrink-0"
+                className="w-auto min-h-11 shrink-0"
                 onClick={() => navigate(`/list/${area.list_id}/study?reinforcement=true`)}
               >
                 <Play className="mr-2 h-4 w-4" />
@@ -97,7 +97,7 @@ export default function Reinforcement() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="min-h-11 min-w-11 shrink-0 text-destructive hover:text-destructive"
+                    className="w-auto min-h-11 min-w-11 shrink-0 p-0 text-destructive hover:text-destructive"
                     disabled={mutation.isPending}
                     title="Remover do Reforço"
                     aria-label={`Remover ${item.term} do Reforço`}

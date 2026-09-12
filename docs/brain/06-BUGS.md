@@ -24,3 +24,19 @@ Parte das regras do drawer está carregada junto da camada Galaxy; testar paleta
 ## Funcional fora do escopo
 
 Nenhum bug de dados foi comprovado por esta auditoria visual. Problemas de persistência/importação/sessão exigem investigação separada.
+
+## P2 — ações gigantes na tela Reforço — correção preparada
+
+- [ROOT-CAUSE] `Button` compartilha `w-full` em viewport estreito e as ações
+  locais de `src/pages/Reinforcement.tsx` não declaravam largura automática.
+  Mesmo após `w-auto`, o CTA ainda podia ser esticado pelo `align-items:
+  stretch` padrão do contêiner mobile.
+- [FIX-IN-SOURCE] O CTA de estudo e a ação de remoção agora optam por largura
+  intrínseca, e o contêiner usa `items-start`; o layout mobile organiza a ação
+  principal abaixo do cabeçalho, sem alterar dados, clones, originais ou a
+  lógica de mutations.
+- [REVALIDATE] Revalidar no preview Lovable sincronizado, nos viewports
+  320/360/375/390/412/430/768 e em desktop. O preview atualmente aberto ainda
+  exibe a versão anterior, então este achado não deve ser marcado como final.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]

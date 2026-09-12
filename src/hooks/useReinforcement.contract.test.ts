@@ -69,4 +69,10 @@ describe("Reforço separation contract", () => {
     expect(home).toContain("onClick={() => navigate('/reinforcement')}");
     expect(home).toContain("navigate('/reinforcement')");
   });
+
+  it("keeps reinforcement actions compact on narrow screens", () => {
+    expect(page).toContain('className="flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-start"');
+    expect(page).toContain('className="w-auto min-h-11 shrink-0"');
+    expect(page).toContain('className="w-auto min-h-11 min-w-11 shrink-0');
+  });
 });

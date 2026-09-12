@@ -96,3 +96,14 @@ Os gates técnicos e a matriz visual do escopo passaram. A branch `main` foi sin
 ## Estado Git conhecido
 
 O worktree isolado mantém uma alteração pré-existente em `supabase/functions/mcp/index.ts` e artefatos/documentos não relacionados. Não incluir essa alteração de Supabase nos commits visuais.
+
+## Estado da etapa Reforço — 2026-09-12
+
+- A correção visual está preparada na branch isolada
+  `fix/reinforcement-layout-20260912`: ações locais não expandem para largura
+  total no mobile e o CTA principal mantém alvo acessível.
+- A implementação não muda o contrato de dados nem funde Pontos de atenção
+  com Reforço. O preview de destino ainda precisa sincronizar a branch para a
+  confirmação visual final.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]

@@ -114,3 +114,21 @@ O preview Lovable não estava disponível na sessão; a verificação visual foi
   `1` ID canônico).
 
 Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]]
+
+## Atualização — compactação visual da tela Reforço — 2026-09-12
+
+- Contrato novo de responsividade: ações locais de estudo e remoção declararam
+  largura automática para não herdar `w-full` no mobile; alvo mínimo de toque
+  foi preservado.
+- Revisão independente reproduziu que `w-auto` ainda podia ser esticado pelo
+  `align-items: stretch` do contêiner. O contrato foi fortalecido para exigir
+  `items-start`; a regressão falhou antes e passou após essa correção.
+- TDD: o contrato falhou antes da implementação e passou depois (`5/5`).
+- Suíte completa: `257` arquivos e `1577` testes; TypeScript e ESLint passaram.
+- Vite compilou; prerender, bundle e SEO passaram (`100/100`). O `brain-check`
+  passou com `35` notas, `243` wikilinks e `1` ID canônico.
+- Limitação: o Lovable ainda não está sincronizado com o branch da correção e
+  o preview local sem sessão ficou no splash de boot; confirmação visual no
+  ambiente de destino continua pendente.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
