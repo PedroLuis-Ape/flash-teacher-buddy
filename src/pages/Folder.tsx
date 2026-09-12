@@ -948,7 +948,7 @@ const Folder = () => {
                             : 'md:hover:bg-primary/5 md:hover:border-primary/30'
                         }`}
                       >
-                        <CardContent className="p-3 flex items-center gap-3">
+                        <CardContent className="p-3 flex flex-wrap items-center gap-3">
                           {/* Selection checkbox */}
                           {selectionMode && (
                             <div 
@@ -972,7 +972,7 @@ const Folder = () => {
                             </div>
                           )}
                           
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-[9rem]">
                             <div className="flex items-center gap-2 min-w-0">
                               <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
                               {isFavorite && (
