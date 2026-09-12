@@ -4,19 +4,19 @@ import { buildStudyReturnRoute, buildStudySettingsRoute } from "./lib/studyCompl
 const reinforcementSource = String.raw`/list/${"${area.list_id}"}/games?reinforcement=true`;
 
 describe("QA regressions 2026-09-12", () => {
-  it("returns authenticated study sessions to the dashboard after save and exit", () => {
+  it("keeps completion return routes pointed at the studied resource", () => {
     expect(buildStudyReturnRoute({
       pathname: "/list/list-1/study",
       resolvedId: "list-1",
       isListRoute: true,
       searchParams: new URLSearchParams("mode=flip"),
-    })).toBe("/dashboard");
+    })).toBe("/list/list-1");
 
     expect(buildStudyReturnRoute({
       pathname: "/collection/collection-1/study",
       resolvedId: "collection-1",
       isListRoute: false,
-    })).toBe("/dashboard");
+    })).toBe("/collection/collection-1");
   });
 
   it("keeps portal exits inside the portal", () => {
