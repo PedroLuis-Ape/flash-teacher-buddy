@@ -582,7 +582,8 @@ const Study = () => {
   const redFocusActive = !!gameSettings.redFocus;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
-  const masteryProgressActive = masteryStatus !== null;
+  // Mastery UI (sem setas de navegação) só quando o formato efetivo é mastery_rounds.
+  const masteryProgressActive = effectivePreset.studyFlowMode === "mastery_rounds" && masteryStatus !== null;
   const overallTotalCards = masteryProgressActive ? masteryTotalEligible : totalCards;
   const studyProgressMetrics = resolveStudyProgressMetrics({
     mode: masteryProgressActive ? "mastery" : "continuous",
@@ -1197,7 +1198,8 @@ const Study = () => {
       toast.info(describeSaveProgressResult(result));
     }
     setIsSavingExit(false);
-    navigate(returnRoute, { replace: true });
+    // Sessão privada salva e volta ao /dashboard; rotas públicas/portal preservam returnRoute.
+    navigate(resourceContext.isPublic ? returnRoute : "/dashboard", { replace: true });
   };
 
   const finishAndReturn = async () => {

@@ -437,13 +437,15 @@ export default function FoldersOptimized() {
       <ApeAppBar title="Biblioteca" variant="home" />
       <div className="mx-auto max-w-6xl space-y-4 px-4 pt-4 lg:px-8">
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-start gap-3 p-4 sm:items-center sm:p-5">
-            <RefreshCcw className="h-5 w-5 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Revisão pessoal</p>
-              <p className="line-clamp-2 break-words text-sm font-medium">🔁 Reforço · {reinforcementSnapshot?.items.length ?? 0} cards</p>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-3 sm:p-5">
+            <div className="flex min-w-0 items-start gap-3 sm:flex-1 sm:items-center">
+              <RefreshCcw className="h-5 w-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Revisão pessoal</p>
+                <p className="line-clamp-2 break-words text-sm font-medium">🔁 Reforço · {reinforcementSnapshot?.items.length ?? 0} cards</p>
+              </div>
             </div>
-            <Button variant="outline" className="min-h-11 shrink-0" onClick={() => navigate("/reinforcement")}>
+            <Button variant="outline" className="min-h-11 w-full shrink-0 sm:w-auto" onClick={() => navigate("/reinforcement")}>
               Abrir
             </Button>
           </CardContent>
