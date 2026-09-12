@@ -170,12 +170,15 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   identidade e preço vindos do cliente. Treze RPCs foram endurecidas no commit
   `90fb5144`, com contrato `16/16`, suíte `260` arquivos / `1601` testes,
   typecheck e build aprovados. Ver [[24-SECURITY-AUDIT-2026-09-12]].
-- [PENDING] Permanecem abertos: gate de papel nas Edge Functions
-  `store-admin-*`, RPCs de leitura que ainda usam parâmetro de identidade,
-  ~60 funções sem `REVOKE FROM PUBLIC`, view `public_profiles`, corrida do
-  cache de sessão e limpeza de IndexedDB no logout.
-- [UNKNOWN] Não há prova de aplicação em produção: o conector Supabase alcança
-  somente o projeto gerenciado `xrnfhhoxmmstagmelvyi`, não o runtime de dados
-  `ymahldldyxvwjeruaxpr`.
+- [VERIFIED-DB] Aplicado e verificado no **banco real** (editor SQL da Lovable):
+  17 funções endurecidas, `anon` bloqueado em lixeira, compra, perfil, papéis
+  e busca; versões `*_unsafe_v1` inalcançáveis; `purge_expired_trash` restrito;
+  policy de listagem do bucket `skins` removida.
+- [PENDING] Permanecem: deploy das Edge Functions `store-admin-*`, view
+  `public_profiles`, limpeza de IndexedDB no logout, `useAuthUser`, ~60
+  funções sem `REVOKE FROM PUBLIC` e allowlist do `OAuthConsent`.
+- [FUNCIONAL] `ensure_piteco_profile` não existe no banco de produção, embora
+  `pitecoinBridge` e `economyData` a chamem — os caminhos de economia falham
+  em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]

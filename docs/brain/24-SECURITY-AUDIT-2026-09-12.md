@@ -98,14 +98,49 @@ build aprovados. As versões `*_unsafe_v1` ficam fora da API.
   não têm definição em nenhuma migration — precisam de `pg_get_functiondef`
   para virar migration versionada.
 
-## Limite de verificação
+## Aplicado e verificado no banco real — 2026-09-13
 
-[UNKNOWN] O conector Supabase alcança apenas o projeto gerenciado
-`xrnfhhoxmmstagmelvyi`. O runtime de dados do app é
-`ymahldldyxvwjeruaxpr` (ver [[areas/supabase-runtime]]), que **não** está
-acessível. Portanto: a migration acima está no Git e validada por testes, mas
-**não há prova de que esteja aplicada em produção**, e o advisor não cobre o
-banco que os usuários realmente usam.
+- [VERIFIED-DB] O editor SQL da Lovable conecta ao banco que os usuários usam
+  de verdade: 23 perfis, 43 pastas, 140 listas, 5.995 flashcards e 13 itens de
+  catálogo. Isso fecha a lacuna de verificação da rodada anterior.
+- [VERIFIED-DB] As três migrations de endurecimento foram aplicadas nesse
+  banco. **17 funções** foram renomeadas para `*_unsafe_v1` e reexpostas por
+  wrappers que validam a identidade no servidor.
+- [VERIFIED-DB] Provas de acesso obtidas com `has_function_privilege`: `anon`
+  = `false` para lixeira, compra, perfil, `has_role` e `search_users`;
+  `authenticated` = `true` apenas nas funções legítimas; as versões
+  `*_unsafe_v1` = `false` para `authenticated`; `purge_expired_trash` =
+  `false`; policy `Public can view skins` removida.
+- [VERIFIED-DB] Preço: nenhuma divergência entre `skins_catalog` e
+  `public_catalog` nos 6 itens duplicados, e os 7 itens que só existem em
+  `public_catalog` são resolvidos por fallback — sem isso, mais da metade da
+  loja quebraria.
+- [VERIFIED-DB] `swap_flashcards_sides` existia apenas no banco (drift) e tinha
+  o mesmo bypass de `auth.uid()` nulo; agora está versionada e endurecida.
+
+## Pendências após esta rodada
+
+- [ALTO] As Edge Functions `store-admin-*` já exigem JWT com papel
+  `developer_admin` no código, mas **precisam de deploy** para valer em
+  produção. Publicar pelo caminho oficial (Lovable ou Supabase CLI).
+- [MÉDIO] A view `public.public_profiles` continua expondo UUID de conta para
+  `anon`; trocar por identificador público muda o contrato de descoberta.
+- [MÉDIO] Logout ainda não limpa IndexedDB/outbox (`ape-offline`) — exige
+  política de retenção antes de apagar, para não perder estudo offline.
+- [MÉDIO] `useAuthUser` deriva identidade do `localStorage` com resolvedor de
+  URL diferente do contexto.
+- [MÉDIO] ~60 funções `SECURITY DEFINER` sem `REVOKE FROM PUBLIC`; varredura
+  em bloco é arriscada e exige inventário com `GRANT` caso a caso.
+- [BAIXO] `OAuthConsent` navega para `redirect_url` do servidor sem allowlist.
+- [FUNCIONAL] `ensure_piteco_profile` **não existe** no banco de produção,
+  embora `src/lib/pitecoinBridge.ts` e `src/lib/economyData.ts` a chamem — os
+  caminhos de recompensa e de estado da economia falham em runtime. Investigar
+  como bug funcional separado.
+
+## Limite de verificação remanescente
+
+[UNKNOWN] O projeto gerenciado `xrnfhhoxmmstagmelvyi` (usado pelo advisor) não
+é o mesmo banco do editor SQL da Lovable. O advisor cobre o primeiro; as
+provas acima vêm do segundo, que é o que serve os usuários.
 
 Related: [[08-RISKS]] · [[06-BUGS]] · [[07-TESTS]] · [[areas/supabase-runtime]] · [[01-CURRENT-STATE]]
-
