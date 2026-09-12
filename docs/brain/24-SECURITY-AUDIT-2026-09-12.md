@@ -123,8 +123,9 @@ build aprovados. As versões `*_unsafe_v1` ficam fora da API.
 - [ALTO] As Edge Functions `store-admin-*` já exigem JWT com papel
   `developer_admin` no código, mas **precisam de deploy** para valer em
   produção. Publicar pelo caminho oficial (Lovable ou Supabase CLI).
-- [MÉDIO] A view `public.public_profiles` continua expondo UUID de conta para
-  `anon`; trocar por identificador público muda o contrato de descoberta.
+- [RESOLVIDO] A view `public.public_profiles` **não existe** no banco real — foi
+  removida pela migration `20260529011037`. O achado vinha do estado antigo das
+  migrations e está extinto em produção.
 - [MÉDIO] Logout ainda não limpa IndexedDB/outbox (`ape-offline`) — exige
   política de retenção antes de apagar, para não perder estudo offline.
 - [MÉDIO] `useAuthUser` deriva identidade do `localStorage` com resolvedor de

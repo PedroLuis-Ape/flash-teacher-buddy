@@ -174,9 +174,11 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   17 funções endurecidas, `anon` bloqueado em lixeira, compra, perfil, papéis
   e busca; versões `*_unsafe_v1` inalcançáveis; `purge_expired_trash` restrito;
   policy de listagem do bucket `skins` removida.
-- [PENDING] Permanecem: deploy das Edge Functions `store-admin-*`, view
-  `public_profiles`, limpeza de IndexedDB no logout, `useAuthUser`, ~60
-  funções sem `REVOKE FROM PUBLIC` e allowlist do `OAuthConsent`.
+- [PENDING] Permanecem: deploy das Edge Functions `store-admin-*`, limpeza de
+  IndexedDB no logout e unificação de identidade no `useAuthUser`.
+- [RESOLVIDO] `public_profiles` não existe em produção; o redirect do
+  `OAuthConsent` foi restringido a http(s) no commit `11b98663`; a superfície
+  anon de `SECURITY DEFINER` caiu de 46 para 33 (todas públicas documentadas).
 - [FUNCIONAL] `ensure_piteco_profile` não existe no banco de produção, embora
   `pitecoinBridge` e `economyData` a chamem — os caminhos de economia falham
   em runtime.
