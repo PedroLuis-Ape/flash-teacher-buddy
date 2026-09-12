@@ -10,7 +10,6 @@ related:
   - "[[01-CURRENT-STATE]]"
   - "[[10-CONTEXT-FEEDING-RULE]]"
   - "[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]"
-  - "[[CANONICAL-VAULT]]"
 ---
 
 # Git, checkouts e worktrees do App Piteco
@@ -63,4 +62,3 @@ Para trabalhar em uma tarefa isolada: criar o worktree dentro de
 worktree — sempre auditando antes. Não usar `Temp`.
 
 Related: [[01-CURRENT-STATE]] · [[10-CONTEXT-FEEDING-RULE]] · [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]
-
