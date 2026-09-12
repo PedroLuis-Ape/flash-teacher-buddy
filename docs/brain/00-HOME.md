@@ -26,6 +26,7 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
   conhecimento durável.
 - [[11-ARCHIVE-IMPORT-2026-09-11]] — conteúdo completo importado do ZIP.
 - [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]] — regras para manter o vault conectado.
+- [[23-GIT-E-WORKTREES]] — checkout principal, pasta oficial de worktrees e regra de limpeza segura.
 - [[README]] — declaração do vault canônico, proveniência e fonte de verdade.
 - [[learning/00-LEARNING-HUB]] — aprendizagem por tentativa, evidência e reteste.
 
@@ -50,5 +51,12 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 ## Regra de retomada
 
 Ler primeiro [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
-depois [[01-CURRENT-STATE]] e o checkpoint da sessão. Confirmar o worktree e o
-diff antes de editar. Não declarar publicação pronta sem validação visual real.
+depois [[01-CURRENT-STATE]] e o checkpoint da sessão.
+
+O checkout principal é `C:\Users\pedro\Documents\APP PITECO`, na branch
+`main`. Worktrees de tarefa ficam em
+`C:\Users\pedro\Documents\App-Piteco-Worktrees\`. Nunca usar
+`AppData\Local\Temp` como local permanente.
+
+Ver [[23-GIT-E-WORKTREES]] para a regra completa. Não declarar publicação
+pronta sem validação visual real.

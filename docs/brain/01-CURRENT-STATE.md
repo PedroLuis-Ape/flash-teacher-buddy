@@ -142,3 +142,24 @@ Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RI
   inspeção voltar a responder.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]
+## Limpeza de checkouts e worktrees — 2026-09-12
+
+- [VERIFIED-GIT] 47 worktrees foram auditados e **45 removidos**; 33 estavam
+  vazios (arquivos apagados do disco por limpadores) e 12 não tinham trabalho
+  exclusivo.
+- [VERIFIED-GIT] Nenhum commit ficou só local: a única branch com commits
+  inéditos, `fix/reinforcement-layout-20260912`, foi enviada ao GitHub antes da
+  remoção.
+- [VERIFIED-GIT] O trabalho não commitado de `piteco-contextual` (18
+  arquivos-fonte + 2 novos) foi preservado e movido para
+  `C:\Users\pedro\Documents\App-Piteco-Worktrees\piteco-contextual`.
+- [VERIFIED-GIT] Backups da limpeza ficam em
+  `App-Piteco-Worktrees\_preservado\20260912\`, incluindo o patch de
+  `supabase/functions/mcp/index.ts`.
+- [VERIFIED-GIT] `C:\Users\pedro\Documents\APP PITECO` agora é o checkout
+  principal na branch `main` (`0a06864a`), limpo. As alterações antigas ficaram
+  em `git stash` (`preservado-pre-cleanup-20260912`).
+- [VERIFIED-GIT] `AppData\Local\Temp` ficou sem nenhuma pasta `ape-*`.
+- A regra permanente está em [[23-GIT-E-WORKTREES]].
+
+Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT-FEEDING-RULE]]
