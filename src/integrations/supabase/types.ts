@@ -2901,6 +2901,9 @@ export type Database = {
           study_flow_mode: string | null
           updated_at: string
           user_id: string
+          write_activity_mode: string | null
+          write_correction_mode: string | null
+          write_rewrite_side: string | null
         }
         Insert: {
           card_order?: string | null
@@ -2915,6 +2918,9 @@ export type Database = {
           study_flow_mode?: string | null
           updated_at?: string
           user_id: string
+          write_activity_mode?: string | null
+          write_correction_mode?: string | null
+          write_rewrite_side?: string | null
         }
         Update: {
           card_order?: string | null
@@ -2929,6 +2935,9 @@ export type Database = {
           study_flow_mode?: string | null
           updated_at?: string
           user_id?: string
+          write_activity_mode?: string | null
+          write_correction_mode?: string | null
+          write_rewrite_side?: string | null
         }
         Relationships: [
           {
@@ -3232,6 +3241,9 @@ export type Database = {
           study_flow_mode: string
           updated_at: string
           user_id: string
+          write_activity_mode: string
+          write_correction_mode: string
+          write_rewrite_side: string
         }
         Insert: {
           card_order?: string
@@ -3245,6 +3257,9 @@ export type Database = {
           study_flow_mode?: string
           updated_at?: string
           user_id: string
+          write_activity_mode?: string
+          write_correction_mode?: string
+          write_rewrite_side?: string
         }
         Update: {
           card_order?: string
@@ -3258,6 +3273,9 @@ export type Database = {
           study_flow_mode?: string
           updated_at?: string
           user_id?: string
+          write_activity_mode?: string
+          write_correction_mode?: string
+          write_rewrite_side?: string
         }
         Relationships: []
       }
