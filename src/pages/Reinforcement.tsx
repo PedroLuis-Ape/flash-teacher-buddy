@@ -31,33 +31,34 @@ export default function Reinforcement() {
       <ApeAppBar title="Reforço" variant="home" />
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-5 lg:px-8">
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-start gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <RefreshCcw className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <h1 className="text-lg font-semibold">REVISÃO PESSOAL</h1>
-                <span className="text-sm font-medium text-primary">
-                  {items.length} {items.length === 1 ? "card" : "cards"}
-                </span>
+          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
+            <div className="flex min-w-0 items-start gap-3 sm:flex-1 sm:gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:h-12 sm:w-12">
+                <RefreshCcw className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cards completos que você escolheu praticar novamente
-                {selectedInstitution ? ` em ${selectedInstitution.name}` : ""}.
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Esta coleção é automática e somente leitura. Você pode estudar ou remover itens.
-              </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <h1 className="text-base font-semibold leading-tight sm:text-lg">REVISÃO PESSOAL</h1>
+                  <span className="text-sm font-medium text-primary">
+                    {items.length} {items.length === 1 ? "card" : "cards"}
+                  </span>
+                </div>
+                <p className="mt-1 break-words text-sm text-muted-foreground">
+                  Cards completos que você escolheu praticar novamente
+                  {selectedInstitution ? ` em ${selectedInstitution.name}` : ""}.
+                </p>
+                <p className="mt-2 break-words text-xs text-muted-foreground">
+                  Esta coleção é automática e somente leitura. Você pode estudar ou remover itens.
+                </p>
+              </div>
             </div>
             {area && items.length > 0 && (
               <Button
-                className="min-h-11 shrink-0"
-                onClick={() => navigate(`/list/${area.list_id}/study?reinforcement=true`)}
+                className="min-h-11 w-full sm:w-auto sm:shrink-0"
+                onClick={() => navigate(`/list/${area.list_id}/games?reinforcement=true`)}
               >
                 <Play className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Estudar agora</span>
-                <span className="sm:hidden">Estudar</span>
+                Estudar agora
               </Button>
             )}
           </CardContent>

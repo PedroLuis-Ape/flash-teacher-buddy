@@ -7,7 +7,7 @@
  *
  * Convention:
  *   sideA  = front = term      = lang_a  (e.g. English)
- *   sideB  = back  = translation = lang_b  (e.g. Portuguese)
+ *   sideB  = back  = translation = lang_b (e.g. Portuguese)
  *
  * Direction semantics (v2 – canonical tokens):
  *   "a-b"  → show A first, answer with B
@@ -56,12 +56,6 @@ function hashToBool(seed: string): boolean {
 
 /**
  * Main resolver – single source of truth for all study components.
- *
- * @param sideA  - Object built from `front` / `langA` / `labelA`
- * @param sideB  - Object built from `back`  / `langB` / `labelB`
- * @param direction - "a-b" | "b-a" | "any" (also accepts legacy "en-pt" | "pt-en")
- * @param cardSeed  - A stable per-card string (e.g. flashcardId or front text)
- *                    used only when direction === "any"
  */
 export function resolveStudySides(
   sideA: StudySide,
@@ -87,16 +81,8 @@ export function resolveStudySides(
   };
 }
 
-/**
- * BCP-47 mapping and language labels are now centralised in
- * `./languages.ts`. We re-export the helpers here for backwards-compat
- * with the many call sites that still import from this module.
- */
 import { toBCP47, getLangLabel } from "./languages";
 export { toBCP47, getLangLabel };
-
-// ─── Effective List Settings Resolution ────────────────────────────
-// Single source of truth for resolving a list's language config with folder fallback.
 
 export interface EffectiveListSettings {
   studyType: string;
@@ -116,6 +102,7 @@ interface ListSettingsRow {
   labels_a?: string | null;
   labels_b?: string | null;
   tts_enabled?: boolean | null;
+  system_kind?: string | null;
 }
 
 interface FolderSettingsRow {
@@ -131,13 +118,10 @@ interface FolderSettingsRow {
  * Resolves the effective language settings for a list, falling back to the
  * parent folder when the list has no explicit override.
  *
- * A list is considered to have an explicit override when its `lang_a` or
- * `lang_b` differ from the "bare defaults" (en/pt) AND from the folder
- * values.  When it matches the bare defaults and the folder has a real
- * config, the folder wins — this is the inheritance behaviour.
- *
- * @param list  - The list row (may have null fields)
- * @param folder - The parent folder row (may be null for orphan lists)
+ * System collections (notably Reforço) are materialized lists whose language
+ * metadata belongs to the materialized list itself. They must never inherit a
+ * different folder language configuration, otherwise the visible card text can
+ * be correct while the ENGLISH/PORTUGUÊS headers are inverted.
  */
 export function resolveEffectiveListSettings(
   list: ListSettingsRow | null | undefined,
@@ -145,29 +129,26 @@ export function resolveEffectiveListSettings(
 ): EffectiveListSettings {
   const BARE_DEFAULTS = { lang_a: "en", lang_b: "pt" };
 
-  // Determine if the list explicitly configured its own languages
   const listLangA = list?.lang_a || null;
   const listLangB = list?.lang_b || null;
   const folderLangA = folder?.lang_a || null;
   const folderLangB = folder?.lang_b || null;
+  const isSystemCollection = list?.system_kind === "reinforcement" || list?.system_kind === "attention_points";
 
-  // A list overrides the folder if it has non-null lang values that
-  // differ from both bare defaults AND from the folder values.
-  const listHasExplicitOverride =
+  const listHasExplicitOverride = isSystemCollection || (
     listLangA !== null &&
     listLangB !== null &&
-    !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB);
+    !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB)
+  );
 
-  // If the list matches bare defaults but the folder has a real config,
-  // the folder wins (inheritance).
   const folderHasConfig = !!(folderLangA && folderLangB);
   const listMatchesBareDefaults =
     (listLangA === BARE_DEFAULTS.lang_a || !listLangA) &&
     (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
 
-  const useFolderFallback = !listHasExplicitOverride || (listMatchesBareDefaults && folderHasConfig);
+  const useFolderFallback = !isSystemCollection
+    && (!listHasExplicitOverride || (listMatchesBareDefaults && folderHasConfig));
 
-  // Pick source
   const src: ListSettingsRow = useFolderFallback && folder
     ? {
         study_type: list?.study_type || folder.study_type,
@@ -192,6 +173,6 @@ export function resolveEffectiveListSettings(
     labelsA: src.labels_a || defaultLabelA,
     labelsB: src.labels_b || defaultLabelB,
     ttsEnabled: src.tts_enabled ?? (studyType === "language"),
-    isListOverride: listHasExplicitOverride && !useFolderFallback,
+    isListOverride: isSystemCollection || (listHasExplicitOverride && !useFolderFallback),
   };
 }

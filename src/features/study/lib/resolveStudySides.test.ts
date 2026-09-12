@@ -6,8 +6,6 @@ import {
   normalizeDirection,
 } from "./resolveStudySides";
 
-// ── normalizeDirection ───────────────────────────────────────────────
-
 describe("normalizeDirection", () => {
   it("maps legacy tokens to canonical", () => {
     expect(normalizeDirection("en-pt")).toBe("a-b");
@@ -20,8 +18,6 @@ describe("normalizeDirection", () => {
     expect(normalizeDirection("any")).toBe("any");
   });
 });
-
-// ── resolveStudySides ────────────────────────────────────────────────
 
 describe("resolveStudySides", () => {
   const sideA = { text: "Bonjour", lang: "fr", label: "Français" };
@@ -44,7 +40,7 @@ describe("resolveStudySides", () => {
   it("any direction → deterministic per card", () => {
     const r1 = resolveStudySides(sideA, sideB, "any", "card-1");
     const r2 = resolveStudySides(sideA, sideB, "any", "card-1");
-    expect(r1.isAFirst).toBe(r2.isAFirst); // deterministic
+    expect(r1.isAFirst).toBe(r2.isAFirst);
   });
 
   it("accepts legacy en-pt/pt-en", () => {
@@ -54,8 +50,6 @@ describe("resolveStudySides", () => {
     expect(ptEn.isAFirst).toBe(false);
   });
 });
-
-// ── getLangLabel ──────────────────────────────────────────────────────
 
 describe("getLangLabel", () => {
   it("returns correct labels for known codes", () => {
@@ -71,8 +65,6 @@ describe("getLangLabel", () => {
   });
 });
 
-// ── resolveEffectiveListSettings ─────────────────────────────────────
-
 describe("resolveEffectiveListSettings", () => {
   it("uses list settings when explicitly overridden", () => {
     const list = { lang_a: "fr", lang_b: "en", labels_a: "Français", labels_b: "English" };
@@ -86,7 +78,7 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.isListOverride).toBe(true);
   });
 
-  it("falls back to folder when list has bare defaults (en/pt)", () => {
+  it("falls back to folder when a normal list has bare defaults (en/pt)", () => {
     const list = { lang_a: "en", lang_b: "pt" };
     const folder = { lang_a: "fr", lang_b: "en", labels_a: "Français", labels_b: "English" };
     const result = resolveEffectiveListSettings(list, folder);
@@ -96,6 +88,31 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.labelsA).toBe("Français");
     expect(result.labelsB).toBe("English");
     expect(result.isListOverride).toBe(false);
+  });
+
+  it("never lets a reinforcement list inherit contradictory folder labels", () => {
+    const list = {
+      system_kind: "reinforcement",
+      study_type: "language",
+      lang_a: "en",
+      lang_b: "pt",
+      labels_a: "English",
+      labels_b: "Português",
+    };
+    const folder = {
+      study_type: "language",
+      lang_a: "pt",
+      lang_b: "en",
+      labels_a: "Português",
+      labels_b: "English",
+    };
+    const result = resolveEffectiveListSettings(list, folder);
+
+    expect(result.langA).toBe("en");
+    expect(result.langB).toBe("pt");
+    expect(result.labelsA).toBe("English");
+    expect(result.labelsB).toBe("Português");
+    expect(result.isListOverride).toBe(true);
   });
 
   it("falls back to folder when list has null langs", () => {
@@ -123,8 +140,6 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.labelsB).toBe("Русский");
   });
 
-  // ── Round-trip consistency tests ─────────────────────────────────
-
   describe("round-trip consistency", () => {
     const langPairs = [
       { a: "fr", b: "en" },
@@ -138,17 +153,14 @@ describe("resolveEffectiveListSettings", () => {
         const sideA = { text: `text_${a}`, lang: a, label: getLangLabel(a) };
         const sideB = { text: `text_${b}`, lang: b, label: getLangLabel(b) };
 
-        // a-b (A first)
         const ab = resolveStudySides(sideA, sideB, "a-b");
         expect(ab.promptSide.lang).toBe(a);
         expect(ab.answerSide.lang).toBe(b);
 
-        // b-a (B first)
         const ba = resolveStudySides(sideA, sideB, "b-a");
         expect(ba.promptSide.lang).toBe(b);
         expect(ba.answerSide.lang).toBe(a);
 
-        // Both should reference the SAME texts, just in different order
         expect(ab.promptSide.text).toBe(ba.answerSide.text);
         expect(ab.answerSide.text).toBe(ba.promptSide.text);
       });
