@@ -4,12 +4,12 @@ import { buildStudySnapshotKey, sanitizeStudySnapshot } from "./lib/studySession
 import * as studySessionSnapshotModule from "./lib/studySessionSnapshot";
 
 describe("study return routes", () => {
-  it("returns to a private list directly", () => {
+  it("returns to the dashboard after leaving a private study session", () => {
     expect(buildStudyReturnRoute({
       pathname: "/list/list-1/study",
       resolvedId: "list-1",
       isListRoute: true,
-    })).toBe("/list/list-1");
+    })).toBe("/dashboard");
   });
 
   it("preserves public classroom context", () => {
