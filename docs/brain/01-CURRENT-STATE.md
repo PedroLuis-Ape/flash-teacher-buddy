@@ -184,3 +184,18 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+
+## Extensão oficial de navegador (2026-09-13)
+
+- [VERIFIED-REPO] A extensão existe em desenvolvimento (Manifest V3, notas,
+  captura, painel, TTS en-US) e **não está aprovada nem publicada**.
+- [DECISION] Nenhuma superfície expõe CTA de instalação antes de `published`;
+  a página `/extensao/index.html` virou status honesto e está com `noindex`.
+- [VERIFIED-REPO] Fonte única de verdade em
+  `public/extensao/store-config.json`; o app lê por
+  `browserExtensionIntegration.ts` e o único caminho que libera CTA é
+  `resolveBrowserExtensionCta`.
+- Ponto de integração escolhido para o futuro: aba **Ferramentas** no Perfil.
+- Ver [[areas/browser-extension]] para arquitetura e checklist de ativação.
+
+Related: [[areas/browser-extension]] · [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]]

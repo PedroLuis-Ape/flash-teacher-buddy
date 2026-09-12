@@ -1,4 +1,10 @@
 {
+  "_comment": "Fonte unica de verdade da extensao APE. Nao libere CTA publico sem status=published e URL https da loja oficial.",
+  "platform": "chrome",
+  "status": "pending_review",
   "chrome": "",
-  "edge": ""
+  "edge": "",
+  "version": null,
+  "approvedAt": null,
+  "updatedAt": "2026-09-13"
 }
