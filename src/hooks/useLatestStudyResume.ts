@@ -56,9 +56,6 @@ async function fetchLatestStudyResume(
     if (!error && data) {
       const remoteResume = resumableFromRemoteSession(data as any);
       if (pointer.resourceKind === "list" && !remoteResume) {
-        // The session row exists, but its related list is no longer visible to
-        // this account. Remove only the local pointer; never mutate the remote
-        // session or the list from this read path.
         clearStudyResumePointer(userId);
       } else {
         const progress = remoteResume ?? deriveStudyResumeProgress({
@@ -76,8 +73,6 @@ async function fetchLatestStudyResume(
       }
     }
 
-    // A sessão apontada não existe mais (ou foi concluída): o ponteiro inválido
-    // é removido em vez de abrir uma sessão aleatória.
     if (!error) clearStudyResumePointer(userId);
     else return resumableFromPointer(pointer);
   }
@@ -107,7 +102,11 @@ export function useLatestStudyResume() {
     queryKey: [STUDY_RESUME_QUERY_KEY, userId, institutionId ?? "general"],
     queryFn: () => fetchLatestStudyResume(userId as string, institutionId),
     enabled: !!userId,
-    staleTime: 15_000,
+    // A Home deve refletir imediatamente a última sessão praticada. Uma janela
+    // de staleTime aqui fazia o card "Voltar para onde parou" reaproveitar o
+    // recurso anterior logo após "Salvar e sair".
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
     retry: 1,
   });
