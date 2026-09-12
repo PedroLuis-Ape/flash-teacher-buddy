@@ -98,7 +98,7 @@ export default function Reinforcement() {
                   </div>
                   <Button
                     variant="ghost"
-                    className="min-h-11 min-w-11 shrink-0 text-destructive hover:text-destructive"
+                    className="w-auto min-h-11 min-w-11 shrink-0 text-destructive hover:text-destructive"
                     disabled={mutation.isPending}
                     title="Remover do Reforço"
                     aria-label={`Remover ${item.term} do Reforço`}

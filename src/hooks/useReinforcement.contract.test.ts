@@ -69,4 +69,12 @@ describe("Reforço separation contract", () => {
     expect(home).toContain("onClick={() => navigate('/reinforcement')}");
     expect(home).toContain("navigate('/reinforcement')");
   });
+
+  it("keeps the row remove action compact on narrow screens", () => {
+    // Mesmo contrato do Button base: w-full no mobile precisa ser anulado
+    // por largura intrínseca em ações secundárias icon-only.
+    expect(page).toContain(
+      'className="w-auto min-h-11 min-w-11 shrink-0 text-destructive hover:text-destructive"',
+    );
+  });
 });

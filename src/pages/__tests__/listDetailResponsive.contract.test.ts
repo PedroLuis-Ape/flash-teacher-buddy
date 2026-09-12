@@ -16,4 +16,10 @@ describe("ListDetail responsive visual contract", () => {
     expect(source).toContain("min-h-0 flex-1 overflow-y-auto");
     expect(source).toContain("ape-overlay-scroll");
   });
+
+  it("keeps the overflow action compact on narrow screens", () => {
+    // O Button compartilhado aplica w-full abaixo de sm; sem largura
+    // intrínseca, a ação icon-only ocuparia a linha inteira no mobile.
+    expect(source).toContain('className="w-auto min-h-11 min-w-11 touch-manipulation"');
+  });
 });

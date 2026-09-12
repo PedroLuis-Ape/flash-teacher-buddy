@@ -1119,7 +1119,7 @@ const ListDetail = () => {
                       size="sm"
                       aria-label="Mais ações da lista"
                       title="Mais ações da lista"
-                      className="min-h-11 min-w-11 touch-manipulation"
+                      className="w-auto min-h-11 min-w-11 touch-manipulation"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
