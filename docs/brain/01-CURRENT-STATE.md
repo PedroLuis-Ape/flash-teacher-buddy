@@ -132,3 +132,13 @@ não como limite desta nova solicitação.
   252 px e nenhum overflow horizontal.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]
+
+## Legibilidade mobile — 2026-09-12
+
+- [VERIFIED-RUNTIME] Correção `3a836650` integrada ao `main`: nomes de lista e
+  de turma deixam de ser cortados em telas estreitas. Ver [[06-BUGS]] e
+  [[07-TESTS]].
+- [PENDING] Confirmar esta revisão no preview autenticado quando o canal de
+  inspeção voltar a responder.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]

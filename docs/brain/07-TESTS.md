@@ -149,3 +149,16 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
   Em modo desktop as ações permaneceram `48x44 px`.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
+## Fechamento — legibilidade de títulos no mobile — 2026-09-12
+
+- Contrato focado: `2/2`.
+- Suíte completa: `259` arquivos e `1585` testes passando.
+- `tsc --noEmit`: exit `0`; `vite build`: concluído.
+- Medição no CSS compilado: o título ia de `78px` truncado para `139px`
+  completos em container de `346px`; a linha cresce de `68px` para `115px`
+  porque as ações descem para a segunda linha em telas estreitas.
+- Integração: commit `3a836650` em `origin/main`.
+- [PENDING] Preview autenticado desta segunda correção não conferido: o iframe
+  parou de aceitar inspeção após o refresh.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]

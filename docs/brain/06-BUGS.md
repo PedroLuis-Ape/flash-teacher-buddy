@@ -60,3 +60,23 @@ Nenhum bug de dados foi comprovado por esta auditoria visual. Problemas de persi
   overflow horizontal. Em modo desktop as ações permaneceram 48x44 px.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]] · [[areas/adaptive-learning]]
+## P2 — nomes de lista e de turma ilegíveis no mobile — corrigido em 2026-09-12
+
+- [ROOT-CAUSE] Na pasta, o cluster de ações usa o `Button` compartilhado, que
+  impõe `min-w-[44px]`. Quatro ações somam ~188 px numa linha de 344 px e o
+  título recebia só 76 px, sem possibilidade de quebra.
+- [ROOT-CAUSE] Na Home, a grade de turmas tem duas colunas em 393 px e o nome
+  usava `truncate`: ~98 px de espaço para nomes de até 185 px.
+- [FIX] `src/pages/Folder.tsx` passou a usar `flex-wrap` na linha e
+  `min-w-[9rem]` no título, então as ações descem para a segunda linha em
+  telas estreitas. `src/components/TurmaShortcut.tsx` passou a usar
+  `line-clamp-2 break-words` no nome.
+- [VERIFIED-RUNTIME] Medição com o CSS compilado, container de 346 px: o nome
+  ia de `78px` (precisava de 139) para `139px` sem corte; a linha cresce de
+  `68px` para `115px` porque as ações quebram.
+- [REGRESSION-CONTRACT] `src/pages/__tests__/mobileTitleLegibility.contract.test.ts`.
+- [INTEGRADO] Commit `3a836650` em `origin/main`.
+- [PENDING] A conferência no preview autenticado desta segunda correção não
+  foi concluída: o iframe do preview parou de aceitar inspeção após o refresh.
+
+Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]] · [[areas/adaptive-learning]]
