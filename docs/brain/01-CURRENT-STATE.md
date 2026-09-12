@@ -163,3 +163,19 @@ Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RI
 - A regra permanente está em [[23-GIT-E-WORKTREES]].
 
 Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT-FEEDING-RULE]]
+
+## Auditoria de segurança — 2026-09-12
+
+- [VERIFIED-REPO] A causa-raiz estrutural era `SECURITY DEFINER` confiando em
+  identidade e preço vindos do cliente. Treze RPCs foram endurecidas no commit
+  `90fb5144`, com contrato `16/16`, suíte `260` arquivos / `1601` testes,
+  typecheck e build aprovados. Ver [[24-SECURITY-AUDIT-2026-09-12]].
+- [PENDING] Permanecem abertos: gate de papel nas Edge Functions
+  `store-admin-*`, RPCs de leitura que ainda usam parâmetro de identidade,
+  ~60 funções sem `REVOKE FROM PUBLIC`, view `public_profiles`, corrida do
+  cache de sessão e limpeza de IndexedDB no logout.
+- [UNKNOWN] Não há prova de aplicação em produção: o conector Supabase alcança
+  somente o projeto gerenciado `xrnfhhoxmmstagmelvyi`, não o runtime de dados
+  `ymahldldyxvwjeruaxpr`.
+
+Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
