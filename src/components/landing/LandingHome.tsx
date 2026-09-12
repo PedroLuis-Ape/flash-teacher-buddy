@@ -1,12 +1,21 @@
 import { ArrowRight, BookOpen, GraduationCap, Layers3 } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { editorialMeta, getEditorialRouteLabel, type EditorialPageDefinition } from "@/content/public/editorialMaster";
+import { FeaturedPublicResource } from "@/features/public-home/FeaturedPublicResource";
+import { MarketingCarousel } from "@/features/public-home/MarketingCarousel";
+import { useFeaturedPublicResource } from "@/features/public-home/useFeaturedPublicResource";
 import "@/styles/landing-home.css";
+import "@/styles/landing-featured.css";
 
 export function LandingHome({ page }: { page: EditorialPageDefinition }) {
   const [steps, student, teacher, author, methodology] = page.sections;
   const demo = page.landingDemo;
+  const { t } = useTranslation();
+  const { data: featured } = useFeaturedPublicResource();
+  const primaryHref = featured?.play_path ?? "/portal";
   return (
     <div className="landing-home">
       <section className="landing-hero landing-container">
@@ -18,12 +27,18 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
           </h1>
           <p className="landing-lead">{page.intro[0]}</p>
           <div className="landing-actions">
-            <AuthAwareCTA guestMode="signup" size="lg" className="landing-primary">
-              {page.cta.primary}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
-            </AuthAwareCTA>
-            <Link to="/portal" className="landing-text-link">{page.cta.secondary}<ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
+            <Link to={primaryHref} className="landing-primary" data-cta="primary-play">
+              <Gamepad2 aria-hidden="true" className="mr-2 h-4 w-4" />
+              {t("publicLanding.playNow")}
+            </Link>
+            <Link to="/portal" className="landing-text-link" data-cta="secondary-explore">
+              {t("publicLanding.exploreMaterials")}<ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+            <Link to="/para-professores" className="landing-text-link" data-cta="tertiary-teacher">
+              {t("publicLanding.forTeachers")}
+            </Link>
           </div>
-          <p className="landing-note">Explore os materiais públicos antes de criar sua conta.</p>
+          <p className="landing-note">{t("publicLanding.localProgressNote")}</p>
         </div>
         {demo && (
           <div className="landing-demo-wrap">
@@ -42,6 +57,8 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
         )}
       </section>
 
+      <FeaturedPublicResource />
+
       <section className="landing-steps-band">
         <div className="landing-container landing-section">
           <p className="landing-eyebrow">Como funciona</p>
@@ -54,6 +71,8 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
           </ol>
         </div>
       </section>
+
+      <MarketingCarousel />
 
       <div className="landing-container">
         <div className="landing-audiences landing-section">

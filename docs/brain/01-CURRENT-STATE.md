@@ -184,3 +184,21 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+
+## Programa de ativação pública — ciclo 1 (2026-09-13)
+
+- [VERIFIED-REPO] Home pública agora exibe atividade real em destaque vinda do
+  banco (`app_config.featured_public_resource` +
+  `get_featured_public_resource_v1`), com CTA "Jogar agora — sem cadastro",
+  carrossel de 4 screenshots reais e i18n nas 5 locales.
+- [VERIFIED-RUNTIME] QA em browser: sem overflow em 320/360/375/390/430;
+  visitante percorre catálogo → pasta → hub → estudo e o card renderiza.
+- [FIX P0] Rotas públicas de estudo não montavam `InstitutionProvider` e
+  quebravam para qualquer visitante; corrigido com contrato de regressão.
+- [PENDING P0] `/portal/list/:id` continua indisponível em produção: as RPCs
+  `get_public_learning_list*` existem no repositório e não no banco.
+- Gates do ciclo: typecheck 0 · 262 arquivos / 1613 testes · lint 0 erros ·
+  build completo OK · SEO 100/100 · preview smoke PASS.
+- Ver [[25-PUBLIC-ACTIVATION-PROGRAM]].
+
+Related: [[25-PUBLIC-ACTIVATION-PROGRAM]] · [[07-TESTS]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]]
