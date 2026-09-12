@@ -144,3 +144,28 @@ build aprovados. As versões `*_unsafe_v1` ficam fora da API.
 provas acima vêm do segundo, que é o que serve os usuários.
 
 Related: [[08-RISKS]] · [[06-BUGS]] · [[07-TESTS]] · [[areas/supabase-runtime]] · [[01-CURRENT-STATE]]
+
+## Superfície anônima e divergência funcional — 2026-09-13
+
+- [VERIFIED-DB] O banco real expunha **46 funções `SECURITY DEFINER` a `anon`**,
+  incluindo operações de escrita: `set_flashcard_group_favorite`,
+  `merge_flashcard_into_group`, `unmerge_flashcard_from_group`,
+  `publish_skin_to_store`, `create_class_folder_with_assignment`,
+  `create_notification` e `reorder_public_turmas`.
+- [FIX] `PUBLIC`/`anon` revogados dessas funções internas, devolvendo acesso a
+  `authenticated` e `service_role`. `anon` caiu para **33**, todas públicas
+  documentadas ou helpers de policy (`is_*`, `can_*`, `get_public_*`).
+  Migration `20260913003000_revoke_anon_internal_functions_v1.sql`, commit
+  `45318448`.
+- [VERIFIED-DB] **Achado funcional P0:** `ensure_piteco_profile` (4 overloads)
+  **não existe em produção**, mas o app a chama em `src/lib/pitecoinBridge.ts`
+  e `src/lib/economyData.ts`.
+- [VERIFIED-DB] Ela existe no projeto gerenciado `xrnfhhoxmmstagmelvyi`, porém
+  **não pode ser simplesmente copiada**: o schema de produção é outro —
+  `study_sessions` tem 12 colunas e nenhuma de recompensa, não existe
+  `study_session_answers`, e `daily_activity` não tem as colunas de recompensa.
+  O pipeline de sessão → respostas → recompensa do projeto gerenciado não existe
+  no banco que serve os usuários. Efeito visível: PTS/PiteCOIN não evoluem.
+- [DECISION-PENDING] Resolver exige escolha de produto: migrar o schema de
+  recompensas para produção (com dados reais de 23 contas e 16 saldos) ou
+  adaptar o app para operar sem esse pipeline. Não executar sem essa definição.
