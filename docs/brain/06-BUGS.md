@@ -130,3 +130,25 @@ mais backup e rollback escritos no arquivo. Coberto por contrato em
 `src/lib/__tests__/publicLearningListRuntime.contract.test.ts` (5 asserções). A regra foi validada em
 produção por leitura: retorna a lista com 33 cards, pasta e autor. **Nada foi aplicado no banco** —
 aguarda decisão do Pedro.
+## Bug visual sistêmico — camada derivada de tokens removida (2026-09-13)
+
+[ROOT CAUSE] O refactor de identidade (0b711050) removeu de space-layouts.css a camada DERIVADA
+--ape-* (surface, button, page, soft, muted, nav, banner, shadow), mas ~40 regras de space-ui-*.css
+continuaram usando var(--ape-*). Custom property inexistente invalida a declaração inteira: background
+vira transparente e box-shadow some. Efeito: botões primários invisíveis (o caso Sabia ao lado de
+Não Sabia), cards sem superfície, áreas quebradas. Confirmado no runtime: --ape-* vazios em html,
+body e .space-ui.
+
+[FIX] space-ui-v1.css passou a DERIVAR a camada dos tokens canônicos em html[data-palette]{...}
+(surface=hsl(var(--card)), button=gradiente de hsl(var(--primary)), nav-text=muted-foreground), valendo
+para as 4 paletas sem duplicar cor. Segunda correção: semânticos por base (html[data-palette].light/.dark)
+porque :root trazia pares reprovados em AA (destructive+branco 3.82:1; warning+branco 2.14:1).
+
+[GUARD] src/lib/__tests__/apeTokensDefined.contract.test.ts falha se qualquer var(--ape-*) do CSS ficar
+sem definição — exatamente a regressão que causou o bug.
+
+[LIÇÃO] var() inexistente não gera erro: apenas apaga a propriedade. Ao refatorar tokens, mover as
+camadas derivadas junto e cobrir com teste de definição.
+
+[VERIFIED] Após o fix: card rgb(23,26,33), primário teal ~11:1, destructive 5.42:1, light destructive
+5.4:1, light success 5.8:1, build com SEO 100/100.
