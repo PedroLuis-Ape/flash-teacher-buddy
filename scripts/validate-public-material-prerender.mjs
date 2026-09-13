@@ -166,6 +166,21 @@ assert.ok(
   "sem autor no payload nao pode existir referencia de autoria",
 );
 
+// 5d. O rotulo de interface do RPC nao pode contar como autoria.
+const placeholderMaterial = buildMaterialJsonLd({
+  ...materialFixture,
+  list: { ...materialFixture.list, author_name: "Professor no APE", author_slug: null },
+});
+const placeholderTypes = placeholderMaterial["@graph"].map((node) => node["@type"]);
+assert.ok(
+  !placeholderTypes.includes("Person"),
+  "o rotulo de interface nao pode virar Person no JSON-LD",
+);
+assert.ok(
+  !("author" in placeholderMaterial["@graph"].find((node) => node["@type"] === "LearningResource")),
+  "o rotulo de interface nao pode virar referencia de autoria",
+);
+
 // 5b. A injecao do JSON-LD precisa acontecer no HTML final do material.
 const injectedHtml = injectMaterialStructuredData(
   "<html><head><title>x</title></head><body><div id=\"root\"></div></body></html>",

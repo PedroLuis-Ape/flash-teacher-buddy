@@ -185,13 +185,13 @@ export default function PublicLearningListPage() {
           <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold text-muted-foreground">
             <span className="inline-flex items-center gap-2"><Layers3 className="h-4 w-4" />{Number(list.card_count ?? 0)} cards</span>
             <span>{languageLabel(list.lang_a)} + {languageLabel(list.lang_b)}</span>
-            {list.author_slug ? (
+            {list.author_display_name && list.author_slug ? (
               <Link to={`/portal/professor/${list.author_slug}`} className="inline-flex items-center gap-2 hover:text-primary">
                 <UserRound className="h-4 w-4" />{list.author_display_name}
               </Link>
-            ) : (
+            ) : list.author_display_name ? (
               <span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4" />{list.author_display_name}</span>
-            )}
+            ) : null}
           </div>
         </header>
 
