@@ -123,3 +123,10 @@ segundo sistema de publicação convivendo com a regra vigente.
 
 [VERIFIED-DB] Todas as colunas que a regra exige existem em produção e o único professor público cumpre
 os requisitos, então a opção (a) é executável.
+[PREPARADO — não aplicado] `supabase/migrations/20260913230000_public_learning_list_runtime_v1.sql`
+cria as 3 funções reutilizando a regra pública vigente (corpos extraídos da migration original por
+script, sem redigitar), com `search_path` fixo, `revoke` de PUBLIC e `grant` para `anon, authenticated`,
+mais backup e rollback escritos no arquivo. Coberto por contrato em
+`src/lib/__tests__/publicLearningListRuntime.contract.test.ts` (5 asserções). A regra foi validada em
+produção por leitura: retorna a lista com 33 cards, pasta e autor. **Nada foi aplicado no banco** —
+aguarda decisão do Pedro.
