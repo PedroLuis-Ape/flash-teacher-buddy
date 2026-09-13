@@ -15,6 +15,7 @@ export interface DeckOrientationEvidence {
   invertedCards: number;
   inversionRatio: number;
   minimumClassifiedCards: number;
+  minimumInvertedCards: number;
   requiredInversionRatio: number;
   samples: Array<{
     term: LanguageScore;
@@ -32,6 +33,7 @@ export interface DeckOrientation {
 
 export const MINIMUM_CLASSIFIED_CARDS = 8;
 export const REQUIRED_INVERSION_RATIO = 0.8;
+export const MINIMUM_INVERTED_CARDS = 8;
 
 /**
  * Resolve the effective languages for a deck without mutating cards or
@@ -52,7 +54,11 @@ export function resolveDeckOrientation({
   for (const card of cards) {
     const term = classifyLanguageText(card.term);
     const translation = classifyLanguageText(card.translation);
-    if (!term || !translation || term.confidence !== "high" || translation.confidence !== "high") continue;
+    // O classificador devolve null para texto ambíguo/curto ("No.", "OK.",
+    // "Hotel.", "Pizza."). Esses cards simplesmente não votam. Exigir
+    // confiança `high` POR CARD matava o sinal em frases reais e curtas
+    // ("Eu sou o Pedro"), então a decisão é agregada: muitos votos concordando.
+    if (!term || !translation) continue;
 
     samples.push({
       term,
@@ -65,6 +71,7 @@ export function resolveDeckOrientation({
   const inversionRatio = samples.length > 0 ? invertedCards / samples.length : 0;
   const inverted = languageCodesMatch(langA, langB) === false
     && samples.length >= MINIMUM_CLASSIFIED_CARDS
+    && invertedCards >= MINIMUM_INVERTED_CARDS
     && inversionRatio >= REQUIRED_INVERSION_RATIO;
 
   return {
@@ -77,6 +84,7 @@ export function resolveDeckOrientation({
       invertedCards,
       inversionRatio,
       minimumClassifiedCards: MINIMUM_CLASSIFIED_CARDS,
+      minimumInvertedCards: MINIMUM_INVERTED_CARDS,
       requiredInversionRatio: REQUIRED_INVERSION_RATIO,
       samples: samples.slice(0, 12),
     },
