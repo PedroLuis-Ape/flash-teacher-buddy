@@ -91,6 +91,8 @@ export function buildLearningResourceJsonLd(resource) {
   const authorProfile = resource.author_slug
     ? absolute(`/portal/professor/${resource.author_slug}`)
     : null;
+  // Sem autor no payload nao existe no HTML visivel: nao inventamos Person.
+  const hasAuthor = Boolean(resource.author_display_name || resource.author_slug);
   const authorId = authorProfile ? `${authorProfile}#person` : `${canonical}#author`;
   const lists = resource.lists ?? [];
   const languages = Array.from(new Set([resource.lang_a || "en", resource.lang_b || "pt"]));
@@ -125,12 +127,12 @@ export function buildLearningResourceJsonLd(resource) {
         isAccessibleForFree: true,
         ...(resource.created_at ? { dateCreated: resource.created_at } : {}),
         ...(resource.updated_at ? { dateModified: resource.updated_at } : {}),
-        author: { "@id": authorId },
+        ...(hasAuthor ? { author: { "@id": authorId } } : {}),
         provider: { "@id": `${SITE_URL}/#organization` },
         mainEntityOfPage: { "@id": pageId },
         ...(lists.length ? { hasPart: lists.map((list) => ({ "@id": `${canonical}#list-${list.id}` })) } : {}),
       },
-      {
+      ...(hasAuthor ? [{
         "@type": "Person",
         "@id": authorId,
         name: resource.author_display_name || "Professor no APE",
@@ -138,7 +140,7 @@ export function buildLearningResourceJsonLd(resource) {
         ...(authorProfile ? { url: authorProfile } : {}),
         ...(resource.author_avatar_url ? { image: resource.author_avatar_url } : {}),
         memberOf: { "@id": `${SITE_URL}/#organization` },
-      },
+      }] : []),
       ...(lists.length ? [{
         "@type": "ItemList",
         "@id": contentsId,

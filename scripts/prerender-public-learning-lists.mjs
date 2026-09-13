@@ -57,6 +57,8 @@ export function buildPublicLearningListJsonLd(list) {
   const canonical = absolute(publicLearningListPath(list.id));
   const folderUrl = absolute(`/portal/folder/${list.folder_id}`);
   const authorUrl = list.author_slug ? absolute(`/portal/professor/${list.author_slug}`) : null;
+  // Sem autor no payload nao existe no HTML visivel: nao inventamos Person.
+  const hasAuthor = Boolean(list.author_display_name || list.author_slug);
   const pageId = `${canonical}#page`;
   const resourceId = `${canonical}#learning-resource`;
   const authorId = authorUrl ? `${authorUrl}#person` : `${canonical}#author`;
@@ -89,7 +91,7 @@ export function buildPublicLearningListJsonLd(list) {
         learningResourceType: list.study_type === "language" ? ["Flashcards", "Language learning list"] : ["Flashcards", "Study list"],
         educationalUse: ["Practice", "Active recall", "Self study"],
         isAccessibleForFree: true,
-        author: { "@id": authorId },
+        ...(hasAuthor ? { author: { "@id": authorId } } : {}),
         provider: { "@id": `${SITE_URL}/#organization` },
         isPartOf: { "@type": "LearningResource", "@id": `${folderUrl}#learning-resource`, url: folderUrl, name: list.folder_title || "Material público" },
         mainEntityOfPage: { "@id": pageId },
@@ -97,7 +99,7 @@ export function buildPublicLearningListJsonLd(list) {
         ...(list.updated_at ? { dateModified: list.updated_at } : {}),
         ...(cards.length ? { hasPart: { "@id": previewId } } : {}),
       },
-      {
+      ...(hasAuthor ? [{
         "@type": "Person",
         "@id": authorId,
         name: list.author_display_name || "Professor no APE",
@@ -105,7 +107,7 @@ export function buildPublicLearningListJsonLd(list) {
         ...(authorUrl ? { url: authorUrl } : {}),
         ...(list.author_avatar_url ? { image: list.author_avatar_url } : {}),
         memberOf: { "@id": `${SITE_URL}/#organization` },
-      },
+      }] : []),
       ...(cards.length ? [{
         "@type": "ItemList",
         "@id": previewId,

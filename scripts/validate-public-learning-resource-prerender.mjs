@@ -16,9 +16,10 @@ const sourceTemplatePath = resolve(root, "index.html");
 const sitemapPath = resolve(distDir, "sitemap-folders.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 
-for (const path of [reportPath, sourceTemplatePath, sitemapPath, redirectsPath]) {
-  assert.ok(existsSync(path), `Arquivo obrigatório ausente: ${path}`);
-}
+assert.ok(existsSync(sourceTemplatePath), `Arquivo obrigatório ausente: ${sourceTemplatePath}`);
+// O build roda este validador depois do prerender; fora do build (ex.: teste
+// unitário do contrato JSON-LD) os artefatos de dist podem não existir ainda.
+const hasBuildArtifacts = existsSync(reportPath) && existsSync(sitemapPath) && existsSync(redirectsPath);
 
 const sample = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -78,6 +79,41 @@ assert.deepEqual(graph[1].inLanguage, ["en", "pt"]);
 assert.equal(graph[2]["@type"], "Person");
 assert.ok(graph.some((node) => node["@type"] === "ItemList"));
 
+// 5b. Com autor no payload, o Person emitido é o alvo da referência author.
+const sampleResource = graph.find((node) => node["@type"] === "LearningResource");
+const sampleAuthor = graph.find((node) => node["@type"] === "Person");
+assert.ok(sampleAuthor, "com autor no payload o nó Person precisa existir");
+assert.equal(
+  sampleResource.author["@id"],
+  sampleAuthor["@id"],
+  "a referência author precisa apontar para o Person emitido",
+);
+
+// 5c. Sem autor no payload nao pode existir Person nem referencia de autoria.
+const anonymousSample = {
+  ...sample,
+  author_display_name: null,
+  author_slug: null,
+  author_avatar_url: null,
+};
+const anonymousGraph = buildLearningResourceJsonLd(anonymousSample)["@graph"];
+assert.ok(
+  !anonymousGraph.some((node) => node["@type"] === "Person"),
+  "JSON-LD nao pode inventar autor no material publico",
+);
+const anonymousResource = anonymousGraph.find((node) => node["@type"] === "LearningResource");
+assert.ok(
+  !("author" in anonymousResource),
+  "sem autor no payload nao pode existir referencia de autoria pendurada",
+);
+for (const serialized of [
+  JSON.stringify(buildLearningResourceJsonLd(sample)),
+  JSON.stringify(buildLearningResourceJsonLd(anonymousSample)),
+]) {
+  assert.ok(!serialized.includes(":null"), "JSON-LD de material publico nao pode conter null");
+  assert.ok(!serialized.includes("undefined"), "JSON-LD de material publico nao pode conter undefined");
+}
+
 const baseSitemap = '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.apeeducation.org/portal</loc></url></urlset>\n';
 const sitemapWithResource = appendLearningResourceUrlsToSitemap(baseSitemap, [sample], "2026-07-13");
 assert.ok(sitemapWithResource.includes(`<loc>${sampleUrl}</loc>`));
@@ -90,24 +126,28 @@ const redirectsWithResource = injectLearningResourceRedirects(baseRedirects, [sa
 assert.ok(redirectsWithResource.includes(`${samplePath}/index.html`));
 assert.ok(redirectsWithResource.indexOf(samplePath) < redirectsWithResource.indexOf("/*"));
 
-const report = JSON.parse(readFileSync(reportPath, "utf8"));
-assert.equal(typeof report.generatedAt, "string");
-assert.equal(typeof report.runtimeSource, "string");
-assert.equal(typeof report.discoveryMode, "string");
-assert.equal(typeof report.resourceCount, "number");
-assert.ok(Array.isArray(report.generatedPaths));
-assert.equal(report.resourceCount, report.generatedPaths.length);
+let validatedResourceCount = null;
+if (hasBuildArtifacts) {
+  const report = JSON.parse(readFileSync(reportPath, "utf8"));
+  assert.equal(typeof report.generatedAt, "string");
+  assert.equal(typeof report.runtimeSource, "string");
+  assert.equal(typeof report.discoveryMode, "string");
+  assert.equal(typeof report.resourceCount, "number");
+  assert.ok(Array.isArray(report.generatedPaths));
+  assert.equal(report.resourceCount, report.generatedPaths.length);
 
-const deployedSitemap = readFileSync(sitemapPath, "utf8");
-const deployedRedirects = readFileSync(redirectsPath, "utf8");
-for (const generatedPath of report.generatedPaths) {
-  const htmlPath = resolve(distDir, generatedPath.slice(1), "index.html");
-  assert.ok(existsSync(htmlPath), `HTML dinâmico ausente: ${generatedPath}`);
-  const html = readFileSync(htmlPath, "utf8");
-  assert.ok(html.includes('data-public-learning-resource="'), `${generatedPath}: marcador de recurso ausente.`);
-  assert.ok(html.includes('"@type":"LearningResource"'), `${generatedPath}: LearningResource ausente.`);
-  assert.ok(deployedSitemap.includes(`<loc>https://www.apeeducation.org${generatedPath}</loc>`), `${generatedPath}: sitemap ausente.`);
-  assert.ok(deployedRedirects.includes(`${generatedPath}/index.html`), `${generatedPath}: redirect pré-renderizado ausente.`);
+  const deployedSitemap = readFileSync(sitemapPath, "utf8");
+  const deployedRedirects = readFileSync(redirectsPath, "utf8");
+  for (const generatedPath of report.generatedPaths) {
+    const htmlPath = resolve(distDir, generatedPath.slice(1), "index.html");
+    assert.ok(existsSync(htmlPath), `HTML dinâmico ausente: ${generatedPath}`);
+    const html = readFileSync(htmlPath, "utf8");
+    assert.ok(html.includes('data-public-learning-resource="'), `${generatedPath}: marcador de recurso ausente.`);
+    assert.ok(html.includes('"@type":"LearningResource"'), `${generatedPath}: LearningResource ausente.`);
+    assert.ok(deployedSitemap.includes(`<loc>https://www.apeeducation.org${generatedPath}</loc>`), `${generatedPath}: sitemap ausente.`);
+    assert.ok(deployedRedirects.includes(`${generatedPath}/index.html`), `${generatedPath}: redirect pré-renderizado ausente.`);
+  }
+  validatedResourceCount = report.resourceCount;
 }
 
 const discoveryMigration = readFileSync(
@@ -140,4 +180,10 @@ assert.equal((canonicalCountsMigration.match(/fc\.parent_card_id IS NULL/g) ?? [
 assert.ok(canonicalCountsMigration.includes("list_public_learning_resource_entries"));
 assert.ok(canonicalCountsMigration.includes("get_public_learning_resource_lists"));
 
-console.log(`Materiais públicos validados: ${report.resourceCount} recursos reais e contrato sintético completo.`);
+console.log("AUTORIA-GATE com-autor OK: Person e referência author presentes.");
+console.log("AUTORIA-GATE sem-autor OK: nenhum Person e nenhuma referência author.");
+console.log(
+  validatedResourceCount === null
+    ? "Materiais públicos validados: contrato sintético completo (sem artefatos de dist)."
+    : `Materiais públicos validados: ${validatedResourceCount} recursos reais e contrato sintético completo.`,
+);

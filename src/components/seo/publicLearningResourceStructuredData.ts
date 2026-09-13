@@ -43,6 +43,8 @@ export function buildPublicLearningResourceStructuredData(
   const authorProfile = resource.author_slug
     ? `${SITE_URL}/portal/professor/${resource.author_slug}`
     : null;
+  // Sem autor no payload nao existe no HTML visivel: nao inventamos Person.
+  const hasAuthor = Boolean(resource.author_display_name || resource.author_slug);
   const authorId = authorProfile ? `${authorProfile}#person` : `${canonical}#author`;
   const languages = Array.from(new Set([
     languageTag(resource.lang_a, "en"),
@@ -79,20 +81,22 @@ export function buildPublicLearningResourceStructuredData(
         isAccessibleForFree: true,
         ...(resource.created_at ? { dateCreated: resource.created_at } : {}),
         ...(resource.updated_at ? { dateModified: resource.updated_at } : {}),
-        author: { "@id": authorId },
+        ...(hasAuthor ? { author: { "@id": authorId } } : {}),
         provider: { "@id": `${SITE_URL}/#organization` },
         mainEntityOfPage: { "@id": pageId },
         ...(lists.length > 0 ? { hasPart: lists.map((list) => ({ "@id": `${canonical}#list-${list.id}` })) } : {}),
       },
-      {
-        "@type": "Person",
-        "@id": authorId,
-        name: resource.author_display_name || "Professor no APE",
-        jobTitle: "Professor",
-        ...(authorProfile ? { url: authorProfile } : {}),
-        ...(resource.author_avatar_url ? { image: resource.author_avatar_url } : {}),
-        memberOf: { "@id": `${SITE_URL}/#organization` },
-      },
+      hasAuthor
+        ? {
+            "@type": "Person",
+            "@id": authorId,
+            name: resource.author_display_name || "Professor no APE",
+            jobTitle: "Professor",
+            ...(authorProfile ? { url: authorProfile } : {}),
+            ...(resource.author_avatar_url ? { image: resource.author_avatar_url } : {}),
+            memberOf: { "@id": `${SITE_URL}/#organization` },
+          }
+        : null,
       ...(lists.length > 0
         ? [{
             "@type": "ItemList",
