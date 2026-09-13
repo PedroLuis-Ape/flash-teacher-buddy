@@ -5,6 +5,8 @@ import { publicCatalogPath, MATERIAL_LOCALES, localeUrlSegment } from "./public-
 import {
   DEFAULT_ROBOTS,
   applyHead,
+  buildMaterialJsonLd,
+  injectMaterialStructuredData,
   renderCatalogStaticContent,
 } from "./prerender-public-materials.mjs";
 
@@ -95,4 +97,96 @@ if (existsSync(sitemapPath)) {
   console.log("sitemap-materials.xml ausente: validando apenas as funcoes puras.");
 }
 
-console.log("OK catalogo publico: canonical unico, robots autoritativo, H1 e sitemap sem filtros.");
+// 5. JSON-LD do material: fiel ao payload e sem valores inventados.
+const materialFixture = {
+  locale: "pt-BR",
+  slug: "exemplo-a1",
+  canonical_path: "/pt-br/material/exemplo-a1",
+  play_path: "/portal/list/11111111-1111-4111-8111-111111111111/games",
+  editorial: {
+    level: "A1",
+    theme: "verbo to be",
+    resource_type: "frases",
+    summary: "Resumo real do material.",
+    reviewed_at: "2026-09-01T12:00:00.000Z",
+  },
+  list: {
+    id: "22222222-2222-4222-8222-222222222222",
+    title: "Exemplo A1",
+    folder_title: "Pasta publica",
+    lang_a: "en",
+    lang_b: "pt",
+    card_count: 12,
+    author_name: "Professora Ana",
+    author_slug: "ana-silva",
+  },
+};
+const materialJsonLd = buildMaterialJsonLd(materialFixture);
+const jsonLdTypes = materialJsonLd["@graph"].map((node) => node["@type"]);
+assert.ok(jsonLdTypes.includes("LearningResource"), "LearningResource ausente no JSON-LD do material");
+assert.ok(jsonLdTypes.includes("BreadcrumbList"), "BreadcrumbList ausente no JSON-LD do material");
+const materialResource = materialJsonLd["@graph"].find((node) => node["@type"] === "LearningResource");
+assert.equal(materialResource.url, "https://www.apeeducation.org/pt-br/material/exemplo-a1");
+assert.equal(materialResource.educationalLevel, "A1");
+assert.equal(materialResource.learningResourceType, "frases");
+assert.equal(materialResource.numberOfItems, 12);
+assert.equal(materialResource.isAccessibleForFree, true);
+assert.deepEqual(materialResource.inLanguage, ["en", "pt"]);
+
+const materialBreadcrumb = materialJsonLd["@graph"].find((node) => node["@type"] === "BreadcrumbList");
+assert.deepEqual(
+  materialBreadcrumb.itemListElement.map((item) => item.name),
+  ["Portal público", "Materiais", "Exemplo A1"],
+);
+assert.equal(materialBreadcrumb.itemListElement[1].item, "https://www.apeeducation.org/pt-br/materiais");
+
+const materialJson = JSON.stringify(materialJsonLd);
+assert.ok(!materialJson.includes(":null"), "JSON-LD do material nao pode conter null");
+assert.ok(!materialJson.includes("undefined"), "JSON-LD do material nao pode conter undefined");
+
+const sparseMaterial = buildMaterialJsonLd({
+  ...materialFixture,
+  editorial: { level: null, theme: null, resource_type: null, summary: null, reviewed_at: null },
+  list: { ...materialFixture.list, author_slug: null },
+});
+const sparseResource = sparseMaterial["@graph"].find((node) => node["@type"] === "LearningResource");
+for (const forbidden of ["educationalLevel", "about", "description", "dateModified"]) {
+  assert.ok(!(forbidden in sparseResource), `JSON-LD nao pode inventar o campo ${forbidden}`);
+}
+
+// 5b. A injecao do JSON-LD precisa acontecer no HTML final do material.
+const injectedHtml = injectMaterialStructuredData(
+  "<html><head><title>x</title></head><body><div id=\"root\"></div></body></html>",
+  materialFixture,
+);
+assert.ok(
+  injectedHtml.includes('<script id="public-material-jsonld" type="application/ld+json">'),
+  "HTML do material precisa receber o script JSON-LD",
+);
+const injectedMatch = injectedHtml.match(/<script id="public-material-jsonld" type="application\/ld\+json">([\s\S]*?)<\/script>/);
+const injectedGraph = JSON.parse(injectedMatch[1].replaceAll("\\u003c", "<"))["@graph"];
+assert.ok(injectedGraph.some((node) => node["@type"] === "LearningResource"), "JSON-LD injetado sem LearningResource");
+
+// 6. robots.txt libera o crawler de assistentes apenas nas superficies curadas.
+const robotsTxt = readFileSync(resolve(root, "public", "robots.txt"), "utf8");
+const assistantBlock = robotsTxt.split("User-agent: OAI-SearchBot")[1]?.split("User-agent:")[0] ?? "";
+assert.ok(assistantBlock, "robots.txt precisa de um bloco para OAI-SearchBot");
+for (const locale of MATERIAL_LOCALES) {
+  const segment = localeUrlSegment(locale);
+  assert.ok(
+    assistantBlock.includes(`Allow: /${segment}/materiais`),
+    `robots.txt deve liberar o catalogo de ${locale} para assistentes`,
+  );
+  assert.ok(
+    assistantBlock.includes(`Allow: /${segment}/material/`),
+    `robots.txt deve liberar os materiais de ${locale} para assistentes`,
+  );
+}
+assert.ok(
+  assistantBlock.includes("Disallow: /"),
+  "o bloco de assistentes precisa fechar o restante do site",
+);
+
+console.log(
+  "OK material publico: canonical unico, robots autoritativo, H1, JSON-LD fiel e sitemap sem filtros.",
+);

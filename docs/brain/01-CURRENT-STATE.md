@@ -344,3 +344,19 @@ Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[07-TESTS]] · [[08-R
   [[09-ASTRA-HANDOFF]] para o handoff completo e a primeira ação exigida.
 
 Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[09-ASTRA-HANDOFF]] · [[07-TESTS]]
+## Fase 5 — GEO: dados estruturados e crawlers de assistentes (2026-09-13)
+
+- [VERIFIED-BUILD] Material curado agora carrega JSON-LD no HTML pré-renderizado:
+  `LearningResource` + `BreadcrumbList` (Portal → Materiais → material), gerados
+  por `buildMaterialJsonLd` em `scripts/prerender-public-materials.mjs`.
+- [DECISION] JSON-LD é emitido **só no pré-render**; o SPA não emite, para não
+  duplicar blocos na mesma página.
+- [VERIFIED-REPO] `public/robots.txt` ganhou bloco `OAI-SearchBot` liberando
+  apenas `/{locale}/materiais` e `/{locale}/material/`.
+- [VERIFIED-BUILD] IndexNow não exigiu código: o coletor já varre o
+  `sitemap.xml` raiz e os sitemaps referenciados, incluindo
+  `sitemap-materials.xml`.
+- [PENDING] Nenhum material aprovado existe, então o JSON-LD do material está
+  validado por fixture, não por página real.
+
+Related: [[sessions/2026-09-13-ape-fase5-task1-geo]] · [[07-TESTS]] · [[08-RISKS]]

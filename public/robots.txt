@@ -1,6 +1,21 @@
 # APE public discovery policy
 # Public pages are crawlable; authenticated and account-specific areas are not.
 
+# Crawlers de assistentes: liberados explicitamente apenas nas superficies
+# publicas curadas (catalogo e material). O restante segue o bloco abaixo.
+User-agent: OAI-SearchBot
+Allow: /pt-br/materiais
+Allow: /pt-br/material/
+Allow: /en/materiais
+Allow: /en/material/
+Allow: /es/materiais
+Allow: /es/material/
+Allow: /fr/materiais
+Allow: /fr/material/
+Allow: /it/materiais
+Allow: /it/material/
+Disallow: /
+
 User-agent: *
 Allow: /
 Disallow: /auth

@@ -124,6 +124,117 @@ export function applyHead(html, { title, description, canonical, robots = DEFAUL
   return out;
 }
 
+/**
+ * Dados estruturados do material curado.
+ *
+ * Fonte unica: o JSON-LD vive no HTML pre-renderizado, porque crawlers de
+ * assistentes (OAI-SearchBot e afins) nao executam JavaScript. Emiti-lo tambem
+ * no SPA geraria dois blocos identicos na mesma pagina.
+ *
+ * Regra: so entra o que existe no payload e, portanto, no HTML visivel.
+ */
+function jsonLdText(value) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized || undefined;
+}
+
+function jsonLdLanguage(value) {
+  const normalized = jsonLdText(value)?.toLowerCase();
+  return normalized && /^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(normalized) ? normalized : undefined;
+}
+
+function compactNodes(values) {
+  return values.filter(Boolean);
+}
+
+export function buildMaterialJsonLd(material) {
+  const path = publicMaterialPath(material.locale, material.slug);
+  const canonical = absolute(path);
+  const list = material.list ?? {};
+  const editorial = material.editorial ?? {};
+  const segment = localeUrlSegment(material.locale);
+  const pageId = `${canonical}#page`;
+  const resourceId = `${canonical}#learning-resource`;
+  const title = jsonLdText(list.title) ?? "";
+  const description = jsonLdText(editorial.summary);
+  const level = jsonLdText(editorial.level);
+  const theme = jsonLdText(editorial.theme);
+  const resourceType = jsonLdText(editorial.resource_type);
+  const reviewedAt = jsonLdText(editorial.reviewed_at);
+  const authorSlug = jsonLdText(list.author_slug);
+  const authorProfile = authorSlug ? `${SITE_URL}/portal/professor/${authorSlug}` : undefined;
+  const authorId = authorProfile ? `${authorProfile}#person` : `${canonical}#author`;
+  const playPath = jsonLdText(material.play_path) ? absolute(material.play_path) : undefined;
+  const languages = compactNodes([
+    jsonLdLanguage(list.lang_a),
+    jsonLdLanguage(list.lang_b),
+  ]);
+  const cardCount = Number(list.card_count);
+
+  const page = {
+    "@type": "WebPage",
+    "@id": pageId,
+    url: canonical,
+    name: title,
+    inLanguage: segment === "pt-br" ? "pt-BR" : segment,
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    mainEntity: { "@id": resourceId },
+    ...(description ? { description } : {}),
+  };
+
+  const resource = {
+    "@type": "LearningResource",
+    "@id": resourceId,
+    name: title,
+    url: canonical,
+    isAccessibleForFree: true,
+    provider: { "@id": `${SITE_URL}/#organization` },
+    mainEntityOfPage: { "@id": pageId },
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    ...(description ? { description } : {}),
+    ...(languages.length ? { inLanguage: languages } : {}),
+    ...(level ? { educationalLevel: level } : {}),
+    ...(theme ? { about: theme } : {}),
+    ...(resourceType ? { learningResourceType: resourceType } : {}),
+    ...(Number.isFinite(cardCount) && cardCount > 0 ? { numberOfItems: cardCount } : {}),
+    ...(reviewedAt ? { dateModified: reviewedAt } : {}),
+    author: { "@id": authorId },
+    ...(playPath
+      ? { potentialAction: { "@type": "ViewAction", name: "Jogar agora", target: playPath } }
+      : {}),
+  };
+
+  const author = {
+    "@type": "Person",
+    "@id": authorId,
+    name: jsonLdText(list.author_name) ?? "Professor no APE",
+    jobTitle: "Professor",
+    memberOf: { "@id": `${SITE_URL}/#organization` },
+    ...(authorProfile ? { url: authorProfile } : {}),
+  };
+
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumb`,
+    itemListElement: compactNodes([
+      { "@type": "ListItem", position: 1, name: "Portal público", item: `${SITE_URL}/portal` },
+      { "@type": "ListItem", position: 2, name: "Materiais", item: `${SITE_URL}/${segment}/materiais` },
+      title ? { "@type": "ListItem", position: 3, name: title, item: canonical } : null,
+    ]),
+  };
+
+  return { "@context": "https://schema.org", "@graph": compactNodes([page, resource, author, breadcrumb]) };
+}
+
+export function renderMaterialJsonLdScript(material) {
+  const serialized = JSON.stringify(buildMaterialJsonLd(material)).replaceAll("<", "\\u003c");
+  return `<script id="public-material-jsonld" type="application/ld+json">${serialized}</script>`;
+}
+
+export function injectMaterialStructuredData(html, material) {
+  return html.replace("</head>", `  ${renderMaterialJsonLdScript(material)}\n</head>`);
+}
+
 function assertGenerated(html, material, path) {
   const canonical = absolute(path);
   const canonicals = html.match(/<link rel="canonical"[^>]*>/gi) ?? [];
@@ -132,6 +243,12 @@ function assertGenerated(html, material, path) {
   if (!/<h1>[^<]+<\/h1>/i.test(html)) throw new Error(`H1 ausente em ${path}`);
   if (!html.includes("Jogar agora")) throw new Error(`CTA ausente em ${path}`);
   if (!html.includes(material.list.title)) throw new Error(`titulo do material ausente em ${path}`);
+  const jsonLdMatch = html.match(/<script id="public-material-jsonld" type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  if (!jsonLdMatch) throw new Error(`JSON-LD ausente em ${path}`);
+  const parsedJsonLd = JSON.parse(jsonLdMatch[1].replaceAll("\\u003c", "<"));
+  const jsonLdTypes = (parsedJsonLd["@graph"] ?? []).map((node) => node["@type"]);
+  if (!jsonLdTypes.includes("LearningResource")) throw new Error(`LearningResource ausente em ${path}`);
+  if (!jsonLdTypes.includes("BreadcrumbList")) throw new Error(`BreadcrumbList ausente em ${path}`);
 }
 
 function assertGeneratedCatalog(html, path) {
@@ -169,6 +286,7 @@ async function main() {
     const withContent = html.replace(/<div id="root"><\/div>/i, `<div id="root">${renderMaterialStaticContent(material)}</div>`);
     if (withContent === html) throw new Error(`marcador <div id="root"></div> ausente para ${path}`);
     html = withContent;
+    html = injectMaterialStructuredData(html, material);
     html = `<!-- Generated by scripts/prerender-public-materials.mjs for ${path} -->\n${html}`;
     assertGenerated(html, material, path);
     const destination = resolve(distDir, path.slice(1), "index.html");
