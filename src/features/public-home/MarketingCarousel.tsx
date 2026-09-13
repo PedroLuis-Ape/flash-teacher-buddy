@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { marketingScreenshots } from "@/features/public-home/marketingScreenshots";
+import { trackProductEvent, trackProductEventOnce } from "@/lib/productEvents";
 
 /**
  * Carrossel de prova visual da Home publica.
@@ -12,6 +13,16 @@ import { marketingScreenshots } from "@/features/public-home/marketingScreenshot
 export function MarketingCarousel() {
   const { t } = useTranslation();
   const trackRef = useRef<HTMLUListElement>(null);
+  const slideIndexRef = useRef(0);
+
+  useEffect(() => {
+    void trackProductEventOnce(
+      "carousel:view:home",
+      "carousel_slide_view",
+      { slide_index: 0 },
+      { surface: "home" },
+    );
+  }, []);
 
   const scrollBySlide = (direction: 1 | -1) => {
     const track = trackRef.current;
@@ -19,6 +30,12 @@ export function MarketingCarousel() {
     const slide = track.querySelector("li");
     const step = slide ? slide.getBoundingClientRect().width + 16 : track.clientWidth;
     track.scrollBy({ left: step * direction, behavior: "smooth" });
+    slideIndexRef.current = Math.max(0, slideIndexRef.current + direction);
+    void trackProductEvent(
+      "carousel_interaction",
+      { slide_index: slideIndexRef.current, action: direction === 1 ? "next" : "previous" },
+      { surface: "home" },
+    );
   };
 
   return (

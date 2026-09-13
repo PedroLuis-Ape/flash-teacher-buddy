@@ -1,7 +1,9 @@
 import { ArrowRight, Gamepad2, Layers3 } from "lucide-react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useFeaturedPublicResource } from "@/features/public-home/useFeaturedPublicResource";
+import { trackProductEvent, trackProductEventOnce } from "@/lib/productEvents";
 
 const FALLBACK_PLAY_HREF = "/portal";
 
@@ -14,6 +16,18 @@ const FALLBACK_PLAY_HREF = "/portal";
 export function FeaturedPublicResource() {
   const { t } = useTranslation();
   const { data, isPending, isError } = useFeaturedPublicResource();
+  const featuredId = data?.list?.id;
+
+  // Impressao real do destaque: uma vez por lista em destaque nesta pagina.
+  useEffect(() => {
+    if (!featuredId) return;
+    void trackProductEventOnce(
+      `featured:impression:${featuredId}`,
+      "featured_resource_impression",
+      { resource_slug: featuredId, position: 1 },
+      { surface: "home" },
+    );
+  }, [featuredId]);
 
   if (isError) return null;
   if (isPending) {
@@ -56,7 +70,17 @@ export function FeaturedPublicResource() {
             </ul>
           )}
           <div className="landing-actions">
-            <Link to={playHref} className="landing-primary">
+            <Link
+              to={playHref}
+              className="landing-primary"
+              onClick={() => {
+                void trackProductEvent(
+                  "featured_resource_play",
+                  { resource_slug: list.id },
+                  { surface: "home" },
+                );
+              }}
+            >
               <Gamepad2 aria-hidden="true" className="mr-2 h-4 w-4" />
               {t("publicLanding.playNow")}
             </Link>

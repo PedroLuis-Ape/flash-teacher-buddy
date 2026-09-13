@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { hasGuestState } from "@/features/guest/guestStateBridge";
+import { trackProductEventOnce } from "@/lib/productEvents";
 
 const DISMISS_KEY = "ape:guest-account-invite-dismissed:v1";
 
@@ -24,6 +25,17 @@ export function GuestAccountInvite() {
   const { t } = useTranslation();
   const { userId, isLoading } = useAuthUser();
   const [dismissed, setDismissed] = useState(() => wasDismissed());
+
+  useEffect(() => {
+    if (isLoading || userId || dismissed) return;
+    if (!hasGuestState()) return;
+    void trackProductEventOnce(
+      "signup-cta:material-invite",
+      "signup_sync_cta_view",
+      {},
+      { surface: "material-invite" },
+    );
+  }, [isLoading, userId, dismissed]);
 
   if (isLoading || userId || dismissed) return null;
   if (!hasGuestState()) return null;

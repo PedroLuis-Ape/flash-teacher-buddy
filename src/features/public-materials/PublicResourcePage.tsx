@@ -1,9 +1,11 @@
 import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, Layers3 } from "lucide-react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { Button } from "@/components/ui/button";
 import { normalizeAppLocale } from "@/i18n/languages";
+import { trackProductEventOnce } from "@/lib/productEvents";
 import { usePublicResource } from "@/features/public-materials/usePublicResource";
 
 const MAX_SAMPLES = 8;
@@ -26,6 +28,16 @@ export default function PublicResourcePage() {
   // O canonical espelha exatamente a URL pedida (locale em minusculas), para
   // nao divergir do endereco real quando o code do locale tem maiusculas.
   const canonicalPath = available ? `/${rawLocale}/material/${slug}` : null;
+
+  useEffect(() => {
+    if (!available || !slug) return;
+    void trackProductEventOnce(
+      `resource-view:${slug}`,
+      "public_resource_view",
+      { resource_slug: slug },
+      { locale: locale ?? "pt-BR", surface: "material" },
+    );
+  }, [available, slug, locale]);
 
   if (!locale) {
     return (

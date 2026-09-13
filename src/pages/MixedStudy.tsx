@@ -4,6 +4,7 @@ import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
+import { trackProductEventOnce } from "@/lib/productEvents";
 import {
   createStudyDeckRequestId,
   loadStudyDeck,
@@ -868,6 +869,28 @@ export default function MixedStudy() {
   }, [cards, favoritesOnly, favoritesReady, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, remoteRestoreFailure, scopeWaitExpired, showRuntimeRecovery]);
 
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
+  const mixedStatusValue = mixed.state?.status ?? null;
+
+  // Fase 5: mede uso real de visitante sem conta no modo misto gamificado.
+  useEffect(() => {
+    if (userId || !resolvedId) return;
+    void trackProductEventOnce(
+      `guest-start:${resolvedId}:mixed`,
+      "guest_game_start",
+      { mode: "mixed" },
+      { surface: "mixed-study" },
+    );
+  }, [userId, resolvedId]);
+
+  useEffect(() => {
+    if (userId || mixedStatusValue !== "journey-complete") return;
+    void trackProductEventOnce(
+      `guest-complete:${resolvedId}:mixed`,
+      "guest_game_complete",
+      { mode: "mixed" },
+      { surface: "mixed-study" },
+    );
+  }, [userId, mixedStatusValue, resolvedId]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
   const currentCardLayers = (currentCard as (MixedFlashcard & { __layers?: MixedFlashcard[] }) | undefined)?.__layers;
   const statusIdentity = useMemo(

@@ -20,6 +20,7 @@ import {
   markGuestMergeDecision,
   readGuestMergeDecision,
 } from "@/features/guest/guestStateBridge";
+import { trackProductEvent, trackProductEventOnce } from "@/lib/productEvents";
 
 /**
  * Pergunta unica e nao bloqueante ao entrar com estado de visitante no
@@ -34,6 +35,8 @@ export function GuestStateMergePrompt() {
     if (!userId) return;
     if (readGuestMergeDecision(userId)) return;
     if (!hasGuestState()) return;
+    void trackProductEventOnce(`guest-resume:${userId}`, "guest_resume", {}, { surface: "guest-merge" });
+    void trackProductEventOnce(`signup-cta:${userId}`, "signup_sync_cta_view", {}, { surface: "guest-merge" });
     setOpen(true);
   }, [userId]);
 
@@ -52,6 +55,7 @@ export function GuestStateMergePrompt() {
       toast.success(t("guestMerge.accountKept"));
     }
     markGuestMergeDecision(userId, decision);
+    void trackProductEvent("signup_after_guest", { outcome: decision }, { surface: "guest-merge" });
     setOpen(false);
   };
 

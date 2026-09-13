@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeAppLocale } from "@/i18n/languages";
+import { trackProductEvent } from "@/lib/productEvents";
 import {
   type PublicResourceCatalogFacet,
   usePublicResourceCatalog,
@@ -129,6 +130,16 @@ export default function PublicCatalogPage() {
   useEffect(() => {
     setSearchValue(q);
   }, [q]);
+
+  // Mede busca/filtro sem enviar o termo digitado (nenhum PII sai daqui).
+  useEffect(() => {
+    if (!data || !hasActiveFilters) return;
+    void trackProductEvent(
+      "public_search_used",
+      { result_count: data.total, has_filters: true },
+      { locale: locale ?? "pt-BR", surface: "catalog" },
+    );
+  }, [data, hasActiveFilters, locale]);
 
   useEffect(() => {
     if (searchValue.trim() === q) return;

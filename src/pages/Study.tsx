@@ -32,6 +32,7 @@ import {
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { trackProductEventOnce } from "@/lib/productEvents";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -746,6 +747,28 @@ const Study = () => {
       try { localStorage.removeItem(completionKey); } catch {}
     }
   }, [isFinished, isGameComplete, completionKey]);
+
+  // Fase 5: mede uso real de visitante sem conta. Sem PII: so o modo e a
+  // identidade publica da lista; nenhum id de usuario sai daqui.
+  useEffect(() => {
+    if (authUserId || !resolvedId) return;
+    void trackProductEventOnce(
+      `guest-start:${resolvedId}:${normalizedMode}`,
+      "guest_game_start",
+      { mode: normalizedMode },
+      { surface: "study" },
+    );
+  }, [authUserId, resolvedId, normalizedMode]);
+
+  useEffect(() => {
+    if (authUserId || !isFinished || !isGameComplete) return;
+    void trackProductEventOnce(
+      `guest-complete:${completionKey ?? resolvedId}`,
+      "guest_game_complete",
+      { mode: normalizedMode },
+      { surface: "study" },
+    );
+  }, [authUserId, isFinished, isGameComplete, completionKey, resolvedId, normalizedMode]);
 
   // On mount: check if this session was already completed and show restart prompt
   useEffect(() => {

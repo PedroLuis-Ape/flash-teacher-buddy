@@ -430,3 +430,20 @@ Related: [[areas/visual-polish]] · [[07-TESTS]] · [[08-RISKS]] · [[24-SECURIT
   SEO 100/100 · preview smoke PASS.
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]] · [[areas/supabase-runtime]]
+## Fase 5 — Medição: instrumentação (2026-09-13)
+
+- [VERIFIED-REPO] `src/lib/productEvents.ts` centraliza o envio: nunca lança,
+  filtra o payload pela allowlist do servidor e ignora nome desconhecido sem
+  chamar a RPC.
+- [DECISION] `public_search_used` envia apenas `result_count` e `has_filters`;
+  o termo digitado nunca sai do navegador.
+- [VERIFIED-TEST] Os 11 eventos da allowlist estão instrumentados e cobertos por
+  contrato (`productEventInstrumentation.contract.test.ts`), inclusive
+  `guest_game_start`/`guest_game_complete`, que só disparam para visitante.
+- [DECISION] O programa foi integrado numa única branch
+  (`integration/ape-program-20260913`) porque as fases 1–3 estavam em branches
+  paralelas nunca integradas.
+- Suíte completa: 273 arquivos / 1693 testes PASS · typecheck 0 · build com
+  SEO 100/100.
+
+Related: [[sessions/2026-09-13-ape-fase5-task3-eventos-cliente]] · [[07-TESTS]] · [[08-RISKS]]
