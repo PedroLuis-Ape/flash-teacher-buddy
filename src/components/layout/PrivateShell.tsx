@@ -47,6 +47,7 @@ const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").th
 const EconomyInitializer = lazy(() => import("@/components/EconomyInitializer").then(m => ({ default: m.EconomyInitializer })));
 const BrowserCheck = lazy(() => import("@/components/BrowserCheck").then(m => ({ default: m.BrowserCheck })));
 const GoogleConnectPrompt = lazy(() => import("@/features/auth/components/GoogleConnectPrompt").then(m => ({ default: m.GoogleConnectPrompt })));
+const ExtensionInstallPrompt = lazy(() => import("@/features/browser-extension/ExtensionInstallPrompt").then(m => ({ default: m.ExtensionInstallPrompt })));
 
 interface PrivateShellProps {
   children: ReactNode;
@@ -168,6 +169,12 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       )}
       {user && secondaryReady && FEATURE_FLAGS.classes_enabled && !safeMode && (
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
+      )}
+
+      {user && secondaryReady && !safeMode && !isActiveStudyRoute && (
+        <Suspense fallback={null}>
+          <ExtensionInstallPrompt authenticated />
+        </Suspense>
       )}
 
       {!isActiveStudyRoute && (

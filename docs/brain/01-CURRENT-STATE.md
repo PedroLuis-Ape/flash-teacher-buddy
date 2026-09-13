@@ -526,3 +526,23 @@ Verificado no preview servindo o build do `main` (`e52bf92b`):
 - [PENDENTE] Lista pública indisponível — ver [[06-BUGS]] (decisão do Pedro).
 - [OBSERVAÇÃO] `/{locale}/material/{slug}` não aprovado mostra "Material não disponível" mas não emite
   `noindex` (herda o `index,follow` estático do shell).
+
+## Integração com a extensão Salvar nas Notas — 2026-09-13
+
+- [FATO CONFIRMADO] O app agora detecta a extensão por ping externo e mostra UM convite
+  (`ExtensionInstallPrompt`) somente para usuário autenticado, desktop Chromium, extensão
+  ausente e snooze vencido; o CTA apenas abre a Chrome Web Store em nova aba. O app não
+  instala nada e o convite não aparece em rotas de estudo em tela cheia.
+- [DECISAO VIGENTE] Configuração única em `src/features/browser-extension/extensionConfig.ts`
+  (ID, URL da loja sem UTM, 5 s para aparecer, 15 s de auto-dismiss, snooze de 7 dias no X,
+  chaves `piteco_extension_prompt_dismissed_until` e `piteco_extension_prompt_seen_session`).
+- [FATO CONFIRMADO] A extensão foi para 1.9.0 com `externally_connectable` restrito a
+  `apeeducation.org` e `www.apeeducation.org` e listener `onMessageExternal` que responde
+  apenas ao ping, validando o remetente; nenhum `host_permissions` novo.
+- [FATO CONFIRMADO] Gates: typecheck 0; Vitest 283 arquivos/1754 testes; ESLint 0 erros nos
+  arquivos alterados; build exit 0 com SEO 100/100; pacote 1.9.0 validado pelo empacotador
+  (`salvar-nas-notas-extension-1.9.0.zip`, SHA-256 `3a9eabbd…462c`).
+- [PENDING] QA em navegador real (instalar pela loja e ver o convite sumir no foco) e a
+  publicação do pacote na Chrome Web Store continuam pendentes — decisão do Pedro.
+
+Related: [[areas/browser-extension]] · [[sessions/2026-09-13-extensao-salvar-nas-notas]] · [[07-TESTS]] · [[08-RISKS]]

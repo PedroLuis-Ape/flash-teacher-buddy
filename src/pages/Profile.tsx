@@ -33,6 +33,7 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { useSpecialFlashcardsCount } from "@/hooks/useSpecialFlashcards";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useReinforcement } from "@/hooks/useReinforcement";
+import { BrowserExtensionSettingsSection } from "@/features/browser-extension/BrowserExtensionSettingsSection";
 
 type PreviewAsset = {
   src: string;
@@ -420,6 +421,8 @@ const Profile = () => {
           </div>
         </Card>
       </div>
+
+      <BrowserExtensionSettingsSection />
     </div>
   );
 
