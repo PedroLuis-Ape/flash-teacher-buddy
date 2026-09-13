@@ -297,3 +297,30 @@ Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECU
   tem HTML inicial e o shell emite um canonical próprio — canonical duplicado.
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
+## Catálogo público — pré-render, canonical e sitemap (2026-09-13)
+
+- [VERIFIED-BUILD] `scripts/prerender-public-materials.mjs` agora pré-renderiza
+  também as 5 páginas de catálogo (`/{locale}/materiais`) a partir do **mesmo**
+  carregamento de dados dos materiais (`loadPublicMaterials` passou a devolver
+  `catalogs`), e `sitemap-materials.xml` lista as 5 URLs base. Nenhuma URL com
+  querystring entra no sitemap (validado no build).
+- [VERIFIED-RUNTIME] `dist/pt-br/materiais/index.html`: **1 canonical**
+  (`https://www.apeeducation.org/pt-br/materiais`), **1 meta robots** autoritativo
+  (`index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1`),
+  **1 H1** real e o estado vazio honesto ("Ainda não há materiais publicados
+  neste idioma"), porque zero curadorias estão aprovadas.
+- [ROOT-CAUSE] O `applyHead` compartilhado já removia o canonical estático do
+  shell, mas **não** removia o `<meta name="robots">` de `index.html:74`. Toda
+  página pré-renderizada saía com duas políticas de robots conflitantes.
+  Corrigido no helper compartilhado, não em uma cópia do catálogo.
+- [DECISION] O HTML pré-renderizado é a superfície autoritativa para crawlers:
+  canonical e robots são reescritos no arquivo gerado, e
+  `scripts/validate-public-material-prerender.mjs` quebra o build se houver
+  ≠ 1 canonical, ≠ 1 robots, H1 ausente ou querystring no sitemap.
+- [DECISION] `prerender-public-materials.mjs` passou a usar guarda
+  `isDirectExecution`, para que importá-lo (pelo validador) não rode o prerender.
+- [KNOWN-LIMIT] No SPA (sem prerender) o shell ainda mantém o canonical raiz
+  estático ao lado do emitido por `SEOHead`. As rotas públicas de catálogo e
+  material são pré-renderizadas; resolver o shell globalmente segue pendente.
+
+Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[07-TESTS]] · [[08-RISKS]] · [[23-GIT-E-WORKTREES]]

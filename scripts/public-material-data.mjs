@@ -28,6 +28,10 @@ export function publicMaterialPath(locale, slug) {
   return `/${localeUrlSegment(locale)}/material/${slug}`;
 }
 
+export function publicCatalogPath(locale) {
+  return `/${localeUrlSegment(locale)}/materiais`;
+}
+
 function timedFetch(input, init = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -63,6 +67,7 @@ export async function loadPublicMaterials() {
   });
 
   const entries = [];
+  const catalogs = [];
   for (const locale of MATERIAL_LOCALES) {
     const { data, error } = await client.rpc("list_public_resources_v1", {
       _locale: locale,
@@ -71,11 +76,22 @@ export async function loadPublicMaterials() {
     });
     if (error) {
       // Projeto sem a migration nao deve quebrar o build.
-      if (isMissingRpc(error, "list_public_resources_v1")) continue;
+      if (isMissingRpc(error, "list_public_resources_v1")) {
+        catalogs.push({ locale, items: [], total: 0, source: "rpc-unavailable" });
+        continue;
+      }
       throw error;
     }
     if (Array.isArray(data?.items)) {
       for (const entry of data.items) entries.push({ locale, ...entry });
+      catalogs.push({
+        locale,
+        items: data.items.map((entry) => ({ locale, ...entry })),
+        total: Number.isFinite(Number(data.total)) ? Number(data.total) : data.items.length,
+        source: "rpc",
+      });
+    } else {
+      catalogs.push({ locale, items: [], total: 0, source: "rpc-invalid-shape" });
     }
   }
 
@@ -92,5 +108,6 @@ export async function loadPublicMaterials() {
     runtimeSource: runtime.source ?? null,
     runtimeProjectId: runtime.projectId ?? null,
     materials: materials.filter(Boolean),
+    catalogs,
   };
 }
