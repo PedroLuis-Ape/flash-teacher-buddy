@@ -108,3 +108,38 @@ aprovação editorial humana, repetir o QA visual dos cards com conteúdo real.
   wrappers before accepting source-contract GREEN.
 
 Related: [[01-CURRENT-STATE]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]]
+
+## Reabertura após revisão — contrato do payload e matriz mobile
+
+- [VERIFIED-REPO] Branch `feat/ape-public-catalog-20260913`, HEAD de partida
+  `88c63d2c`; alterações preexistentes/proibidas continuam fora do escopo.
+- [ROOT-CAUSE] O boundary da RPC convertia payload `null`, array ou parcialmente
+  tipado em catálogo vazio. Isso confundia quebra do contrato de transporte com
+  ausência editorial válida e podia acionar mensagem enganosa ao usuário.
+- [DECISION] A desserialização passa a ser estrita: estrutura raiz, itens,
+  contagens, booleano e todas as facetas precisam respeitar o contrato. Falha
+  lança erro para o React Query; somente o objeto vazio válido chega ao estado
+  sem curadoria.
+- [PREDICTION] Um teste unitário do parser deve falhar antes da implementação e
+  passar depois; Playwright deve medir 320/360/375/390/430/1440 px com
+  `scrollWidth <= innerWidth + 1`, incluindo filtros mobile abertos.
+- [SCOPE] O canonical/meta estático do shell permanece explicitamente fora
+  desta correção, conforme decisão da revisão.
+
+## Fechamento da correção de revisão
+
+- [VERIFIED-TEST] RED: 12/12 casos novos falharam porque o parser estrito ainda
+  não existia; o contrato original permaneceu 7/7 verde.
+- [VERIFIED-TEST] GREEN: contrato e teste de payload passaram 21/21. O fetch
+  rejeita `data: null` e resolve o objeto vazio válido sem coerção.
+- [VERIFIED-TYPECHECK] `tsc --noEmit -p tsconfig.app.json`: exit 0.
+- [VERIFIED-RUNTIME] Chromium/Playwright real mediu base e filtros abertos em
+  320/360/375/390/430 px: em todos, `scrollWidth === viewportWidth`, três
+  selects visíveis quando abertos e nenhum erro de página/request. Desktop
+  1440 px também teve `scrollWidth=1440` e três selects visíveis.
+- [SELF-REVIEW] Validação cobre campos de cada item e cada faceta, além da raiz;
+  não houve alteração em `PublicCatalogPage`, `SEOHead`, `index.html`, banco ou
+  estado editorial.
+- [ADAPTIVE-LEARNING] Coerção defensiva em boundary público pode apagar falha de
+  infraestrutura e produzir mensagem de domínio falsa. A lição fica registrada
+  nesta sessão como correção validada, sem promoção global nesta ocorrência.

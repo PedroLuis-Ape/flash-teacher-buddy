@@ -246,9 +246,13 @@ Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECU
 - [VERIFIED-REPO] Rota pública `/:locale/materiais`, hook React Query próprio e
   catálogo com busca debounced, filtros no banco, três estados distintos
   (sem curadoria, zero filtrado e erro recuperável) e i18n nas cinco locales.
+- [VERIFIED-REPO] O boundary da RPC valida estritamente raiz, itens, total,
+  `has_more` e facetas; payload malformado lança erro recuperável, enquanto o
+  vazio contratualmente válido permanece no estado sem curadoria.
 - [VERIFIED-RUNTIME] Playwright consultou a RPC real, confirmou o payload vazio
   esperado, argumentos nulos/filtrados, retry, URL com `replace` e ausência de
-  overflow em 320 e 1440 px. Mobile usa um único controle `Filtrar` expansível.
+  overflow em 320/360/375/390/430/1440 px. Mobile usa um único controle
+  `Filtrar` expansível; a matriz também passou com os três selects abertos.
 - [REVALIDATE] Cards reais não tiveram QA visual porque nenhuma curadoria está
   aprovada/indexável; não foi criado conteúdo fictício para contornar isso.
 - [KNOWN-LIMIT] O shell cliente mantém seu canonical raiz estático ao lado do

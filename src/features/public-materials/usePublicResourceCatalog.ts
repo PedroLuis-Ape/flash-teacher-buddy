@@ -42,13 +42,6 @@ export interface PublicResourceCatalogParams {
   offset?: number;
 }
 
-const EMPTY_CATALOG: PublicResourceCatalog = {
-  items: [],
-  total: 0,
-  has_more: false,
-  facets: { levels: [], themes: [], resource_types: [] },
-};
-
 type CatalogRpc = (
   name: "list_public_resources_v1",
   args: {
@@ -73,6 +66,77 @@ export const publicResourceCatalogKey = ({
 }: PublicResourceCatalogParams) =>
   ["public", "catalog", locale, q, level, theme, type, limit, offset] as const;
 
+const INVALID_CATALOG_RESPONSE = "Resposta inválida de list_public_resources_v1";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+function isCatalogItem(value: unknown): value is PublicResourceCatalogItem {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.slug === "string" &&
+    typeof value.title === "string" &&
+    isNullableString(value.folder_title) &&
+    isNullableString(value.level) &&
+    isNullableString(value.theme) &&
+    isNullableString(value.resource_type) &&
+    isNullableString(value.summary) &&
+    isNonNegativeInteger(value.card_count) &&
+    typeof value.author_name === "string" &&
+    isNullableString(value.author_slug) &&
+    isNullableString(value.canonical_path) &&
+    typeof value.play_path === "string"
+  );
+}
+
+function isCatalogFacet(value: unknown): value is PublicResourceCatalogFacet {
+  return (
+    isRecord(value) &&
+    typeof value.value === "string" &&
+    isNonNegativeInteger(value.count)
+  );
+}
+
+export function parsePublicResourceCatalog(data: unknown): PublicResourceCatalog {
+  if (
+    !isRecord(data) ||
+    !Array.isArray(data.items) ||
+    !data.items.every(isCatalogItem) ||
+    !isNonNegativeInteger(data.total) ||
+    typeof data.has_more !== "boolean" ||
+    !isRecord(data.facets) ||
+    !Array.isArray(data.facets.levels) ||
+    !data.facets.levels.every(isCatalogFacet) ||
+    !Array.isArray(data.facets.themes) ||
+    !data.facets.themes.every(isCatalogFacet) ||
+    !Array.isArray(data.facets.resource_types) ||
+    !data.facets.resource_types.every(isCatalogFacet)
+  ) {
+    throw new Error(INVALID_CATALOG_RESPONSE);
+  }
+
+  return {
+    items: data.items,
+    total: data.total,
+    has_more: data.has_more,
+    facets: {
+      levels: data.facets.levels,
+      themes: data.facets.themes,
+      resource_types: data.facets.resource_types,
+    },
+  };
+}
+
 export async function fetchPublicResourceCatalog({
   locale,
   q = "",
@@ -94,21 +158,7 @@ export async function fetchPublicResourceCatalog({
   });
 
   if (error) throw error;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return EMPTY_CATALOG;
-
-  const payload = data as Partial<PublicResourceCatalog>;
-  return {
-    items: Array.isArray(payload.items) ? payload.items : [],
-    total: typeof payload.total === "number" ? payload.total : 0,
-    has_more: payload.has_more === true,
-    facets: {
-      levels: Array.isArray(payload.facets?.levels) ? payload.facets.levels : [],
-      themes: Array.isArray(payload.facets?.themes) ? payload.facets.themes : [],
-      resource_types: Array.isArray(payload.facets?.resource_types)
-        ? payload.facets.resource_types
-        : [],
-    },
-  };
+  return parsePublicResourceCatalog(data);
 }
 
 export function usePublicResourceCatalog(params: PublicResourceCatalogParams) {

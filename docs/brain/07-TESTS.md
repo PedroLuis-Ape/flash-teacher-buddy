@@ -158,7 +158,10 @@ Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas
   página canônica e sessão/rota 17/17.
 - [VERIFIED-RUNTIME] Playwright: RPC real com payload vazio, retry recuperável,
   debounce sem history spam, filtros móveis expansíveis e zero overflow em
-  320/1440 px. Ver [[sessions/2026-09-13-public-catalog-task-2]].
+  320/360/375/390/430/1440 px; em cada largura mobile, o painel aberto mostrou
+  três selects e continuou sem overflow. O parser estrito e o fetch passaram
+  14 testes que separam payload malformado de vazio válido; com o contrato da
+  página, foram 21/21. Ver [[sessions/2026-09-13-public-catalog-task-2]].
 ## Fechamento — legibilidade de títulos no mobile — 2026-09-12
 
 - Contrato focado: `2/2`.

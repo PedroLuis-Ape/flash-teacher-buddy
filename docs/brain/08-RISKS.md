@@ -83,6 +83,9 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[areas/sup
 
 - [REVALIDATE] Sem linhas aprovadas/indexáveis, os cards não puderam ser
   inspecionados visualmente com conteúdo real; preservar o empty state honesto.
+- [RESOLVIDO] O payload bem-sucedido da RPC não pode mais ser normalizado
+  silenciosamente para vazio: qualquer estrutura ausente ou de tipo incorreto
+  lança erro e ativa o fluxo recuperável de retry.
 - [KNOWN-LIMIT] No SPA local, o canonical raiz estático do shell permanece ao
   lado do canonical da rota emitido por `SEOHead`. O catálogo cumpre as props
   desta task, mas o pipeline SEO compartilhado deve eliminar a duplicidade.
