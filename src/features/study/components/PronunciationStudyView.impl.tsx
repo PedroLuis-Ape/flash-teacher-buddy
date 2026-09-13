@@ -42,6 +42,8 @@ interface PronunciationStudyViewProps {
   onSkip?: () => void;
   onPrevious?: () => void;
   canGoPrevious?: boolean;
+  /** Quando a lista desliga o TTS, nada aqui pode falar. */
+  ttsEnabled?: boolean;
 }
 
 export function PronunciationStudyView({
@@ -67,6 +69,7 @@ export function PronunciationStudyView({
   onCorrect,
   onIncorrect,
   onSkip,
+  ttsEnabled = true,
 }: PronunciationStudyViewProps) {
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -116,6 +119,7 @@ export function PronunciationStudyView({
   }, [speakSide.text, resetTranscript, stopTTS]);
 
   const handlePlayPronunciation = () => {
+    if (!ttsEnabled) return;
     stopTTS();
     const rate = getSpeechRate();
     speak(speakSide.text, {
@@ -198,12 +202,12 @@ export function PronunciationStudyView({
           Fale em {speakSide.label}
         </p>
         <h2 className="mb-1 text-[clamp(1.75rem,8.5vw,2.5rem)] font-bold leading-tight tracking-tight text-primary sm:mb-2 sm:text-4xl md:text-5xl">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick={ttsEnabled} speakLang={speakLang} />
         </h2>
         <p className="mb-4 text-xs italic text-muted-foreground/60 sm:mb-8 sm:text-sm">
-          “<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick speakLang={hintLang} />”
+          “<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick={ttsEnabled} speakLang={hintLang} />”
         </p>
-        <Button variant="secondary" size="sm" onClick={handlePlayPronunciation} className="h-10 gap-2 rounded-full px-5 sm:px-6">
+        <Button variant="secondary" size="sm" onClick={handlePlayPronunciation} disabled={!ttsEnabled} className="h-10 gap-2 rounded-full px-5 sm:px-6">
           <Volume2 className="h-4 w-4" /> Ouvir original
         </Button>
       </Card>

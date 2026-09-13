@@ -2684,6 +2684,7 @@ const Study = () => {
               langB={effectiveStudySettings.langB || "pt"}
               labelA={effectiveStudySettings.labelsA || undefined}
               labelB={effectiveStudySettings.labelsB || undefined}
+              ttsEnabled={effectiveStudySettings.ttsEnabled}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
               isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
               onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
