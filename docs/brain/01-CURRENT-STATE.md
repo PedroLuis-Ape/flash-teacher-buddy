@@ -241,6 +241,22 @@ Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECU
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
 
+## Materiais públicos — Fase 4, página de catálogo (2026-09-13)
+
+- [VERIFIED-REPO] Rota pública `/:locale/materiais`, hook React Query próprio e
+  catálogo com busca debounced, filtros no banco, três estados distintos
+  (sem curadoria, zero filtrado e erro recuperável) e i18n nas cinco locales.
+- [VERIFIED-RUNTIME] Playwright consultou a RPC real, confirmou o payload vazio
+  esperado, argumentos nulos/filtrados, retry, URL com `replace` e ausência de
+  overflow em 320 e 1440 px. Mobile usa um único controle `Filtrar` expansível.
+- [REVALIDATE] Cards reais não tiveram QA visual porque nenhuma curadoria está
+  aprovada/indexável; não foi criado conteúdo fictício para contornar isso.
+- [KNOWN-LIMIT] O shell cliente mantém seu canonical raiz estático ao lado do
+  canonical correto emitido por `SEOHead`; filtros também emitem `noindex,
+  follow`. Resolver o canonical global pertence ao pipeline SEO compartilhado.
+
+Ver [[sessions/2026-09-13-public-catalog-task-2]], [[07-TESTS]] e [[08-RISKS]].
+
 ## Materiais públicos — Fase 4, prerender e sitemap (2026-09-13)
 
 - [VERIFIED-REPO] Pipeline próprio do prerender: `scripts/public-material-data.mjs`

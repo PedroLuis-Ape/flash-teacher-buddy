@@ -1,4 +1,9 @@
 const PUBLIC_PREFIXES = [
+  '/pt-br/materiais',
+  '/en/materiais',
+  '/es/materiais',
+  '/fr/materiais',
+  '/it/materiais',
   '/pt-br/material',
   '/en/material',
   '/es/material',

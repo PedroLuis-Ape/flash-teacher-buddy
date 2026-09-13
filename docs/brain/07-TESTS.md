@@ -149,6 +149,16 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
   Em modo desktop as ações permaneceram `48x44 px`.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
+
+## Catálogo público — Task 2 — 2026-09-13
+
+- [VERIFIED-TEST] RED inicial: 7/7 falhas esperadas; RED de regressão do binding
+  RPC: 1/7 falha esperada.
+- [VERIFIED-TEST] GREEN focado: contrato do catálogo 7/7; conjunto catálogo,
+  página canônica e sessão/rota 17/17.
+- [VERIFIED-RUNTIME] Playwright: RPC real com payload vazio, retry recuperável,
+  debounce sem history spam, filtros móveis expansíveis e zero overflow em
+  320/1440 px. Ver [[sessions/2026-09-13-public-catalog-task-2]].
 ## Fechamento — legibilidade de títulos no mobile — 2026-09-12
 
 - Contrato focado: `2/2`.

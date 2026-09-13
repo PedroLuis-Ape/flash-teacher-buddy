@@ -78,3 +78,13 @@ related:
   pré-existente e deliberadamente não foi incluído.
 
 Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[areas/supabase-runtime]]
+
+## Catálogo público — 2026-09-13
+
+- [REVALIDATE] Sem linhas aprovadas/indexáveis, os cards não puderam ser
+  inspecionados visualmente com conteúdo real; preservar o empty state honesto.
+- [KNOWN-LIMIT] No SPA local, o canonical raiz estático do shell permanece ao
+  lado do canonical da rota emitido por `SEOHead`. O catálogo cumpre as props
+  desta task, mas o pipeline SEO compartilhado deve eliminar a duplicidade.
+
+Related: [[01-CURRENT-STATE]] · [[07-TESTS]] · [[sessions/2026-09-13-public-catalog-task-2]]

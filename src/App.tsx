@@ -40,6 +40,7 @@ const FolderWithExport = lazy(() => import("./pages/FolderWithExport"));
 const PublicFolderRoute = lazy(() => import("./pages/PublicFolderRoute"));
 const PublicLearningListPage = lazy(() => import("./pages/PublicLearningListPage"));
 const PublicResourcePage = lazy(() => import("./features/public-materials/PublicResourcePage"));
+const PublicCatalogPage = lazy(() => import("./features/public-materials/PublicCatalogPage"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
 const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
@@ -199,6 +200,7 @@ const App = () => {
                           {/* Pagina canonica de material publico curado: o componente
                               valida o locale e o status editorial antes de renderizar. */}
                           <Route path="/:locale/material/:slug" element={<PublicResourcePage />} />
+                          <Route path="/:locale/materiais" element={<PublicCatalogPage />} />
                           <Route path="/store" element={<Store />} />
                           <Route path="/gifts" element={<PresentBox />} />
                           <Route path="/reinos" element={<Reinos />} />
