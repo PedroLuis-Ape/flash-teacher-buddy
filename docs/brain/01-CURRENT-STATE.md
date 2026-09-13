@@ -324,3 +324,23 @@ Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECU
   material são pré-renderizadas; resolver o shell globalmente segue pendente.
 
 Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[07-TESTS]] · [[08-RISKS]] · [[23-GIT-E-WORKTREES]]
+## Fechamento do bloco SEO/GEO do catálogo público (2026-09-13)
+
+- [VERIFIED-BUILD] Suíte completa 266 arquivos / 1642 testes PASS; `eslint .`
+  com 0 erros e 72 warnings pré-existentes; `npm run build` exit 0 com
+  `seo:visibility:score` = 100/100 e orçamento de bundle aprovado;
+  `brain:check` PASS (41 notas, 443 wikilinks).
+- [VERIFIED-DB] A curadoria segue com 5 linhas em `draft` e
+  `is_indexable = false`; a RPC pública responde `items: []`, `total: 0`.
+  Isso é o estado correto, não uma falha.
+- [PENDING] A revisão independente da Task 3 e a revisão final da branch
+  inteira ficaram pendentes porque a conta atingiu o limite de uso de
+  subagentes (liberação às 23:58 de 2026-09-12). Nenhuma task foi declarada
+  concluída sem revisão: a Task 3 está implementada e rotulada REVALIDATE.
+- [DECISION] A branch permanece **local e não mergeada** até as revisões
+  rodarem; nada foi publicado na Lovable.
+- [NEXT] Próximo passo planejado: **implementar o Modo Reino Beta público, com
+  SEO, Guest Mode e uso exclusivo do modo misto gamificado**. Ver
+  [[09-ASTRA-HANDOFF]] para o handoff completo e a primeira ação exigida.
+
+Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[09-ASTRA-HANDOFF]] · [[07-TESTS]]
