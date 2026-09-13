@@ -152,3 +152,60 @@ camadas derivadas junto e cobrir com teste de definição.
 
 [VERIFIED] Após o fix: card rgb(23,26,33), primário teal ~11:1, destructive 5.42:1, light destructive
 5.4:1, light success 5.8:1, build com SEO 100/100.
+
+## Convite da extensão não aparecia na landing pública — corrigido em 2026-09-13
+
+- [ROOT-CAUSE] Duas barreiras somadas: (1) `ExtensionInstallPrompt` só era montado
+  em `PrivateShell`, que o `GlobalLayout` só renderiza em rota protegida autenticada
+  (`/` é público); (2) o próprio componente exigia `authenticated` e só então
+  habilitava o ping, então sem login o status ficava `"unknown"`.
+- [SINTOMA] Visitante em desktop Chromium, sem a extensão e sem snooze, nunca via o
+  convite — `finalEligibility = false` com `reasonNotShown` = gate de autenticação +
+  superfície não montada.
+- [FIX] Política única em `extensionPromptPolicy.ts` (superfície + 7 gates com motivo)
+  e UM ponto de montagem (`BrowserExtensionPromptMount`) em `GlobalLayout`; o gate de
+  autenticação deixou de existir na landing. Auto-dismiss, snooze de 7 dias, X, CTA
+  para a Chrome Web Store em nova aba, espera de 5 s e auto-dismiss de 15 s preservados.
+- [REGRESSION-CONTRACT] `extensionIntegration.test.tsx` (A..J + K1–K5 + M1–M5),
+  `extensionPromptPolicy.test.ts` (matriz dos 7 gates e das superfícies) e
+  `browserExtension.contract.test.ts` (exatamente um ponto de montagem no app).
+- [STATUS] Corrigido e verde localmente; QA em navegador real com a extensão instalada
+  segue pendente.
+
+Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[07-TESTS]] · [[08-RISKS]]
+
+
+## P1 — card "Voltar para onde parou" preso na lista antiga — corrigido em 2026-09-13
+
+[SINTOMA] O card continuava em "Verbos frasais 14 de 15 (93%)" depois de o
+usuário estudar outras listas; nenhum login, reload ou limpeza de cache mudava.
+
+[ROOT-CAUSE] A Home resolvia a retomada com o ponteiro local primeiro e só
+consultava sessões duráveis quando ele não existia
+(src/hooks/useLatestStudyResume.ts, revisão 53aa3cf6), e o ponteiro só era
+publicado por src/pages/Study.tsx — ainda limitado a rotas /study por
+src/features/study/lib/studyResume.ts:14. A Prática Mista
+(src/pages/MixedStudy.tsx, modo durável mixed-adaptive) gravava a sessão em
+study_sessions mas nunca publicava o ponteiro; com a sessão antiga ainda aberta,
+o card ficava preso nela indefinidamente.
+
+[FIX] src/features/study/lib/studyResumeSelection.ts decide pela última
+atividade real (updated_at), empate no ponteiro, tolerância de 5s de relógio;
+src/features/study/lib/studyResumeQuery.ts consulta as duas fontes, filtra
+instituição, ignora conclusão marcada localmente e realinha o ponteiro para a
+sessão vencedora; src/features/study/hooks/useStudyResumePublisher.ts é a
+camada comum de publicação usada por Study.tsx e MixedStudy.tsx;
+studyResumeRoute.ts retoma sessão mista em /mixed-study?mode=mixed;
+studyResumeCache.ts invalida study-resume e home-data ao sair, concluir e
+fechar o percurso misto.
+
+[REGRESSION-CONTRACT] src/features/study/lib/studyResumeQuery.test.ts (A -> B ->
+C, escopo de instituição, título/progresso/destino coerentes, conclusão,
+degradação sem mentir), studyResumeSelection.test.ts,
+studyResumeCache.test.ts, useStudyResumePublisher.test.tsx e as asserções de
+rota mista em studyResumeIntegration.test.ts.
+
+[STATUS] Corrigido e validado localmente (tsc 0, suíte completa 288 arquivos /
+1809 testes verdes, build exit 0 e SEO 100/100). Sem commit, merge, deploy ou
+escrita no Supabase. Ver [[areas/study-resume]] e
+[[sessions/2026-09-13-resume-card-ultima-sessao]].

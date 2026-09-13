@@ -129,6 +129,18 @@ O preview Lovable não estava disponível na sessão; a verificação visual foi
 - Memória: `node scripts/brain-check.mjs` passou (`35` notas, `224` wikilinks,
   `1` ID canônico).
 
+## Convite da extensão na landing pública — evidência 2026-09-13
+
+- Focados: `node node_modules/vitest/vitest.mjs run src/features/browser-extension`
+  → 3 arquivos / 45 testes PASS (RED anterior: 11 falhas em 24).
+- `npm run typecheck` → exit 0 (app + node).
+- `npm run build` → exit 0, pré-render de 23 rotas, orçamento de bundle aprovado,
+  `APE SEO visibility score: 100/100`.
+- `node scripts/brain-check.mjs` → `BRAIN_CHECK_PASS`.
+- Suíte completa (288 arquivos): duas execuções com 1–2 timeouts em testes pesados de
+  varredura de `src` que passam isolados — não determinístico e não relacionado ao convite.
+
+
 Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]]
 ## Fechamento — ações icon-only no mobile — 2026-09-12
 
@@ -149,6 +161,32 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
   Em modo desktop as ações permaneceram `48x44 px`.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
+
+## Fechamento — card "Voltar para onde parou" (2026-09-13)
+
+- RED observado antes do fix: studyResumeIntegration.test.ts falhou em 2 casos
+  (isSafeStudyResumePath recusava /list/ID/mixed-study e
+  buildStudyPathFromRemoteSession devolvia /list/ID/study?mode=mixed-adaptive).
+- Testes focados: 9 arquivos / 67 testes passando, incluindo
+  studyResumeQuery.test.ts (A -> B -> C, escopo anon x usuário, conclusão,
+  título/progresso/destino coerentes, fallback de transporte) e
+  useStudyResumePublisher.test.tsx (publicação pelo Study e pela Prática Mista).
+- Suíte de estudo/hooks: 115 arquivos / 964 testes passando.
+- Suíte completa final: 288 arquivos / 1809 testes passando. Numa rodada
+  anterior, com o worktree compartilhado sob carga, dois casos de
+  src/lib/__tests__/paletteContrast.contract.test.ts estouraram o timeout de 5s
+  (varredura síncrona de todo o src) e passaram 15/15 com --testTimeout=30000 —
+  contenção de CPU, não asserção violada.
+- Typecheck: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.app.json
+  exit 0.
+- Lint dos arquivos alterados: 0 erros (warnings restantes em Study.tsx são
+  pré-existentes).
+- Build: npm run build exit 0, com APE SEO visibility score 100/100 e orçamento
+  de bundle aprovado.
+- [NAO VERIFICADO] Reprodução manual em navegador autenticado (A -> B -> C) e
+  conferência visual do card; o worktree não tinha preview acessível.
+
+Related: [[areas/study-resume]] · [[06-BUGS]] · [[sessions/2026-09-13-resume-card-ultima-sessao]]
 
 ## Estudo — orientação efetiva A/B, labels e TTS — 2026-09-13
 

@@ -4,11 +4,15 @@
  * Regra de ouro (UX): o app NÃO instala nada. O CTA abre a Chrome Web Store em
  * nova aba e o usuário confirma a instalação no navegador.
  *
- * Renderiza somente quando: usuário autenticado + navegador compatível +
- * extensão não detectada + snooze vencido + convite não visto nesta sessão.
+ * Renderiza quando: navegador compatível (desktop Chromium) + extensão não
+ * detectada + snooze vencido + convite não visto nesta sessão.
+ *
+ * A superfície é decidida por `extensionPromptPolicy` + `BrowserExtensionPromptMount`
+ * (landing pública SEM login ou app autenticado). Aqui NÃO existe gate de
+ * autenticação: login nunca foi requisito da landing pública.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Headphones, MousePointer2, Puzzle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,17 +28,28 @@ import {
   snoozeExtensionPrompt,
   wasPromptSeenThisSession,
 } from "./extensionPromptStorage";
+import { evaluateExtensionPromptGates, publishExtensionPromptDebug } from "./extensionPromptPolicy";
+import { isMobileEnvironment } from "./extensionStatus";
+import { readCompatibilityEnvironment } from "./extensionRuntime";
 import { useBrowserExtensionStatus } from "./useBrowserExtensionStatus";
 
 type PromptPhase = "idle" | "waiting" | "entering" | "visible" | "closing";
 
 interface ExtensionInstallPromptProps {
-  /** O convite só existe para usuário autenticado (default: false). */
-  authenticated?: boolean;
+  /**
+   * Rota atual e estado da sessão: usados APENAS no diagnóstico
+   * (`pitecoExtensionPromptDebug`). Nunca gate-iam a exibição.
+   */
+  route?: string;
+  authenticatedSession?: boolean;
 }
 
-export function ExtensionInstallPrompt({ authenticated = false }: ExtensionInstallPromptProps) {
-  const { status } = useBrowserExtensionStatus({ enabled: authenticated });
+export function ExtensionInstallPrompt({
+  route = "",
+  authenticatedSession = false,
+}: ExtensionInstallPromptProps) {
+  const environment = useMemo(() => readCompatibilityEnvironment(), []);
+  const { status } = useBrowserExtensionStatus();
   const [phase, setPhase] = useState<PromptPhase>("idle");
   const [dismissed, setDismissed] = useState(false);
   const [snoozed] = useState(() => isPromptSnoozed());
@@ -44,12 +59,22 @@ export function ExtensionInstallPrompt({ authenticated = false }: ExtensionInsta
     seenThisSessionRef.current = wasPromptSeenThisSession();
   }
 
-  const eligible =
-    authenticated &&
-    status === "missing" &&
-    !snoozed &&
-    !dismissed &&
-    !seenThisSessionRef.current;
+  const gates = evaluateExtensionPromptGates({
+    route,
+    authenticatedSession,
+    browserCompatible: environment.extensionMessaging,
+    isDesktop: !isMobileEnvironment(environment),
+    extensionStatus: status,
+    snoozeActive: snoozed,
+    seenThisSession: seenThisSessionRef.current,
+    dismissedThisMount: dismissed,
+  });
+
+  if (import.meta.env.DEV) {
+    publishExtensionPromptDebug(gates);
+  }
+
+  const eligible = gates.finalEligibility;
 
   const dismiss = useCallback((reason: "auto" | "explicit") => {
     rememberPromptSeenThisSession();

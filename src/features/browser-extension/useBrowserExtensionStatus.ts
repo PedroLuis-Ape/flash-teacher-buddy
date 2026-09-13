@@ -11,11 +11,6 @@ export interface BrowserExtensionStatus {
   refresh: () => void;
 }
 
-interface UseBrowserExtensionStatusOptions {
-  /** Só consulta a extensão quando true (ex.: usuário autenticado). */
-  enabled?: boolean;
-}
-
 /**
  * Status da extensão no navegador atual.
  *
@@ -23,13 +18,13 @@ interface UseBrowserExtensionStatusOptions {
  * - "unknown": ainda verificando
  * - "installed" / "missing": resultado do ping
  *
+ * Consulta sempre que montado: não existe mais superfície "autenticada" como
+ * pré-condição (a landing pública também precisa saber o status).
+ *
  * Revalida ao voltar o foco para a janela — depois de instalar, o convite
  * desaparece sem exigir reload.
  */
-export function useBrowserExtensionStatus(
-  options: UseBrowserExtensionStatusOptions = {},
-): BrowserExtensionStatus {
-  const enabled = options.enabled ?? true;
+export function useBrowserExtensionStatus(): BrowserExtensionStatus {
   const [status, setStatus] = useState<ExtensionStatus>(() =>
     detectExtensionCompatibility(readCompatibilityEnvironment()) ? "unknown" : "unsupported",
   );
@@ -59,8 +54,6 @@ export function useBrowserExtensionStatus(
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
-
     refresh();
 
     const win = getWindowObject();
@@ -78,7 +71,7 @@ export function useBrowserExtensionStatus(
       win?.removeEventListener?.("focus", onFocus);
       doc?.removeEventListener?.("visibilitychange", onVisibilityChange);
     };
-  }, [enabled, refresh]);
+  }, [refresh]);
 
   return { status, refresh };
 }

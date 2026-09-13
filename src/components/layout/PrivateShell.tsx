@@ -47,7 +47,6 @@ const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").th
 const EconomyInitializer = lazy(() => import("@/components/EconomyInitializer").then(m => ({ default: m.EconomyInitializer })));
 const BrowserCheck = lazy(() => import("@/components/BrowserCheck").then(m => ({ default: m.BrowserCheck })));
 const GoogleConnectPrompt = lazy(() => import("@/features/auth/components/GoogleConnectPrompt").then(m => ({ default: m.GoogleConnectPrompt })));
-const ExtensionInstallPrompt = lazy(() => import("@/features/browser-extension/ExtensionInstallPrompt").then(m => ({ default: m.ExtensionInstallPrompt })));
 
 interface PrivateShellProps {
   children: ReactNode;
@@ -171,11 +170,9 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
 
-      {user && secondaryReady && !safeMode && !isActiveStudyRoute && (
-        <Suspense fallback={null}>
-          <ExtensionInstallPrompt authenticated />
-        </Suspense>
-      )}
+      {/* O convite da extensão vive em GlobalLayout/BrowserExtensionPromptMount:
+          montá-lo aqui criaria uma segunda instância e devolveria o gate de
+          autenticação que bloqueava a landing pública. */}
 
       {!isActiveStudyRoute && (
         <div className="space-ui-version-badge fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">

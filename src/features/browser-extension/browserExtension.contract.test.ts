@@ -1,10 +1,35 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 const browserExtensionDir = resolve(root, "src/features/browser-extension");
+
+/**
+ * Fontes de produção (sem testes) para contar pontos de montagem.
+ * Só `.tsx`: um elemento JSX não pode existir em arquivo `.ts`, e varrer
+ * o resto da árvore deixaria o teste desnecessariamente lento.
+ */
+function listSourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = resolve(dir, entry.name);
+    if (entry.isDirectory()) return listSourceFiles(entryPath);
+    if (!entry.name.endsWith(".tsx") || /\.test\.tsx$/.test(entry.name)) return [];
+    return [entryPath];
+  });
+}
+
+async function countPromptMounts(): Promise<number> {
+  const sources = await Promise.all(
+    listSourceFiles(resolve(root, "src")).map((file) => readFile(file, "utf8")),
+  );
+  return sources.reduce(
+    (total, source) => total + (source.match(/<BrowserExtensionPromptMount/g)?.length ?? 0),
+    0,
+  );
+}
 
 describe("APE browser extension contract", () => {
   it("ships with American English as the initial pronunciation preset", () => {
@@ -17,19 +42,33 @@ describe("APE browser extension contract", () => {
     expect(background).toContain('defaultLang: "en-US"');
   });
 
-  it("keeps the prompt inline in the authenticated shell without covering public pages", () => {
-    const publicShell = read("src/components/layout/PublicShell.tsx");
+  it("mounts the prompt exactly once, from the shared layout, without an auth gate", async () => {
+    const globalLayout = read("src/components/layout/GlobalLayout.tsx");
     const privateShell = read("src/components/layout/PrivateShell.tsx");
+    const publicShell = read("src/components/layout/PublicShell.tsx");
+    const mount = read("src/features/browser-extension/BrowserExtensionPromptMount.tsx");
+    const policy = read("src/features/browser-extension/extensionPromptPolicy.ts");
     const landing = read("src/components/landing/LandingHome.tsx");
     const installPage = read("public/extensao/index.html");
 
-    expect(publicShell).not.toContain("ExtensionInstallPrompt");
-    expect(privateShell).toContain("ExtensionInstallPrompt");
-    expect(privateShell).toContain("ExtensionInstallPrompt authenticated");
+    // UMA instância para toda a aplicação: o shell público e o autenticado
+    // apenas compartilham o mesmo ponto de montagem em GlobalLayout.
+    expect(await countPromptMounts()).toBe(1);
+    expect(globalLayout).toContain("<BrowserExtensionPromptMount />");
+    expect(privateShell).not.toContain("<BrowserExtensionPromptMount");
+    expect(privateShell).not.toContain("<ExtensionInstallPrompt");
+    expect(publicShell).not.toContain("<ExtensionInstallPrompt");
+    expect(mount).toContain("<ExtensionInstallPrompt");
+
+    // A landing pública é elegível SEM login; o gate de auth foi removido.
+    expect(policy).toContain("isPublicLandingPath");
+    expect(policy).toContain("public-landing");
+    expect(policy).not.toContain("authenticatedSession && isPublicLandingPath");
+
     expect(landing).toContain('href="/extensao/index.html"');
     expect(installPage).toContain("Chrome Web Store");
     expect(installPage).toContain("store-config.json");
-  });
+  }, 20_000);
 
   it("publishes ID, store URL and timings from a single config module", () => {
     const config = read("src/features/browser-extension/extensionConfig.ts");

@@ -20,6 +20,8 @@ duplica o conteúdo das lições.
   A validação inicial está registrada em [[learning/attempts/2026-09-11-skill-integration]].
 - `CANDIDATE_LESSON`: [[learning/lessons/2026-09-13-supabase-rpc-method-binding]] —
   preservar o receiver ao tipar métodos de SDK que dependem de `this`.
+- `CANDIDATE_LESSON`: [[learning/lessons/2026-09-13-gate-auth-em-superficie-publica]] —
+  convite de aquisição não pode existir só no shell autenticado.
 
 ## Status aceitos
 

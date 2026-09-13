@@ -8,6 +8,7 @@ import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 import { MixedModeRecommendationBubble } from "@/features/study/components/MixedModeRecommendationBubble";
+import { BrowserExtensionPromptMount } from "@/features/browser-extension/BrowserExtensionPromptMount";
 import { MobilePortraitOnlyGate } from "@/components/layout/MobilePortraitOnlyGate";
 import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
 import { isProtectedPath } from "@/lib/sessionRouteAccess";
@@ -36,6 +37,10 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     <>
       <PortalHistorySyncAgent />
       {content}
+      {/* Convite da extensão: montado UMA única vez para toda a aplicação.
+          A landing pública ("/") é elegível SEM login; o app autenticado
+          continua elegível. A política vive em extensionPromptPolicy. */}
+      <BrowserExtensionPromptMount />
       <MobilePortraitOnlyGate active={portraitOnlySession} />
       <MixedModeRecommendationBubble />
       {location.pathname === "/import" && user && (

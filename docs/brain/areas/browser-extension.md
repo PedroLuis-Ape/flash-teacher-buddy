@@ -5,7 +5,7 @@ type: area
 domain: extension
 status: active
 priority: high
-last_reviewed: 2026-09-12
+last_reviewed: 2026-09-13
 related:
   - "[[01-CURRENT-STATE]]"
   - "[[04-DECISIONS]]"
@@ -190,8 +190,12 @@ como "unsupported" e nunca lança.
 `EXTENSION_ID` (`gomkkomamhecmmomcpjmioikjadpddnh`), `WEB_STORE_URL` sem UTM,
 `SHOW_DELAY_MS` 5 s, `AUTO_DISMISS_MS` 15 s, `SNOOZE_DURATION_MS` 7 dias.
 
+[DECISAO SUBSTITUIDA em 2026-09-13] O convite era montado só no shell autenticado
+(`PrivateShell`) e exigia login — inalcançável na landing pública.
 [DECISAO VIGENTE] Existe UM convite: `src/features/browser-extension/ExtensionInstallPrompt.tsx`,
-montado só no shell autenticado (`PrivateShell`) e fora das rotas de estudo em tela cheia.
+com UM ponto de montagem (`BrowserExtensionPromptMount`, em `GlobalLayout`). A landing pública
+é elegível SEM login; o app autenticado continua elegível; rotas de estudo em tela cheia e
+Safe Mode suprimem o convite. Superfície e gates vivem em `extensionPromptPolicy.ts`.
 Não renderiza nada durante a espera (sem elemento invisível focável), tem X com `aria-label`
 e o CTA apenas abre a Chrome Web Store em nova aba (`target="_blank"`, `rel="noopener noreferrer"`).
 O app NUNCA instala a extensão.
@@ -219,3 +223,33 @@ cópia legada versionada no repositório do app (`browser-extension/ape-pronunci
 ao voltar o foco) não foi executado; a garantia atual é de contrato + unidade.
 
 Related: [[sessions/2026-09-13-extensao-salvar-nas-notas]] · [[07-TESTS]] · [[08-RISKS]]
+
+## Correção — convite elegível na landing pública (2026-09-13)
+
+[DECISAO SUBSTITUIDA] O convite não pode depender de login. Antes desta rodada ele
+existia apenas em `PrivateShell` e exigia a prop `authenticated`, então o visitante
+da landing nunca o via (o ping da extensão nem era disparado).
+
+[DECISAO VIGENTE] Superfície e elegibilidade ficam em
+`src/features/browser-extension/extensionPromptPolicy.ts`:
+
+- `public-landing` — `/` e `/landing`, elegível SEM autenticação;
+- `authenticated-app` — rotas privadas autenticadas;
+- `null` — outras páginas públicas, rotas de estudo em tela cheia e Safe Mode.
+
+[DECISAO VIGENTE] Existe UM ponto de montagem,
+`src/features/browser-extension/BrowserExtensionPromptMount.tsx`, chamado uma vez por
+`GlobalLayout`. Não montar o convite em `PublicShell`/`PrivateShell` de novo.
+
+[VERIFIED-REPO] Os 7 gates auditáveis são `extensionDetected`, `browserCompatible`,
+`isDesktop`, `authenticated` (diagnóstico, NÃO gate), `snoozeActive`,
+`seenThisSession` e `finalEligibility`, com `reasonNotShown` explicando a primeira
+barreira. Em desenvolvimento o snapshot sai em `window.pitecoExtensionPromptDebug`.
+
+[VERIFIED-TEST] Cobertura: `extensionPromptPolicy.test.ts` (matriz dos gates e das
+superfícies), `extensionIntegration.test.tsx` (A..J, K1–K5 na landing e M1–M5 de
+montagem única) e `browserExtension.contract.test.ts` (exatamente um ponto de montagem
+em `src`).
+
+Related: [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] ·
+[[learning/lessons/2026-09-13-gate-auth-em-superficie-publica]] · [[07-TESTS]]

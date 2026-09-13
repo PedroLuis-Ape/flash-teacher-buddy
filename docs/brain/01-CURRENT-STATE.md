@@ -126,10 +126,27 @@ não como limite desta nova solicitação.
 
 - [VERIFIED-REPO] Já existem `useEconomy`, `useReinforcement`,
   `useLatestStudyResume`, repository/outbox de sessões e migrations relacionadas.
-- [REVALIDATE] A consulta autoritativa da Home ainda precisa ser alinhada com
-  a consulta de retomada e com status/descartes reais de `study_sessions`.
+- [RESOLVIDO 2026-09-13] A consulta do card foi alinhada com as sessões abertas
+  reais e com o escopo de instituição; ver [[areas/study-resume]] e
+  [[sessions/2026-09-13-resume-card-ultima-sessao]].
 - [UNKNOWN] Schema, RLS e RPCs efetivamente aplicados no Supabase de produção
   ainda não foram verificados nesta rodada.
+
+## Retomada de estudo — card "Voltar para onde parou" (fechamento 2026-09-13)
+
+- [DECISAO VIGENTE] A fonte do card é a última atividade real de estudo
+  (ponteiro local validado + sessões abertas em study_sessions), nunca um
+  fallback antigo com prioridade absoluta. Detalhes em [[areas/study-resume]].
+- [FIX] O ponteiro de retomada passou a ser publicado por todas as superfícies
+  de estudo (Study e Prática Mista); a Home realinha o ponteiro para a sessão
+  vencedora e sair/concluir invalida o cache da retomada e da Home.
+- [EVIDENCIA] tsc = 0; testes focados 9 arquivos / 67 testes verdes; suíte
+  completa 288 arquivos / 1809 testes verdes; npm run build exit 0 com SEO
+  100/100. Ver [[07-TESTS]].
+- [NAO VERIFICADO] Reprodução manual em navegador autenticado (A -> B -> C).
+- [ESCOPO] Nada foi mergeado, publicado ou escrito no Supabase. O worktree é
+  compartilhado com outra frente ativa (extensão de navegador), cujas
+  alterações não foram tocadas.
 
 ## Estado da etapa Reforço — fechamento 2026-09-12
 
@@ -530,9 +547,11 @@ Verificado no preview servindo o build do `main` (`e52bf92b`):
 ## Integração com a extensão Salvar nas Notas — 2026-09-13
 
 - [FATO CONFIRMADO] O app agora detecta a extensão por ping externo e mostra UM convite
-  (`ExtensionInstallPrompt`) somente para usuário autenticado, desktop Chromium, extensão
-  ausente e snooze vencido; o CTA apenas abre a Chrome Web Store em nova aba. O app não
-  instala nada e o convite não aparece em rotas de estudo em tela cheia.
+  (`ExtensionInstallPrompt`) em desktop Chromium, extensão ausente e snooze vencido; o CTA
+  apenas abre a Chrome Web Store em nova aba. O app não instala nada e o convite não aparece
+  em rotas de estudo em tela cheia.
+- [DECISAO SUBSTITUIDA em 2026-09-13] A exigência de usuário autenticado deixou de valer:
+  era ela que impedia o convite de aparecer na landing pública. Ver abaixo.
 - [DECISAO VIGENTE] Configuração única em `src/features/browser-extension/extensionConfig.ts`
   (ID, URL da loja sem UTM, 5 s para aparecer, 15 s de auto-dismiss, snooze de 7 dias no X,
   chaves `piteco_extension_prompt_dismissed_until` e `piteco_extension_prompt_seen_session`).
@@ -546,3 +565,23 @@ Verificado no preview servindo o build do `main` (`e52bf92b`):
   publicação do pacote na Chrome Web Store continuam pendentes — decisão do Pedro.
 
 Related: [[areas/browser-extension]] · [[sessions/2026-09-13-extensao-salvar-nas-notas]] · [[07-TESTS]] · [[08-RISKS]]
+
+## Convite da extensão na landing pública — 2026-09-13
+
+- [FATO CONFIRMADO] O convite da extensão não aparecia em `/` porque existia apenas no
+  shell autenticado e ainda exigia login dentro do componente: `finalEligibility` era
+  `false` (gate de autenticação) e a superfície nem era montada.
+- [DECISAO VIGENTE] A landing pública (`/` e `/landing`) é elegível SEM autenticação; o
+  app autenticado continua elegível; estudo em tela cheia e Safe Mode suprimem. Existe UM
+  ponto de montagem (`BrowserExtensionPromptMount`) em `GlobalLayout`, e a política
+  (superfície + 7 gates com `reasonNotShown`) vive em `extensionPromptPolicy.ts`.
+- [DECISAO SUBSTITUIDA] O registro anterior desta nota que dizia "somente para usuário
+  autenticado" deixou de valer nesta data.
+- [VERIFIED-TEST] Focados 45/45 em `src/features/browser-extension`; typecheck 0; lint 0
+  erros; build exit 0 com SEO 100/100. RED inicial: 11/24 falhas exatamente no cenário da
+  landing sem login.
+- [PENDING] QA em navegador real com a extensão instalada segue pendente; a suíte completa
+  apresentou timeouts não determinísticos em testes pesados de varredura, alheios a este
+  diff (ver [[sessions/2026-09-13-convite-extensao-landing-publica]]).
+
+Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] · [[07-TESTS]]

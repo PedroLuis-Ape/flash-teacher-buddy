@@ -20,7 +20,13 @@ const PUBLIC_PREFIXES = [
   '/en',
 ] as const;
 
-const PUBLIC_EXACT = new Set<string>(['/', '/landing']);
+/**
+ * Rotas que servem a landing pública. Fonte única: `PUBLIC_EXACT` deriva daqui
+ * e `isPublicLandingPath` responde à pergunta "esta rota é a landing?".
+ */
+const PUBLIC_LANDING_PATHS = ['/', '/landing'] as const;
+
+const PUBLIC_EXACT = new Set<string>(PUBLIC_LANDING_PATHS);
 
 export function isPublicClassSharePath(pathname: string): boolean {
   const parts = pathname.split('/').filter(Boolean);
@@ -38,4 +44,15 @@ export function isProtectedPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(normalized)) return false;
   if (isPublicClassSharePath(normalized)) return false;
   return !PUBLIC_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+/**
+ * Landing pública (canônica `/` e alias `/landing`), tolerante a barra final.
+ *
+ * É a superfície onde o convite da extensão pode aparecer SEM login: o gate de
+ * autenticação não vale para página pública de aquisição.
+ */
+export function isPublicLandingPath(pathname: string): boolean {
+  const normalized = pathname.toLowerCase().replace(/\/+$/, '') || '/';
+  return (PUBLIC_LANDING_PATHS as readonly string[]).includes(normalized);
 }

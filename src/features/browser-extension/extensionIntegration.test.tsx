@@ -7,9 +7,11 @@
  */
 
 import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { BrowserExtensionPromptMount } from "./BrowserExtensionPromptMount";
 import { BrowserExtensionSettingsSection } from "./BrowserExtensionSettingsSection";
 import { ExtensionInstallPrompt } from "./ExtensionInstallPrompt";
 import {
@@ -24,6 +26,15 @@ import {
   WEB_STORE_URL,
 } from "./extensionConfig";
 import { detectExtensionCompatibility, pingExtension } from "./extensionStatus";
+
+/** Sessão simulada do ponto de montagem (`GlobalLayout` → `useAuth`). */
+const authState = vi.hoisted(() => ({ status: "anonymous" as string }));
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({
+    status: authState.status,
+    user: authState.status === "authenticated" ? { id: "user-1" } : null,
+  }),
+}));
 
 type SendMessageHandler = (
   extensionId: string,
@@ -166,19 +177,27 @@ afterEach(() => {
 });
 
 describe("convite da extensão — cenários A..J", () => {
-  it("A — usuário não autenticado não vê o convite nem consulta a extensão", async () => {
-    const harness = installBrowser({ handler: installedExtension(), mobile: false });
-    const renderer = await render(<ExtensionInstallPrompt authenticated={false} />);
+  it("A — landing pública sem login é elegível e mostra o convite após o delay", async () => {
+    const harness = installBrowser({ handler: missingExtension(), mobile: false });
+    const renderer = await render(<ExtensionInstallPrompt />);
 
-    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+    await settle();
+    expect(harness.sendMessage).toHaveBeenCalledWith(
+      EXTENSION_ID,
+      { type: "PITECO_EXTENSION_PING" },
+      expect.any(Function),
+    );
 
+    await advance(SHOW_DELAY_MS - 1);
     expect(renderer.toJSON()).toBeNull();
-    expect(harness.sendMessage).not.toHaveBeenCalled();
+
+    await advance(1);
+    expect(renderer.toJSON()).not.toBeNull();
   });
 
   it("B — mobile não é compatível e não mostra o convite", async () => {
     const harness = installBrowser({ handler: missingExtension(), mobile: true });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
 
@@ -197,7 +216,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("C — navegador sem canal externo (Firefox/Safari) fica incompatível", async () => {
     installBrowser({ hasChannel: false, mobile: false });
-    const prompt = await render(<ExtensionInstallPrompt authenticated />);
+    const prompt = await render(<ExtensionInstallPrompt />);
     const settings = await render(<BrowserExtensionSettingsSection />);
 
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
@@ -209,7 +228,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("D — desktop Chromium com extensão instalada: ping correto e sem convite", async () => {
     const harness = installBrowser({ handler: installedExtension(), mobile: false });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
@@ -224,7 +243,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("E — desktop Chromium sem extensão mostra o convite só depois do delay", async () => {
     installBrowser({ handler: missingExtension(), mobile: false });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS - 1);
@@ -236,7 +255,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("F — fechar no X remove o convite e grava snooze de 7 dias", async () => {
     const harness = installBrowser({ handler: missingExtension(), mobile: false });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS);
@@ -262,7 +281,7 @@ describe("convite da extensão — cenários A..J", () => {
     const harness = installBrowser({ handler: missingExtension(), mobile: false });
     harness.local.setItem(PROMPT_SNOOZE_KEY, String(Date.now() + 60 * 60 * 1_000));
 
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
 
     expect(renderer.toJSON()).toBeNull();
@@ -270,7 +289,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("H — auto-dismiss remove o convite pelo resto da sessão", async () => {
     const harness = installBrowser({ handler: missingExtension(), mobile: false });
-    const first = await render(<ExtensionInstallPrompt authenticated />);
+    const first = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS);
@@ -282,14 +301,14 @@ describe("convite da extensão — cenários A..J", () => {
     expect(harness.session.getItem(PROMPT_SESSION_KEY)).toBe("1");
     expect(harness.local.getItem(PROMPT_SNOOZE_KEY)).toBeNull();
 
-    const second = await render(<ExtensionInstallPrompt authenticated />);
+    const second = await render(<ExtensionInstallPrompt />);
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
     expect(second.toJSON()).toBeNull();
   });
 
   it("I — CTA abre a Chrome Web Store em nova aba (o app não instala nada)", async () => {
     installBrowser({ handler: missingExtension(), mobile: false });
-    const prompt = await render(<ExtensionInstallPrompt authenticated />);
+    const prompt = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS);
@@ -313,7 +332,7 @@ describe("convite da extensão — cenários A..J", () => {
       },
       mobile: false,
     });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await settle();
     await advance(SHOW_DELAY_MS);
@@ -324,7 +343,7 @@ describe("convite da extensão — cenários A..J", () => {
 
   it("J — timeout do ping é tratado como não instalada", async () => {
     installBrowser({ handler: () => undefined, mobile: false });
-    const renderer = await render(<ExtensionInstallPrompt authenticated />);
+    const renderer = await render(<ExtensionInstallPrompt />);
 
     await advance(PING_TIMEOUT_MS - 1);
     expect(renderer.toJSON()).toBeNull();
@@ -334,6 +353,63 @@ describe("convite da extensão — cenários A..J", () => {
 
     await advance(SHOW_DELAY_MS);
     expect(renderer.toJSON()).not.toBeNull();
+  });
+});
+
+describe("convite na landing pública — matriz de gates sem login", () => {
+  it("K1 — extensão detectada: o convite fica oculto", async () => {
+    const harness = installBrowser({ handler: installedExtension(), mobile: false });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    expect(harness.sendMessage).toHaveBeenCalled();
+
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("K2 — snooze ativo: o convite fica oculto", async () => {
+    const harness = installBrowser({ handler: missingExtension(), mobile: false });
+    harness.local.setItem(PROMPT_SNOOZE_KEY, String(Date.now() + 60 * 60 * 1_000));
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    expect(harness.sendMessage).toHaveBeenCalled();
+
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("K3 — já visto nesta sessão: o convite fica oculto", async () => {
+    const harness = installBrowser({ handler: missingExtension(), mobile: false });
+    harness.session.setItem(PROMPT_SESSION_KEY, "1");
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    expect(harness.sendMessage).toHaveBeenCalled();
+
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("K4 — mobile nunca vê o convite e não consulta a extensão", async () => {
+    const harness = installBrowser({ handler: missingExtension(), mobile: true });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    expect(renderer.toJSON()).toBeNull();
+    expect(harness.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("K5 — navegador sem canal externo (Firefox/Safari) nunca vê o convite", async () => {
+    const harness = installBrowser({ hasChannel: false, mobile: false });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    expect(renderer.toJSON()).toBeNull();
+    expect(harness.sendMessage).not.toHaveBeenCalled();
   });
 });
 
@@ -368,5 +444,74 @@ describe("pingExtension", () => {
   it("não lança quando não existe chrome.runtime", async () => {
     installBrowser({ hasChannel: false, mobile: false });
     await expect(pingExtension()).resolves.toBe("missing");
+  });
+});
+
+describe("montagem única do convite (GlobalLayout)", () => {
+  const countPrompts = (renderer: ReactTestRenderer): number =>
+    renderer.root.findAllByType("aside").length;
+
+  const mountAt = (entry: string) =>
+    render(
+      <MemoryRouter initialEntries={[entry]}>
+        <BrowserExtensionPromptMount />
+      </MemoryRouter>,
+    );
+
+  it("M1 — landing pública sem login: exatamente UMA instância, depois do delay", async () => {
+    authState.status = "anonymous";
+    const harness = installBrowser({ handler: missingExtension(), mobile: false });
+    const renderer = await mountAt("/");
+
+    await settle();
+    await advance(SHOW_DELAY_MS);
+
+    expect(harness.sendMessage).toHaveBeenCalled();
+    expect(countPrompts(renderer)).toBe(1);
+  });
+
+  it("M2 — app autenticado em rota privada: exatamente UMA instância", async () => {
+    authState.status = "authenticated";
+    installBrowser({ handler: missingExtension(), mobile: false });
+    const renderer = await mountAt("/dashboard");
+
+    await settle();
+    await advance(SHOW_DELAY_MS);
+
+    expect(countPrompts(renderer)).toBe(1);
+  });
+
+  it("M3 — rota pública que não é a landing: nenhuma instância", async () => {
+    authState.status = "anonymous";
+    installBrowser({ handler: missingExtension(), mobile: false });
+    const renderer = await mountAt("/auth");
+
+    await settle();
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    expect(countPrompts(renderer)).toBe(0);
+  });
+
+  it("M4 — rota de estudo em tela cheia: nenhuma instância", async () => {
+    authState.status = "authenticated";
+    installBrowser({ handler: missingExtension(), mobile: false });
+    const renderer = await mountAt("/list/abc/study");
+
+    await settle();
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    expect(countPrompts(renderer)).toBe(0);
+  });
+
+  it("M5 — Safe Mode: nenhuma instância, mesmo na landing pública", async () => {
+    authState.status = "anonymous";
+    const harness = installBrowser({ handler: missingExtension(), mobile: false });
+    harness.local.setItem("ape_safe_mode", "true");
+    const renderer = await mountAt("/");
+
+    await settle();
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    expect(countPrompts(renderer)).toBe(0);
   });
 });
