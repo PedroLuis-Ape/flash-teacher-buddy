@@ -91,3 +91,35 @@ Related: [[sessions/2026-09-13-ab-language-orientation]] · [[07-TESTS]] · [[08
   foi concluída: o iframe do preview parou de aceitar inspeção após o refresh.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]] · [[areas/adaptive-learning]]
+## BUG — Lista pública indisponível: camada de publicação nunca aplicada (2026-09-13)
+
+[VERIFIED-RUNTIME] `/portal/list/{id}` renderiza "Lista pública indisponível" (~3s). Evidência de rede
+capturada por CDP no build de produção:
+
+```
+rpc/get_public_learning_list        -> HTTP 404   (função não existe)
+lists?select=...                    -> HTTP 401   (anon não pode ler a tabela; RLS)
+```
+
+[VERIFIED-DB] Em produção (`ymahldldyxvwjeruaxpr`) NÃO existem:
+`public_entity_publications`, `public_learning_list_entries`, `is_public_learning_list`,
+`get_public_learning_list`, `get_public_learning_list_card_preview` — 0 de 3 funções presentes.
+
+[CONFLITO] A migration do repositório `20260713152000_public_learning_list_pages.sql` **não pode ser
+aplicada como está**: depende de `public.public_entity_publications`, que também não existe em produção.
+O fallback do próprio cliente (`loadLegacyPublicList`) também não funciona, porque depende de leitura
+direta de `lists` por `anon` — negada pela RLS (401).
+
+[IMPACTO] A página de lista do portal não abre; o convite de visitante da Fase 3 (`GuestAccountInvite`,
+montado só nessa página) fica inalcançável. O restante do fluxo (catálogo → hub de jogos → estudo) não
+passa por essa camada e funciona.
+
+[DECISÃO PENDENTE — requer o Pedro] Duas saídas: (a) reimplementar `get_public_learning_list` e
+`..._card_preview` contra a regra pública vigente (`visibility='class'`, `class_id IS NULL`,
+`deleted_at IS NULL`, dono com `is_teacher`, `public_access_enabled`, `public_profile_searchable` e
+`public_slug`), sem a camada de registro — mesma decisão já tomada na Fase 4 para os materiais curados;
+(b) aplicar a camada de registro completa, inclusive `public_entity_publications` — mais superfície e um
+segundo sistema de publicação convivendo com a regra vigente.
+
+[VERIFIED-DB] Todas as colunas que a regra exige existem em produção e o único professor público cumpre
+os requisitos, então a opção (a) é executável.

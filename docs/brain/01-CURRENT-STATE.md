@@ -511,3 +511,18 @@ Próximo passo e ordem de retomada: [[09-ASTRA-HANDOFF]].
 - [FATO CONFIRMADO] O runtime agora usa settings centralizados no Mixed e orientação de deck somente por evidência agregada; não houve alteração de cards, banco, migration, merge, push ou deploy.
 - [FATO CONFIRMADO] Gates: typecheck 0; Vitest 278 arquivos/1723 testes; ESLint 0 erros/72 warnings; build e SEO 100/100; brain-check PASS.
 - [FOLLOW-UP] Permanecem a duplicidade de direção em `gameCore.ts`, recálculos nos wrappers e `PronunciationStudyView` fixado em `sideB`. Ver [[sessions/2026-09-13-ab-language-orientation]] e [[08-RISKS]].
+## Verificação ao vivo do programa SEO/GEO (2026-09-13)
+
+Verificado no preview servindo o build do `main` (`e52bf92b`):
+
+- Fase 1: destaque real no DOM (`data-featured-source="config"`, Passo 001 · 33 cards · Pedro), CTA
+  "Jogar agora — sem cadastro" e carrossel com os 4 screenshots; o CTA leva ao Hub de jogos (funciona).
+- Fase 2: paleta `black` = teal `172 70% 50%`, índigo `232 60% 55%`, âmbar `38 92% 58%`, fundo `rgb(12,14,19)`.
+- Fase 4: 5 locales com H1 próprio, 1 canonical, 1 robots e JSON-LD; busca funciona (`?q=` + estado filtrado
+  + limpar filtros); `noindex, follow` com filtro; sitemap com 5 URLs sem querystring.
+- Fase 5: `robots.txt` com OAI-SearchBot sem bloquear a raiz; JSON-LD nas páginas públicas.
+- Bug A/B: na tela — English / "I am at home" / "Escolha a tradução em Português:" com opções em português.
+- Mobile 390 px: catálogo e home sem overflow horizontal; toggle `Filtrar` presente no mobile.
+- [PENDENTE] Lista pública indisponível — ver [[06-BUGS]] (decisão do Pedro).
+- [OBSERVAÇÃO] `/{locale}/material/{slug}` não aprovado mostra "Material não disponível" mas não emite
+  `noindex` (herda o `index,follow` estático do shell).
