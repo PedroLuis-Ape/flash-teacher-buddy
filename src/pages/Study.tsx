@@ -68,10 +68,8 @@ import { awaitSaveProgress, describeSaveProgressResult } from "@/features/study/
 import {
   clearStudyResumePointerForSession,
   markStudySessionCompleted,
-  writeStudyResumePointer,
 } from "@/features/study/lib/studyResumePointer";
 import {
-  canonicalizeStudyResumePath,
   parseRequestedResumeSessionId,
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
@@ -120,7 +118,8 @@ import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/
 import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { STUDY_RESUME_QUERY_KEY } from "@/hooks/useLatestStudyResume";
+import { invalidateStudyResumeCaches } from "@/features/study/lib/studyResumeCache";
+import { useStudyResumePublisher } from "@/features/study/hooks/useStudyResumePublisher";
 import { buildStudyReturnRoute, buildStudySettingsRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
 import {
@@ -1246,8 +1245,7 @@ const Study = () => {
     const result = await awaitSaveProgress(() => saveProgressNow());
     publishResumePointer();
     // A Home não pode continuar mostrando o progresso antigo em cache.
-    await queryClient.invalidateQueries({ queryKey: [STUDY_RESUME_QUERY_KEY] });
-    await queryClient.invalidateQueries({ queryKey: ["home-data"] });
+    await invalidateStudyResumeCaches(queryClient);
     if (result.status !== "remote-confirmed") {
       toast.info(describeSaveProgressResult(result));
     }
@@ -1267,6 +1265,8 @@ const Study = () => {
       markStudySessionCompleted(authUserId, engineSessionId);
       clearStudyResumePointerForSession(authUserId, engineSessionId);
     }
+    // Sessão concluída sai do card imediatamente, sem esperar um novo fetch.
+    await invalidateStudyResumeCaches(queryClient);
     setShowCompletionModal(false);
     navigate(returnRoute, { replace: true });
   };
@@ -1536,49 +1536,25 @@ const Study = () => {
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
 
-  // ── Ponteiro de retomada v2 ──
+  // ── Ponteiro de retomada v2 (camada comum a todas as superfícies) ──
   // Só publicamos quando existe uma sessão válida com deck pronto e ao menos um
-  // card jogável. O ponteiro aponta para uma sessionId específica.
-  const publishResumePointer = useCallback(() => {
-    if (!authUserId || !engineSessionId) return;
-    if (!resolvedId || cardsOrder.length === 0) return;
-    writeStudyResumePointer({
-      userId: authUserId,
-      sessionId: engineSessionId,
-      resourceKind: isListRoute ? "list" : "collection",
-      resourceId: resolvedId,
-      gameMode: normalizedMode,
-      institutionId: resumeInstitutionId,
-      path: canonicalizeStudyResumePath(`${location.pathname}${location.search}`)
-        ?? location.pathname,
-      settingsSummary: studySettings,
-      currentIndex,
-      currentCardId: engineCurrentCardId ?? null,
-      layerIndex: hasLayers ? safeLayerIdx : null,
-    });
-  }, [
-    authUserId,
-    cardsOrder.length,
-    currentIndex,
-    engineCurrentCardId,
-    engineSessionId,
-    hasLayers,
-    isListRoute,
-    location.pathname,
-    location.search,
-    normalizedMode,
-    resolvedId,
-    resumeInstitutionId,
-    safeLayerIdx,
-    studySettings,
-  ]);
-
-  // Atualizado sempre que a sessão avança ou as configurações mudam — não
+  // card jogável. O ponteiro aponta para uma sessionId específica e é
+  // atualizado sempre que a sessão avança ou as configurações mudam — não
   // apenas quando a URL muda.
-  useEffect(() => {
-    if (isFinished) return;
-    publishResumePointer();
-  }, [isFinished, publishResumePointer]);
+  const { publish: publishResumePointer } = useStudyResumePublisher({
+    userId: authUserId,
+    sessionId: engineSessionId,
+    resourceKind: isListRoute ? "list" : "collection",
+    resourceId: resolvedId,
+    gameMode: normalizedMode,
+    institutionId: resumeInstitutionId,
+    path: `${location.pathname}${location.search}`,
+    settingsSummary: studySettings,
+    currentIndex,
+    currentCardId: engineCurrentCardId ?? null,
+    layerIndex: hasLayers ? safeLayerIdx : null,
+    finished: isFinished,
+  });
 
   // O parâmetro técnico só sai da URL depois que o engine confirmou a sessão
   // pedida. Se a sessão não pôde ser restaurada, o ponteiro é limpo e o usuário

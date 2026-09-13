@@ -1,106 +1,50 @@
 /**
  * Fonte única de retomada para a Home e para o banner "Continuar".
  *
- * Ordem de decisão:
- * 1. ponteiro local (StudyResumeSnapshotV2) — sessão exata do aparelho;
- * 2. validação/enriquecimento dessa sessão no banco (título e progresso reais);
- * 3. fallback remoto (sessão aberta mais recente) quando não há ponteiro local
- *    — outro aparelho, cache limpo, PWA reinstalada.
+ * Decisão (implementada em `features/study/lib/studyResumeQuery`):
+ * 1. a sessão de estudo REALMENTE mais recente entre o ponteiro local
+ *    (`ape_state_study_resume:v2:<scope>`) e as sessões abertas duráveis;
+ * 2. empate fica com o ponteiro — identidade exata do aparelho;
+ * 3. o ponteiro é realinhado para a sessão vencedora, para que o botão
+ *    Continuar abra exatamente a lista exibida no card.
  */
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import {
   clearStudyResumePointer,
-  readStudyResumePointer,
-  studyResumePointerMatchesInstitution,
+  markStudySessionCompleted,
 } from "@/features/study/lib/studyResumePointer";
 import {
-  RESUMABLE_STUDY_SESSION_COLUMNS,
-  deriveStudyResumeProgress,
-  resumableFromPointer,
-  resumableFromRemoteSession,
-  type ResumableStudySession,
-} from "@/features/study/lib/resumableStudySession";
+  fetchLatestStudyResume,
+  type StudyResumeQueryClient,
+} from "@/features/study/lib/studyResumeQuery";
+import { STUDY_RESUME_QUERY_KEY } from "@/features/study/lib/studyResumeCache";
+import type { ResumableStudySession } from "@/features/study/lib/resumableStudySession";
 
-export const STUDY_RESUME_QUERY_KEY = "study-resume";
+export { STUDY_RESUME_QUERY_KEY };
 
-function matchesInstitution(row: any, institutionId: string | null): boolean {
-  const list = Array.isArray(row?.lists) ? row.lists[0] : row?.lists;
-  if (!list || typeof list.id !== "string" || list.deleted_at != null) return false;
-  const listInstitution = list?.institution_id ?? null;
-  return institutionId ? listInstitution === institutionId : listInstitution === null;
-}
-
-async function fetchLatestStudyResume(
-  userId: string,
-  institutionId: string | null,
-): Promise<ResumableStudySession | null> {
-  const pointer = readStudyResumePointer(userId);
-
-  if (pointer && studyResumePointerMatchesInstitution(pointer, institutionId)) {
-    let pointerQuery = supabase
-      .from("study_sessions")
-      .select(RESUMABLE_STUDY_SESSION_COLUMNS)
-      .eq("id", pointer.sessionId)
-      .eq("user_id", userId)
-      .eq("mode", pointer.gameMode)
-      .eq("completed", false)
-    if (pointer.resourceKind === "list") {
-      pointerQuery = pointerQuery.eq("list_id", pointer.resourceId);
-    }
-    const { data, error } = await pointerQuery.maybeSingle();
-
-    if (!error && data) {
-      const remoteResume = resumableFromRemoteSession(data as any);
-      if (pointer.resourceKind === "list" && !remoteResume) {
-        clearStudyResumePointer(userId);
-      } else {
-        const progress = remoteResume ?? deriveStudyResumeProgress({
-          sessionSnapshot: (data as any).session_snapshot,
-          cardsOrder: (data as any).cards_order,
-          currentIndex: (data as any).current_index,
-        });
-        const list = Array.isArray((data as any).lists) ? (data as any).lists[0] : (data as any).lists;
-        return resumableFromPointer(pointer, {
-          title: remoteResume?.title ?? (typeof list?.title === "string" ? list.title : null),
-          totalCards: progress.totalCards,
-          progressCount: progress.progressCount,
-          progressUnit: progress.progressUnit,
-        });
-      }
-    }
-
-    if (!error) clearStudyResumePointer(userId);
-    else return resumableFromPointer(pointer);
-  }
-
-  const { data: openSessions, error: openError } = await supabase
-    .from("study_sessions")
-    .select(RESUMABLE_STUDY_SESSION_COLUMNS)
-    .eq("user_id", userId)
-    .eq("completed", false)
-    .order("updated_at", { ascending: false })
-    .limit(10);
-  if (openError) throw openError;
-
-  const candidate = (openSessions ?? [])
-    .map((row) => ({ row, resume: resumableFromRemoteSession(row as any) }))
-    .find(({ row, resume }) => Boolean(resume) && matchesInstitution(row, institutionId));
-  return candidate?.resume ?? null;
-}
+const resumeClient = supabase as unknown as StudyResumeQueryClient;
 
 export function useLatestStudyResume() {
   const { userId } = useAuthUser();
   const { selectedInstitution } = useInstitution();
   const institutionId = selectedInstitution?.id ?? null;
   const queryClient = useQueryClient();
+  const queryKey = useMemo(
+    () => [STUDY_RESUME_QUERY_KEY, userId, institutionId ?? "general"] as const,
+    [institutionId, userId],
+  );
 
   const query = useQuery<ResumableStudySession | null>({
-    queryKey: [STUDY_RESUME_QUERY_KEY, userId, institutionId ?? "general"],
-    queryFn: () => fetchLatestStudyResume(userId as string, institutionId),
+    queryKey,
+    queryFn: () => fetchLatestStudyResume({
+      userId: userId as string,
+      institutionId,
+      client: resumeClient,
+    }),
     enabled: !!userId,
     // A Home deve refletir imediatamente a última sessão praticada. Uma janela
     // de staleTime aqui fazia o card "Voltar para onde parou" reaproveitar o
@@ -112,9 +56,16 @@ export function useLatestStudyResume() {
   });
 
   const dismiss = useCallback(() => {
-    if (userId) clearStudyResumePointer(userId);
-    queryClient.setQueryData([STUDY_RESUME_QUERY_KEY, userId, institutionId ?? "general"], null);
-  }, [institutionId, queryClient, userId]);
+    if (!userId) return;
+    const current = queryClient.getQueryData<ResumableStudySession | null>(queryKey);
+    if (current?.sessionId) {
+      // Descartar sem concluir também não pode ressuscitar a sessão: a marca
+      // local vale até a conclusão remota confirmar.
+      markStudySessionCompleted(userId, current.sessionId);
+    }
+    clearStudyResumePointer(userId);
+    queryClient.setQueryData(queryKey, null);
+  }, [queryClient, queryKey, userId]);
 
   return {
     resume: query.data ?? null,

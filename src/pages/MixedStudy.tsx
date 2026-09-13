@@ -67,6 +67,9 @@ import {
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import { createStudyProgressOperationId, recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
 import { claimStudySession, persistStudySession } from "@/features/study/lib/studySessionRepository";
+import { invalidateStudyResumeCaches } from "@/features/study/lib/studyResumeCache";
+import { useStudyResumePublisher } from "@/features/study/hooks/useStudyResumePublisher";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   enqueueStudySessionSnapshot,
   listPendingStudySessionSnapshots,
@@ -127,6 +130,7 @@ export default function MixedStudy() {
   const [searchParams] = useSearchParams();
   const { status: authStatus, userId, session } = useAuth();
   const { selectedInstitution } = useInstitution();
+  const queryClient = useQueryClient();
   const isListRoute = resourceContext.resourceKind === "list";
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -864,6 +868,33 @@ export default function MixedStudy() {
     studySettings.writeCorrectionMode,
     studySettings.studyFlowMode,
   ]);
+
+  // ── Ponteiro de retomada v2 (camada comum a todas as superfícies) ──
+  // A Prática Mista já grava a mesma sessão durável do resto do app; sem
+  // publicar o ponteiro, o card "Voltar para onde parou" da Home continuava
+  // mostrando a lista anterior, mesmo com a sessão nova aberta.
+  const mixedJourneyComplete = mixed.state?.status === "journey-complete";
+  const { publish: publishResumePointer } = useStudyResumePublisher({
+    userId,
+    sessionId: studySessionId,
+    resourceKind: isListRoute ? "list" : "collection",
+    resourceId: resolvedId,
+    // Modo durável da linha em study_sessions (a superfície é /mixed-study).
+    gameMode: "mixed-adaptive",
+    institutionId: selectedInstitution?.id ?? null,
+    path: `${location.pathname}${location.search}`,
+    settingsSummary: studySettings,
+    currentIndex: mixed.state?.currentIndex ?? 0,
+    currentCardId: mixed.currentCardId ?? null,
+    layerIndex: null,
+    finished: mixedJourneyComplete,
+  });
+
+  useEffect(() => {
+    if (!mixedJourneyComplete) return;
+    // Sessão concluída precisa sair do card da Home sem novo login/reload.
+    void invalidateStudyResumeCaches(queryClient);
+  }, [mixedJourneyComplete, queryClient]);
   useEffect(() => {
     answeredCardKeyRef.current = null;
   }, [currentAnswerKey]);
@@ -1031,6 +1062,9 @@ export default function MixedStudy() {
       // available when the optional remote confirmation is unavailable.
       console.warn("[MixedStudy] Saída com sincronização remota pendente:", error);
     });
+    publishResumePointer();
+    // A Home não pode reabrir o card antigo do cache depois de abandonar.
+    await invalidateStudyResumeCaches(queryClient);
     if (window.history.state?.idx > 0) {
       navigate(-1);
       return;

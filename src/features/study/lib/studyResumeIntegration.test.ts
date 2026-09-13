@@ -14,6 +14,7 @@ import {
 import { fetchRequestedStudySession } from "./requestedStudySession";
 import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV2";
 import type { StudyResumeSnapshotV2 } from "./studyResumePointer";
+import { isSafeStudyResumePath } from "./studyResume";
 
 const SESSION_ID = "11111111-2222-3333-4444-555555555555";
 
@@ -66,6 +67,24 @@ describe("buildStudyResumeRoute", () => {
       settings: { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, scope: "favorites", direction: "b-a", order: "sequential" },
     })!;
     expect(path).toBe("/list/list-9/study?mode=write&dir=b-a&order=sequential&favorites=true");
+  });
+
+  it("retoma a Prática Mista na superfície correta", () => {
+    const path = buildStudyPathFromRemoteSession({
+      listId: "list-9",
+      mode: "mixed-adaptive",
+      settings: DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+    })!;
+    expect(path).toContain("/list/list-9/mixed-study");
+    expect(path).toContain("mode=mixed");
+    expect(path).not.toContain("mixed-adaptive");
+    expect(isSafeStudyResumePath(path)).toBe(true);
+  });
+
+  it("aceita a rota mista como retomada segura e continua recusando o portal público", () => {
+    expect(isSafeStudyResumePath("/list/list-1/mixed-study?mode=mixed")).toBe(true);
+    expect(isSafeStudyResumePath("/collection/col-1/mixed-study?mode=mixed")).toBe(true);
+    expect(isSafeStudyResumePath("/portal/list/list-1/mixed-study?mode=mixed")).toBe(false);
   });
 });
 

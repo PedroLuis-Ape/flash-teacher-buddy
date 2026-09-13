@@ -8,7 +8,10 @@ export interface StudyResumeSnapshot {
 const STORAGE_PREFIX = "ape_state_study_resume:v1:";
 const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
-const PRIVATE_STUDY_PATH = /^\/(list|collection)\/[A-Za-z0-9_-]+\/study$/;
+// "mixed-study" é a superfície da Prática Mista (mesma sessão durável, rota
+// própria). Sem ela o ponteiro de retomada nunca podia apontar para a última
+// sessão praticada nessa superfície e o card da Home ficava preso na anterior.
+const PRIVATE_STUDY_PATH = /^\/(list|collection)\/[A-Za-z0-9_-]+\/(?:study|mixed-study)$/;
 
 export function studyResumeStorageKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`;

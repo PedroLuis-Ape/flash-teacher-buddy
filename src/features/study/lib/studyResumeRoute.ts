@@ -14,6 +14,21 @@ export const RESUME_SESSION_PARAM = "resume_session";
 const BASE_ORIGIN = "https://www.apeeducation.org";
 const UUID_RE = /^[0-9a-fA-F-]{8,64}$/;
 
+/**
+ * Modos duráveis da Prática Mista. A sessão é gravada como "mixed-adaptive",
+ * mas a superfície que a retoma é `/mixed-study` com `mode=mixed` — enviar
+ * "mixed-adaptive" para `/study` faz o Study normalizar para flip e abrir
+ * outra sessão.
+ */
+const MIXED_STUDY_MODES = new Set(["mixed", "mixed-adaptive"]);
+
+export function resolveStudyResumeSegment(mode: string): "study" | "mixed-study" {
+  return MIXED_STUDY_MODES.has(mode) ? "mixed-study" : "study";
+}
+
+export function resolveStudyResumeModeParam(mode: string): string {
+  return MIXED_STUDY_MODES.has(mode) ? "mixed" : mode;
+}
 export interface StudyResumeRouteInput {
   path: string;
   sessionId: string;
@@ -68,8 +83,9 @@ export function buildStudyPathFromRemoteSession(input: {
   settings?: Partial<StudySettingsSnapshotV2> | null;
 }): string | null {
   if (!input.listId || !input.mode) return null;
-  const url = new URL(`/list/${input.listId}/study`, BASE_ORIGIN);
-  url.searchParams.set("mode", input.mode);
+  const segment = resolveStudyResumeSegment(input.mode);
+  const url = new URL(`/list/${input.listId}/${segment}`, BASE_ORIGIN);
+  url.searchParams.set("mode", resolveStudyResumeModeParam(input.mode));
   const settings = input.settings ?? {};
   if (settings.direction) url.searchParams.set("dir", settings.direction);
   if (settings.order) url.searchParams.set("order", settings.order);
