@@ -13,3 +13,40 @@ html[data-palette] [role="dialog"],html[data-palette] [role="menu"],html[data-pa
 .space-ui [role="progressbar"]{overflow:hidden;background:hsl(var(--muted))!important;box-shadow:inset 0 1px 3px hsl(0 0% 0%/.12)!important}.space-ui [role="progressbar"]>div{background:var(--ape-button)!important;background-image:var(--ape-button)!important;box-shadow:none!important}
 .space-ui .flip-card-front>*,.space-ui .flip-card-back>*{color:hsl(var(--card-foreground))!important;background:var(--ape-surface)!important;background-image:none!important;border-color:hsl(var(--border))!important;box-shadow:var(--ape-shadow)!important}
 @media(max-width:767px),(update:slow){.space-ui button,.space-ui [role="button"]{transition-duration:90ms!important}.space-ui-header,.space-ui .bg-card,.space-ui .stat-tile,.space-ui .card-premium,.space-ui .glass-panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+/*
+ * Camada DERIVADA por paleta (--ape-*).
+ *
+ * Causa-raiz do bug visual: o refactor de identidade (fonte unica de tokens)
+ * removeu estas variaveis de space-layouts.css, mas as regras abaixo continuaram
+ * usando var(--ape-surface)/var(--ape-button)/var(--ape-page). Variavel
+ * inexistente => declaracao invalida => background transparente, sem sombra:
+ * botoes primarios e cards desapareciam.
+ *
+ * Agora sao DERIVADAS dos tokens canonicos, entao valem para as 4 paletas
+ * automaticamente e nao podem divergir da identidade.
+ */
+html[data-palette]{
+  --ape-page:linear-gradient(180deg,hsl(var(--background)),hsl(var(--card)));
+  --ape-surface:hsl(var(--card));
+  --ape-soft:hsl(var(--muted));
+  --ape-muted:hsl(var(--muted));
+  --ape-disabled:hsl(var(--muted));
+  --ape-nav:hsl(var(--card));
+  --ape-nav-text:hsl(var(--muted-foreground));
+  --ape-nav-active:hsl(var(--primary)/.14);
+  --ape-banner:linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)));
+  /* Gradiente chapado na cor primaria: garante o contraste ja projetado em
+     --primary-foreground, em vez de clarear o fundo e comer o contraste. */
+  --ape-button:linear-gradient(135deg,hsl(var(--primary)),hsl(var(--primary)));
+  --ape-shadow:0 18px 44px -32px hsl(var(--primary)/.35)
+}
+/*
+ * Semânticos por BASE (light/dark).
+ *
+ * `:root` trazia pares antigos que reprovam em AA quando usados como fundo com
+ * texto branco (medido: destructive 0 70% 60% + branco = 3.82:1) ou como texto
+ * sobre card claro. Estes valores servem aos DOIS papéis (texto e fundo) e sao
+ * resolvidos pela classe de base que applyPalette ja aplica no <html>.
+ */
+html[data-palette].light{--destructive:0 72% 45%;--destructive-foreground:0 0% 100%;--success:152 62% 28%;--success-foreground:0 0% 100%;--warning:32 90% 35%;--warning-foreground:0 0% 100%}
+html[data-palette].dark{--destructive:0 72% 47%;--destructive-foreground:0 0% 100%;--success:152 62% 45%;--success-foreground:0 0% 100%;--warning:38 92% 58%;--warning-foreground:30 45% 12%}
