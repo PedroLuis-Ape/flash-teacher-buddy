@@ -184,3 +184,37 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+
+## Materiais públicos — Fase 4, camada de dados (2026-09-13)
+
+- [VERIFIED-DB] O banco de produção **não tem** `public_entity_publications`;
+  portanto o registro moderno de publicação do repositório não existe lá. A
+  Fase 4 **reutiliza a regra pública vigente do portal**
+  (`folders.visibility='class'`, `class_id IS NULL`, dono com
+  `public_access_enabled`) em vez de introduzir um segundo sistema de publicação.
+- [DECISION] Curadoria editorial entra como camada adicional: tabela
+  `public_resource_editorial` (list_id + locale, slug único, level, theme,
+  resource_type, summary, `status` draft/approved/retired, `is_indexable`,
+  revisão). RLS habilitada, sem policy, `REVOKE` de `public/anon/authenticated`
+  — leitura apenas por RPC.
+- [VERIFIED-DB] RPCs públicas `get_public_resource_v1(_locale, _slug)` e
+  `list_public_resources_v1(_locale, _limit, _offset)`: `SECURITY DEFINER`,
+  `search_path` fixo, `GRANT` para `anon`, e **quality gate** no servidor
+  (≥ 8 cards e ≥ 90% de termos únicos) — material curto ou duplicado nunca
+  publica.
+- [VERIFIED-DB] Cinco sementes de curadoria aplicadas como **rascunho**
+  (`status='draft'`, `is_indexable=false`), escritas a partir do conteúdo real
+  dos cards. Verificado: rascunho não aparece (`source: none`, catálogo 0) e,
+  com uma linha aprovada em teste, a RPC devolve `source: editorial` com 8
+  amostras — depois revertida para rascunho. Nada ficou público.
+- [DATA-QUALITY] Uma das listas públicas tem título "Passo 005 - Presente
+  Interrogativo" com conteúdo de **passado** ("Were they in the classroom?") e
+  duplica o título de outra lista — ficou fora das sementes até correção.
+- [VERIFIED-TEST] Contrato `src/lib/__tests__/publicResourceEditorial.contract.test.ts`
+  (6 testes): tabela/estados/deny-all, leitura só do aprovado, quality gate,
+  reuso da regra vigente, grants e sementes apenas como rascunho.
+- [NEXT] Fase 4 continua com a rota `/{locale}/material/{slug}` consumindo
+  `get_public_resource_v1`, canonical/hreflang e inclusão no sitemap apenas para
+  linhas aprovadas.
+
+Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
