@@ -48,7 +48,30 @@
     "author": "Author",
     "playNow": "Play now — no account needed"
   },
- "home": {
+  "publicLanding": {
+    "playNow": "Play now — no sign-up",
+    "exploreMaterials": "Explore materials",
+    "forTeachers": "I am a teacher",
+    "localProgressNote": "Your progress stays on this device. Create an account when you want to sync.",
+    "featuredKicker": "Featured public activity",
+    "cardCount": "{{count}} cards",
+    "viewMaterial": "View the material",
+    "carousel": {
+      "kicker": "Inside APE",
+      "heading": "One list. Several games.",
+      "previous": "Previous slide",
+      "next": "Next slide",
+      "catalog": "Find something to practise",
+      "catalogAlt": "APE public catalog showing folders and lists of English materials",
+      "folder": "Open the folder and pick a list",
+      "folderAlt": "APE public folder page listing the available activity lists",
+      "hub": "One list, several games",
+      "hubAlt": "APE games hub showing the available modes for the same list",
+      "study": "Practise in seconds",
+      "studyAlt": "APE study screen showing a card with the English sentence and its translation"
+    }
+  },
+  "home": {
     "welcome": "Welcome",
     "weeklyPts": "Weekly PTS",
     "level": "Level",

@@ -48,7 +48,30 @@
     "author": "Autor",
     "playNow": "Jogar agora — sem cadastro"
   },
- "home": {
+  "publicLanding": {
+    "playNow": "Jogar agora — sem cadastro",
+    "exploreMaterials": "Explorar materiais",
+    "forTeachers": "Sou professor",
+    "localProgressNote": "Seu progresso fica neste dispositivo. Crie conta quando quiser sincronizar.",
+    "featuredKicker": "Atividade pública em destaque",
+    "cardCount": "{{count}} cards",
+    "viewMaterial": "Ver o material",
+    "carousel": {
+      "kicker": "Por dentro do APE",
+      "heading": "Uma lista. Vários jogos.",
+      "previous": "Slide anterior",
+      "next": "Próximo slide",
+      "catalog": "Encontre algo para praticar",
+      "catalogAlt": "Catálogo público do APE com pastas e listas de materiais de inglês",
+      "folder": "Abra a pasta e escolha a lista",
+      "folderAlt": "Página de uma pasta pública do APE listando as listas de atividades disponíveis",
+      "hub": "Uma lista, vários jogos",
+      "hubAlt": "Hub de jogos do APE com os modos disponíveis para a mesma lista",
+      "study": "Pratique em segundos",
+      "studyAlt": "Tela de estudo do APE mostrando um card com a frase em inglês e a tradução"
+    }
+  },
+  "home": {
     "welcome": "Bem-vindo",
     "weeklyPts": "PTS Semanais",
     "level": "Nível",

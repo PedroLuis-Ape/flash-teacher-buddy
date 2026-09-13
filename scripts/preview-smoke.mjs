@@ -128,10 +128,14 @@ try {
     allowConsole: [/Preview smoke component failure/, /\[SafeMode\]/],
     allowPageErrors: [/Preview smoke component failure/],
   });
-  await runCase(browser, "supabase-unavailable", "/landing", {
-    routeSupabase: true,
-    allowConsole: [/supabase/i, /network/i, /fetch/i, /auth/i, /Query/i],
-  });
+    await runCase(browser, "supabase-unavailable", "/landing", {
+      routeSupabase: true,
+      // A Home publica agora le o destaque via RPC publica. Com o Supabase
+      // bloqueado, a pagina precisa continuar util: o CTA principal e o
+      // carrossel vem de i18n/assets e nao dependem da rede.
+      text: "Jogar agora",
+      allowConsole: [/supabase/i, /network/i, /fetch/i, /auth/i, /Query/i, /Failed to load resource/i],
+    });
   for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 412, height: 915 }]) {
     await runCase(browser, `health-mobile-${viewport.width}`, "/__preview-health", {
       viewport, selector: '[data-testid="preview-health"]', mobileLayout: true,

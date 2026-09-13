@@ -14,6 +14,7 @@ import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom"
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
 import { PageTransition } from "@/components/PageTransition";
@@ -192,11 +193,15 @@ const App = () => {
                           <Route path="/portal/folder/:id" element={<PublicFolderRoute />} />
                           <Route path="/portal/list/:id" element={<PublicLearningListPage />} />
                           <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
-                          <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
-                          <Route path="/portal/list/:id/mixed-study" element={<ListDirectionGate><MixedStudy /></ListDirectionGate>} />
+                          {/* Rotas publicas de estudo usam as mesmas telas do app
+                              autenticado, que dependem de useInstitution(). Sem o
+                              provider aqui o visitante recebia RouteErrorBoundary e
+                              nao conseguia jogar sem cadastro. */}
+                          <Route path="/portal/list/:id/study" element={<InstitutionProvider><ListDirectionGate><Study /></ListDirectionGate></InstitutionProvider>} />
+                          <Route path="/portal/list/:id/mixed-study" element={<InstitutionProvider><ListDirectionGate><MixedStudy /></ListDirectionGate></InstitutionProvider>} />
                           <Route path="/portal/collection/:id" element={<PublicCollection />} />
-                          <Route path="/portal/collection/:id/study" element={<Study />} />
-                          <Route path="/portal/collection/:id/mixed-study" element={<MixedStudy />} />
+                          <Route path="/portal/collection/:id/study" element={<InstitutionProvider><Study /></InstitutionProvider>} />
+                          <Route path="/portal/collection/:id/mixed-study" element={<InstitutionProvider><MixedStudy /></InstitutionProvider>} />
                           {/* Pagina canonica de material publico curado: o componente
                               valida o locale e o status editorial antes de renderizar. */}
                           <Route path="/:locale/material/:slug" element={<PublicResourcePage />} />

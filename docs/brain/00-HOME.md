@@ -28,6 +28,7 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]] — regras para manter o vault conectado.
 - [[23-GIT-E-WORKTREES]] — checkout principal, pasta oficial de worktrees e regra de limpeza segura.
 - [[24-SECURITY-AUDIT-2026-09-12]] — auditoria de segurança: causa-raiz das RPCs, correções e pendências.
+- [[25-PUBLIC-ACTIVATION-PROGRAM]] — Home de ativação, destaque real, carrossel e pendências do programa público.
 - [[README]] — declaração do vault canônico, proveniência e fonte de verdade.
 - [[learning/00-LEARNING-HUB]] — aprendizagem por tentativa, evidência e reteste.
 
