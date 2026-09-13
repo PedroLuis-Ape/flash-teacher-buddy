@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { readPlatformRuntime } from "@/integrations/supabase/platformRuntime";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import { resolveDeckOrientation, resolveEffectiveSideLabels } from "@/features/study/lib/resolveDeckOrientation";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
@@ -476,6 +477,36 @@ const Study = () => {
 
     return scoped;
   }, [activeDeckSubset, flashcards, favorites, redListIds, redFocusActiveForDeck]);
+
+  // The card payload remains immutable. When legacy metadata contradicts a
+  // strong aggregate signal from the deck, only the session's effective side
+  // languages/labels are projected here for instructions and TTS.
+  const deckOrientation = useMemo(
+    () => resolveDeckOrientation({
+      langA: listSettings.langA,
+      langB: listSettings.langB,
+      cards: flashcards,
+    }),
+    [flashcards, listSettings.langA, listSettings.langB],
+  );
+  const effectiveSideLabels = useMemo(
+    () => resolveEffectiveSideLabels({
+      labelA: listSettings.labelsA,
+      labelB: listSettings.labelsB,
+      inverted: deckOrientation.inverted,
+    }),
+    [deckOrientation.inverted, listSettings.labelsA, listSettings.labelsB],
+  );
+  const effectiveStudySettings = useMemo(
+    () => ({
+      ...listSettings,
+      langA: deckOrientation.langA,
+      langB: deckOrientation.langB,
+      labelsA: effectiveSideLabels.labelA,
+      labelsB: effectiveSideLabels.labelB,
+    }),
+    [deckOrientation.langA, deckOrientation.langB, effectiveSideLabels.labelA, effectiveSideLabels.labelB, listSettings],
+  );
   const emptyStudyScope = deckLoadState.phase === "ready"
     && selectedScopeReady
     && flashcards.length > 0
@@ -1838,17 +1869,17 @@ const Study = () => {
     if (!displayedCard || !currentTerm) return undefined;
     const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
-    const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
+    const langCtx = { langA: effectiveStudySettings.langA, langB: effectiveStudySettings.langB };
     return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, displayedCard, effectiveStudySettings.langA, effectiveStudySettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
     if (!displayedCard || !currentTranslation) return undefined;
     const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
-    const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
+    const langCtx = { langA: effectiveStudySettings.langA, langB: effectiveStudySettings.langB };
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, effectiveStudySettings.langA, effectiveStudySettings.langB]);
 
   // Clara Master P0 — NEVER auto-persist `favoritesOnly: false` just because
   // the favorites query came back empty. Auth races, fetching states, and
@@ -2413,8 +2444,8 @@ const Study = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="a-b">{listSettings.labelsA} → {listSettings.labelsB}</SelectItem>
-                    <SelectItem value="b-a">{listSettings.labelsB} → {listSettings.labelsA}</SelectItem>
+                    <SelectItem value="a-b">{effectiveStudySettings.labelsA} → {effectiveStudySettings.labelsB}</SelectItem>
+                    <SelectItem value="b-a">{effectiveStudySettings.labelsB} → {effectiveStudySettings.labelsA}</SelectItem>
                     <SelectItem value="any">Misto</SelectItem>
                   </SelectContent>
                 </Select>
@@ -2431,11 +2462,11 @@ const Study = () => {
           </div>
 
           {/* Language direction indicator */}
-          {listSettings.studyType === "language" && (
+          {effectiveStudySettings.studyType === "language" && (
             <div className="hidden lg:flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">A: {listSettings.labelsA}</span>
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">A: {effectiveStudySettings.labelsA}</span>
               <span>→</span>
-              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">B: {listSettings.labelsB}</span>
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">B: {effectiveStudySettings.labelsB}</span>
             </div>
           )}
 
@@ -2510,11 +2541,11 @@ const Study = () => {
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
               writeSettings={writeSessionSettings}
-              ttsEnabled={listSettings.ttsEnabled}
-              labelA={listSettings.labelsA}
-              labelB={listSettings.labelsB}
-              langA={listSettings.langA}
-              langB={listSettings.langB}
+              ttsEnabled={effectiveStudySettings.ttsEnabled}
+              labelA={effectiveStudySettings.labelsA}
+              labelB={effectiveStudySettings.labelsB}
+              langA={effectiveStudySettings.langA}
+              langB={effectiveStudySettings.langB}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
               isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
               onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
@@ -2553,8 +2584,11 @@ const Study = () => {
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}
               rewriteSnapshotScope={studySnapshotKey}
-              langA={listSettings.langA}
-              langB={listSettings.langB}
+              ttsEnabled={effectiveStudySettings.ttsEnabled}
+              labelA={effectiveStudySettings.labelsA}
+              labelB={effectiveStudySettings.labelsB}
+              langA={effectiveStudySettings.langA}
+              langB={effectiveStudySettings.langB}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
               isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
               onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
@@ -2583,8 +2617,11 @@ const Study = () => {
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
               writeSettings={writeSessionSettings}
-              langA={listSettings.langA}
-              langB={listSettings.langB}
+              ttsEnabled={effectiveStudySettings.ttsEnabled}
+              labelA={effectiveStudySettings.labelsA}
+              labelB={effectiveStudySettings.labelsB}
+              langA={effectiveStudySettings.langA}
+              langB={effectiveStudySettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
@@ -2614,8 +2651,11 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
-              langA={listSettings.langA}
-              langB={listSettings.langB}
+              ttsEnabled={effectiveStudySettings.ttsEnabled}
+              labelA={effectiveStudySettings.labelsA}
+              labelB={effectiveStudySettings.labelsB}
+              langA={effectiveStudySettings.langA}
+              langB={effectiveStudySettings.langB}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
               isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
               onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
@@ -2640,10 +2680,10 @@ const Study = () => {
               wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              langA={listSettings?.langA || "en"}
-              langB={listSettings?.langB || "pt"}
-              labelA={listSettings?.labelsA || undefined}
-              labelB={listSettings?.labelsB || undefined}
+              langA={effectiveStudySettings.langA || "en"}
+              langB={effectiveStudySettings.langB || "pt"}
+              labelA={effectiveStudySettings.labelsA || undefined}
+              labelB={effectiveStudySettings.labelsB || undefined}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
               isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
               onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
@@ -2746,9 +2786,9 @@ const Study = () => {
         isOpen={!!editingFlashcard}
         onClose={() => setEditingFlashcard(null)}
         onSave={handleUpdateFlashcardInGame}
-        studyType={listSettings.studyType}
-        labelA={listSettings.labelsA}
-        labelB={listSettings.labelsB}
+        studyType={effectiveStudySettings.studyType}
+        labelA={effectiveStudySettings.labelsA}
+        labelB={effectiveStudySettings.labelsB}
       />
     </div>
   );

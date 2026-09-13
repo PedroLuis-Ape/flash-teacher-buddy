@@ -60,6 +60,17 @@ Nenhum bug de dados foi comprovado por esta auditoria visual. Problemas de persi
   overflow horizontal. Em modo desktop as ações permaneceram 48x44 px.
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/visual-polish]] · [[areas/adaptive-learning]]
+
+## P2 — orientação A/B, labels e TTS no estudo — corrigido em 2026-09-13
+
+- [ROOT-CAUSE] A metadata `lang_a/lang_b` contradizia o conteúdo legado de alguns decks; o `MixedStudy` ainda resolvia idioma/labels manualmente, não carregava `tts_enabled` e não repassava labels às views. As views então falavam e rotulavam o lado pela metadata incorreta.
+- [FIX] O runtime agora usa `resolveEffectiveListSettings` no Mixed e projeta uma orientação efetiva somente quando há pelo menos 8 pares high-confidence com consenso de 80%; texto e identidade de card permanecem inalterados.
+- [FIX] `src/lib/languageClassifier.ts` é compartilhado pela auditoria e pelo runtime. MC, Write e Unscramble recebem labels/`ttsEnabled`; o locale do TTS deriva do lado efetivamente exibido.
+- [REGRESSION-CONTRACT] `src/features/study/lib/resolveDeckOrientation.test.ts` cobre a-b, b-a, any, deck legado invertido, frases curtas/ambíguas, amostra pequena, resolver do Mixed, coleções de sistema e `speechSynthesis`.
+- [FOLLOW-UP] `gameCore.ts` ainda tem resolver duplicado; wrappers podem recalcular direção; `PronunciationStudyView` ainda fala sempre `sideB`.
+- [STATUS] Implementação local em validação final; não houve escrita no banco, migration, merge, push ou deploy.
+
+Related: [[sessions/2026-09-13-ab-language-orientation]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/adaptive-learning]]
 ## P2 — nomes de lista e de turma ilegíveis no mobile — corrigido em 2026-09-12
 
 - [ROOT-CAUSE] Na pasta, o cluster de ações usa o `Button` compartilhado, que

@@ -125,3 +125,11 @@ revisão dedicada.
 - [NEEDS_RECONCILIATION] O ramo sem autor foi validado por fixture sintética;
   revalidar quando existir pasta/lista pública real sem autor. Isso é uma
   limitação de cobertura, não uma reabertura do risco corrigido.
+
+## R-2026-09-13-02 — orientação heurística de idioma no estudo
+
+- [MITIGATED] A inversão de orientação é deliberadamente conservadora: exige 8 pares classificados com alta confiança e 80% de consenso, ignorando frases curtas/ambíguas. Isso evita trocar rótulo por um card isolado, mas pode deixar decks multilíngues ou com pouco texto sem reconciliação automática.
+- [KNOWN-LIMIT] A suíte e o typecheck não provam a fala em um navegador real; o teste atual mocka `speechSynthesis`/`useTTS` e valida `en-US`/`pt-BR` para o texto exibido.
+- [FOLLOW-UP] A duplicidade de direção em `gameCore.ts`, o recálculo dos wrappers e o `PronunciationStudyView` fixado em `sideB` permanecem fora deste lote.
+
+Related: [[sessions/2026-09-13-ab-language-orientation]] · [[06-BUGS]] · [[07-TESTS]]

@@ -504,3 +504,10 @@ Related: [[sessions/2026-09-13-catalogo-canonical-e-i18n]] · [[07-TESTS]] · [[
   contrato anônimo.
 
 Próximo passo e ordem de retomada: [[09-ASTRA-HANDOFF]].
+
+## Estudo — correção de orientação A/B, labels e TTS — 2026-09-13
+
+- [FATO CONFIRMADO] A branch `integration/ape-program-20260913` contém o commit local `fix(study): orientacao efetiva de idioma/label/tts no estudo e no modo misto`.
+- [FATO CONFIRMADO] O runtime agora usa settings centralizados no Mixed e orientação de deck somente por evidência agregada; não houve alteração de cards, banco, migration, merge, push ou deploy.
+- [FATO CONFIRMADO] Gates: typecheck 0; Vitest 278 arquivos/1723 testes; ESLint 0 erros/72 warnings; build e SEO 100/100; brain-check PASS.
+- [FOLLOW-UP] Permanecem a duplicidade de direção em `gameCore.ts`, recálculos nos wrappers e `PronunciationStudyView` fixado em `sideB`. Ver [[sessions/2026-09-13-ab-language-orientation]] e [[08-RISKS]].

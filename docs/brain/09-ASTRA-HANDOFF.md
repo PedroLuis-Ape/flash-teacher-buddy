@@ -57,3 +57,9 @@ começar antes de o Pedro decidir.
 ## [HISTORICAL] Estado da entrega — plano de polish visual (2026-09-11)
 
 Não está autorizada a afirmação de “pronto para publicação” ainda. O próximo marco é completar o loop visual e o relatório de release.
+
+## Handoff técnico — estudo A/B — 2026-09-13
+
+- [FATO CONFIRMADO] A branch permanece local; não foi pushada, mesclada ou publicada.
+- [FATO CONFIRMADO] A correção está fechada com gates locais verdes e relatório em `.superpowers/sdd/ab-bug-report.md`.
+- [FOLLOW-UP] Para uma task futura, revisar `gameCore.ts`, wrappers que recalculam direção e `PronunciationStudyView` que sempre fala `sideB`; não reabrir este lote por essas melhorias opcionais.

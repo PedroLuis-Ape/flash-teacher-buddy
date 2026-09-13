@@ -32,6 +32,9 @@ interface MultipleChoiceStudyViewProps {
   direction: string;
   langA?: string;
   langB?: string;
+  labelA?: string;
+  labelB?: string;
+  ttsEnabled?: boolean;
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   isFavorite?: boolean;
@@ -59,6 +62,9 @@ export const MultipleChoiceStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  labelA,
+  labelB,
+  ttsEnabled = true,
   mergedHintsA,
   mergedHintsB,
   isFavorite = false,
@@ -83,8 +89,8 @@ export const MultipleChoiceStudyView = ({
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
-  const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
-  const sideB = { text: currentCard.translation, lang: langB, label: getLangLabel(langB) };
+  const sideA = { text: currentCard.term, lang: langA, label: labelA || getLangLabel(langA) };
+  const sideB = { text: currentCard.translation, lang: langB, label: labelB || getLangLabel(langB) };
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, currentCard.id || currentCard.term);
 
   const promptWordHints = currentCard.word_hints;
@@ -208,7 +214,7 @@ export const MultipleChoiceStudyView = ({
                 text={prompt}
                 wordHints={promptWordHints}
                 mergedHints={promptMergedHints}
-                speakOnHintClick
+                speakOnHintClick={ttsEnabled}
                 speakLang={promptLang}
               />
             </p>
@@ -217,6 +223,7 @@ export const MultipleChoiceStudyView = ({
               variant="ghost"
               size="sm"
               className="h-8 w-8 shrink-0 p-0"
+              disabled={!ttsEnabled}
               onClick={() => {
                 const rate = getSpeechRate();
                 speak(prompt, { langOverride: promptLang, rate });

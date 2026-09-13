@@ -80,6 +80,9 @@ interface WriteStudyViewProps {
   studyFlowMode: StudyFlowModePreset;
   langA?: string;
   langB?: string;
+  labelA?: string;
+  labelB?: string;
+  ttsEnabled?: boolean;
   isFavorite?: boolean;
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
@@ -122,6 +125,9 @@ export const WriteStudyView = ({
   studyFlowMode,
   langA = "en",
   langB = "pt",
+  labelA,
+  labelB,
+  ttsEnabled = true,
   isFavorite = false,
   isRedListed = false,
   onToggleFavorite,
@@ -170,8 +176,8 @@ export const WriteStudyView = ({
   }, [evaluation]);
   const [attentionPointOpen, setAttentionPointOpen] = useState(false);
 
-  const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
-  const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
+  const sideA = { text: front, lang: langA, label: labelA || getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
+  const sideB = { text: back, lang: langB, label: labelB || getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
   const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
   const isRewriteActivity = writeActivityMode === "rewrite";
   const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
@@ -455,7 +461,7 @@ export const WriteStudyView = ({
                   text={prompt}
                   wordHints={promptWordHints}
                   mergedHints={promptMergedHints}
-                  speakOnHintClick
+                  speakOnHintClick={ttsEnabled}
                   speakLang={promptLang}
                 />
               </p>
@@ -464,6 +470,7 @@ export const WriteStudyView = ({
               variant="ghost"
               size="sm"
               className={cn("shrink-0 p-0", hasFeedback ? "h-8 w-8" : "h-9 w-9")}
+              disabled={!ttsEnabled}
               onClick={() => {
                 const rate = getSpeechRate();
                 speak(prompt, { langOverride: promptLang, rate });
@@ -545,7 +552,7 @@ export const WriteStudyView = ({
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={() => advance.requestAdvance({ source: "next_button" })}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
+            onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
@@ -566,7 +573,7 @@ export const WriteStudyView = ({
             onAction={() => advance.requestAdvance({ source: "next_button" })}
             secondaryActionLabel="Tentar corrigir"
             onSecondaryAction={handleRetry}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
+            onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
@@ -592,7 +599,7 @@ export const WriteStudyView = ({
             }
             secondaryActionLabel={effectiveCorrectionMode === "hard" ? undefined : "Tentar corrigir"}
             onSecondaryAction={effectiveCorrectionMode === "hard" ? undefined : handleRetry}
-            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); }}
+            onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
             tertiaryActionLabel="Marcar dificuldade"
             tertiaryActionHint="Guarde uma palavra sem sair do estudo."

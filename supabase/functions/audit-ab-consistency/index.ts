@@ -1,83 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  classifyLanguageText as detectLanguage,
+  type LanguageScore as LangScore,
+} from "../../../src/lib/languageClassifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
-
-// ── Simple language detection heuristics ──────────────────────────────
-const LANG_PATTERNS: Record<string, { chars: RegExp; words: string[] }> = {
-  pt: {
-    chars: /[ãõçáéíóúâêôà]/i,
-    words: ["de", "que", "não", "para", "uma", "com", "ele", "ela", "você", "eu", "nós", "são", "está", "ter", "ser", "fazer", "como", "mais", "muito", "bem", "mas", "por"],
-  },
-  en: {
-    chars: /\b(the|is|are|was|were|have|has|had|will|would|could|should|can|do|does|did|don't|doesn't|didn't|won't|wouldn't|couldn't|shouldn't|can't|it's|that's|there's|what's|he's|she's|I'm|you're|we're|they're|I've|you've|we've|they've)\b/i,
-    words: ["the", "is", "are", "was", "were", "have", "has", "had", "will", "would", "could", "should", "can", "this", "that", "with", "from", "they", "been", "some", "what", "when", "your", "which"],
-  },
-  fr: {
-    chars: /[éèêëàâùûüîïôœæç]/i,
-    words: ["le", "la", "les", "des", "est", "sont", "une", "dans", "pour", "avec", "que", "qui", "sur", "par", "pas", "mais", "nous", "vous", "ils", "elles", "être", "avoir", "faire", "cette", "ces", "tout", "c'est", "j'ai", "je"],
-  },
-  es: {
-    chars: /[ñ¿¡áéíóúü]/i,
-    words: ["el", "la", "los", "las", "es", "son", "una", "con", "que", "para", "por", "está", "pero", "como", "más", "todo", "esta", "cuando", "también", "puede", "hace", "desde", "donde", "tiene"],
-  },
-  de: {
-    chars: /[äöüß]/i,
-    words: ["der", "die", "das", "ist", "und", "ein", "eine", "nicht", "mit", "auf", "für", "sich", "den", "dem", "ich", "wir", "sie", "haben", "werden", "sein"],
-  },
-  it: {
-    chars: /[àèéìíòóùú]/i,
-    words: ["il", "la", "che", "di", "non", "una", "per", "sono", "con", "gli", "questo", "anche", "come", "della", "più", "fatto", "essere", "hanno", "quando", "tutto"],
-  },
-};
-
-interface LangScore {
-  lang: string;
-  score: number;
-  confidence: "high" | "medium" | "low";
-}
-
-function detectLanguage(text: string): LangScore | null {
-  if (!text || text.trim().length < 3) return null;
-
-  const normalized = text.toLowerCase().trim();
-  const words = normalized.split(/\s+/);
-
-  const scores: Record<string, number> = {};
-
-  for (const [lang, patterns] of Object.entries(LANG_PATTERNS)) {
-    let score = 0;
-
-    // Character pattern match
-    if (patterns.chars.test(normalized)) {
-      score += 3;
-    }
-
-    // Word frequency match
-    for (const word of words) {
-      if (patterns.words.includes(word)) {
-        score += 2;
-      }
-    }
-
-    scores[lang] = score;
-  }
-
-  const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0 || entries[0][1] === 0) return null;
-
-  const topScore = entries[0][1];
-  const secondScore = entries.length > 1 ? entries[1][1] : 0;
-
-  let confidence: "high" | "medium" | "low" = "low";
-  if (topScore >= 6 && topScore > secondScore * 2) confidence = "high";
-  else if (topScore >= 3 && topScore > secondScore) confidence = "medium";
-
-  return { lang: entries[0][0], score: topScore, confidence };
-}
 
 interface FlaggedCard {
   id: string;

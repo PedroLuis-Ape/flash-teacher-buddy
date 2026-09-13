@@ -25,6 +25,8 @@ import {
   type StudyDeckLoadState,
 } from "@/features/study/lib/studyDeckLoadState";
 import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import { resolveDeckOrientation, resolveEffectiveSideLabels } from "@/features/study/lib/resolveDeckOrientation";
 import { scoreCard, type CardProgressLike } from "@/features/study/lib/intelligenceScoring";
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
@@ -103,6 +105,7 @@ const DEFAULT_LABELS = {
   langB: "pt",
   labelA: "English",
   labelB: "Português",
+  ttsEnabled: true,
 };
 
 function getActivityLabel(mode: string | null): string {
@@ -271,6 +274,34 @@ export default function MixedStudy() {
     redListIds: [],
     settings: { subset: favoritesOnly ? "favorites" : "all" },
   }), [deckCards, favoriteIds, favoritesOnly]);
+  // Keep card identity/text untouched. This projection is the session-only
+  // effective language used by labels, instructions and TTS.
+  const deckOrientation = useMemo(
+    () => resolveDeckOrientation({
+      langA: labels.langA,
+      langB: labels.langB,
+      cards: deckCards,
+    }),
+    [deckCards, labels.langA, labels.langB],
+  );
+  const effectiveSideLabels = useMemo(
+    () => resolveEffectiveSideLabels({
+      labelA: labels.labelA,
+      labelB: labels.labelB,
+      inverted: deckOrientation.inverted,
+    }),
+    [deckOrientation.inverted, labels.labelA, labels.labelB],
+  );
+  const effectiveListSettings = useMemo(
+    () => ({
+      ...labels,
+      langA: deckOrientation.langA,
+      langB: deckOrientation.langB,
+      labelA: effectiveSideLabels.labelA,
+      labelB: effectiveSideLabels.labelB,
+    }),
+    [deckOrientation.langA, deckOrientation.langB, effectiveSideLabels.labelA, effectiveSideLabels.labelB, labels],
+  );
   const emptyStudyScope = deckLoadState.phase === "ready"
     && favoritesReady
     && deckCards.length > 0
@@ -512,7 +543,7 @@ export default function MixedStudy() {
           const { data: listRow } = await withStudyRuntimeTimeout<{ data: any }>(
             (metadataClient as any)
               .from("lists")
-              .select("folder_id, lang_a, lang_b, labels_a, labels_b")
+              .select("folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, system_kind")
               .eq("id", resolvedId)
               .abortSignal(abortController.signal)
               .maybeSingle(),
@@ -525,7 +556,7 @@ export default function MixedStudy() {
             const folderResult = await withStudyRuntimeTimeout<{ data: any }>(
               (metadataClient as any)
                 .from("folders")
-                .select("lang_a, lang_b, labels_a, labels_b")
+                .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
                 .eq("id", listRow.folder_id)
                 .abortSignal(abortController.signal)
                 .maybeSingle(),
@@ -536,11 +567,13 @@ export default function MixedStudy() {
             folderRow = folderResult.data;
           }
           if (isCurrent() && (listRow || folderRow)) {
+            const resolved = resolveEffectiveListSettings(listRow, folderRow);
             setLabels({
-              langA: listRow?.lang_a || folderRow?.lang_a || "en",
-              langB: listRow?.lang_b || folderRow?.lang_b || "pt",
-              labelA: listRow?.labels_a || folderRow?.labels_a || "Lado A",
-              labelB: listRow?.labels_b || folderRow?.labels_b || "Lado B",
+              langA: resolved.langA,
+              langB: resolved.langB,
+              labelA: resolved.labelsA,
+              labelB: resolved.labelsB,
+              ttsEnabled: resolved.ttsEnabled,
             });
           }
         }
@@ -1232,8 +1265,11 @@ export default function MixedStudy() {
     flashcardId: currentCard.id,
     wordHintsA: currentCard.word_hints,
     direction: resolvedDirection,
-    langA: labels.langA,
-    langB: labels.langB,
+    langA: effectiveListSettings.langA,
+    langB: effectiveListSettings.langB,
+    labelA: effectiveListSettings.labelA,
+    labelB: effectiveListSettings.labelB,
+    ttsEnabled: effectiveListSettings.ttsEnabled,
     onCorrect: () => handleAnswer(true),
     onIncorrect: () => handleAnswer(false),
     onSkip: requestSkip,
@@ -1303,8 +1339,11 @@ export default function MixedStudy() {
               allCards={cards}
               direction={resolvedDirection}
               writeSettings={writeSessionSettings}
-              langA={labels.langA}
-              langB={labels.langB}
+              langA={effectiveListSettings.langA}
+              langB={effectiveListSettings.langB}
+              labelA={effectiveListSettings.labelA}
+              labelB={effectiveListSettings.labelB}
+              ttsEnabled={effectiveListSettings.ttsEnabled}
               onCorrect={() => handleAnswer(true)}
               onIncorrect={() => handleAnswer(false)}
               onSkip={requestSkip}

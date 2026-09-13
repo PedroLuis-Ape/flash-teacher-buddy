@@ -150,6 +150,15 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
 
+## Estudo — orientação efetiva A/B, labels e TTS — 2026-09-13
+
+- [VERIFIED-TEST] `src/features/study/lib/resolveDeckOrientation.test.ts`: 10/10 no foco. Cobertura: a-b, b-a, any, legado invertido com evidência, massa curta/ambígua, 1–2 cards, resolver único do Mixed, coleção de sistema e mock de `speechSynthesis`/`useTTS` em `en-US`/`pt-BR`.
+- [VERIFIED-TEST] O classificador preserva pesos/limiares da auditoria; o fixture forte pontua literalmente 11 e retorna `high`.
+- [VERIFIED-GATE] Última suíte completa anterior ao teste adicional: 278 arquivos, 1722 testes, passou. A suíte final será repetida antes do commit.
+- [LIMITATION] Não houve QA de navegador/voz real; o locale observado é o da unidade mockada e a confirmação final de publicação permanece fora do escopo.
+
+Related: [[sessions/2026-09-13-ab-language-orientation]] · [[06-BUGS]] · [[08-RISKS]]
+
 ## Catálogo público — Task 2 — 2026-09-13
 
 - [VERIFIED-TEST] RED inicial: 7/7 falhas esperadas; RED de regressão do binding

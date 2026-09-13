@@ -26,6 +26,9 @@ interface UnscrambleStudyViewProps {
   direction: string;
   langA?: string;
   langB?: string;
+  labelA?: string;
+  labelB?: string;
+  ttsEnabled?: boolean;
   isFavorite?: boolean;
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
@@ -78,6 +81,9 @@ export const UnscrambleStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  labelA,
+  labelB,
+  ttsEnabled = true,
   isFavorite = false,
   isRedListed = false,
   onToggleFavorite,
@@ -100,8 +106,8 @@ export const UnscrambleStudyView = ({
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
-  const sideA = { text: front, lang: langA, label: "" };
-  const sideB = { text: back, lang: langB, label: "" };
+  const sideA = { text: front, lang: langA, label: labelA || "" };
+  const sideB = { text: back, lang: langB, label: labelB || "" };
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
   const promptWordHints = wordHintsA;
   const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
@@ -212,9 +218,9 @@ export const UnscrambleStudyView = ({
         <p className="mb-4 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:mb-3 sm:text-xs">Organize as palavras</p>
         <div className="flex items-start justify-center gap-2">
           <p className={cn("flex-1 break-words px-1 text-center font-bold leading-tight [text-wrap:balance] sm:text-2xl", questionSizeClass)}>
-            <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
+            <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick={ttsEnabled} speakLang={questionLang} />
           </p>
-          <Button variant="ghost" size="icon" onClick={handlePlayAudio} className="mt-0.5 h-10 w-10 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
+          <Button variant="ghost" size="icon" onClick={handlePlayAudio} disabled={!ttsEnabled} className="mt-0.5 h-10 w-10 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
             <Volume2 className="h-5 w-5" />
           </Button>
         </div>
