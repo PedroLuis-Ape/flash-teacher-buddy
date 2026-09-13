@@ -35,7 +35,7 @@ export function getRarityColor(rarity: string): string {
     case 'legendary':
       return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50';
     case 'epic':
-      return 'bg-purple-500/20 text-purple-500 border-purple-500/50';
+      return 'bg-teal-500/20 text-teal-500 border-teal-500/50';
     case 'rare':
       return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
     case 'normal':

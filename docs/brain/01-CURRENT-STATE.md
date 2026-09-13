@@ -184,3 +184,18 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+
+## Identidade cromática — Fase 2 (2026-09-13)
+
+- [VERIFIED-REPO] A paleta padrão `black` deixou o roxo: teal (primary), índigo
+  (secondary), âmbar (accent) e neutros dessaturados.
+- [ROOT-CAUSE] Os tokens estavam duplicados em `space-layouts.css` e a cópia
+  vencia por especificidade; a duplicata foi removida e passou a existir uma
+  única fonte (`space-ui-v1.css`), protegida por contrato.
+- [VERIFIED-TEST] Contrato de contraste WCAG AA + banimento de classes roxas
+  hardcoded em `src/`.
+- Gates: typecheck 0 · 263 arquivos / 1628 testes · lint 0 erros · build OK ·
+  SEO 100/100 · preview smoke PASS.
+- Ver [[areas/visual-polish]].
+
+Related: [[areas/visual-polish]] · [[07-TESTS]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]]

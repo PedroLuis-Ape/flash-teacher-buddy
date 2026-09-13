@@ -75,9 +75,9 @@ export function FolderGlossarySemanticReviewCard({
 
   return (
     <>
-      <div className="flex flex-col gap-3 rounded-xl border border-violet-500/25 bg-violet-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-teal-500/25 bg-teal-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 gap-3">
-          <BrainCircuit className="mt-0.5 h-5 w-5 shrink-0 text-violet-500" />
+          <BrainCircuit className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
           <div className="min-w-0">
             <p className="font-medium">Auditar qualidade semântica</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -108,7 +108,7 @@ export function FolderGlossarySemanticReviewCard({
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             {loading ? (
               <div className="flex min-h-72 flex-col items-center justify-center gap-3 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
                 <p>Preparando palavras, expressões e exemplos para a revisão...</p>
               </div>
             ) : error ? (

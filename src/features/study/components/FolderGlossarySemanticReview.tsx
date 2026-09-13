@@ -50,7 +50,7 @@ const semanticStatusClasses: Record<SemanticReviewStatus, string> = {
   approved: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
   approved_with_warning: "border-amber-500/30 bg-amber-500/10 text-amber-600",
   requires_human_review: "border-orange-500/30 bg-orange-500/10 text-orange-600",
-  conflicting_senses: "border-violet-500/30 bg-violet-500/10 text-violet-600",
+  conflicting_senses: "border-amber-500/30 bg-amber-500/10 text-amber-600",
   incorrect: "border-destructive/30 bg-destructive/10 text-destructive",
 };
 
@@ -306,10 +306,10 @@ export function FolderGlossarySemanticReview({
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-violet-500/25 bg-violet-500/5 p-4">
+    <section className="space-y-4 rounded-xl border border-teal-500/25 bg-teal-500/5 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 gap-3">
-          <BrainCircuit className="mt-0.5 h-5 w-5 shrink-0 text-violet-500" />
+          <BrainCircuit className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
           <div>
             <p className="font-semibold">Qualidade semântica das traduções</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
