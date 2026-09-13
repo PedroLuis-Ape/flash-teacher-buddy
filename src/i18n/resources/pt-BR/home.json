@@ -1,4 +1,17 @@
 {
+  "guestMerge": {
+    "title": "Você estudou como visitante neste dispositivo",
+    "description": "Encontramos preferências e um ponto de estudo salvos localmente. Quer levar isso para a sua conta?",
+    "useDevice": "Usar deste dispositivo",
+    "keepAccount": "Manter as da conta",
+    "deviceApplied": "Trouxemos {{count}} preferência(s) deste dispositivo.",
+    "nothingToImport": "Nada novo para importar deste dispositivo.",
+    "accountKept": "Suas preferências da conta foram mantidas.",
+    "inviteTitle": "Leve seu progresso com você",
+    "inviteBody": "Crie uma conta para continuar de onde parou em qualquer dispositivo.",
+    "inviteCta": "Criar conta",
+    "inviteDismiss": "Agora não"
+  },
   "home": {
     "welcome": "Bem-vindo",
     "weeklyPts": "PTS Semanais",

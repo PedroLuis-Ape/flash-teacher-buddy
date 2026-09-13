@@ -184,3 +184,27 @@ Related: [[23-GIT-E-WORKTREES]] · [[12-PROCESS-LOG-2026-09-12]] · [[10-CONTEXT
   em runtime.
 
 Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+
+## Continuidade do visitante — Fase 3 (2026-09-13)
+
+- [VERIFIED-REPO] O visitante já gravava preset e retomada no escopo `anon`
+  (`authUserId || "anon"` em `Study.tsx` e no motor de estudo).
+- [FIX] Ao entrar, esse estado ficava órfão: a conta não herdava nada. A ponte
+  `src/features/guest/guestStateBridge.ts` copia chaves `studyPreferences:v4:anon:*`
+  e `ape_state_study_resume:v2:anon` para o escopo do usuário, **sem sobrescrever**
+  o que já existe na conta, e limpa o escopo `anon` para a pergunta não repetir.
+- [DECISION] Pergunta única e não bloqueante (`GuestStateMergePrompt`, montado no
+  shell autenticado): "usar deste dispositivo" ou "manter as da conta". Fechar
+  sem responder aplica a política definida — o dispositivo vence; depois disso o
+  remoto é autoritativo.
+- [VERIFIED-REPO] Convite contextual não bloqueante
+  (`GuestAccountInvite`) na página de material público: só aparece para visitante
+  que já estudou neste dispositivo e é dispensável por sessão. O primeiro jogo
+  nunca é interrompido.
+- [VERIFIED-TEST] 8 testes no módulo (`guestStateBridge.test.ts` +
+  `guestContinuity.contract.test.ts`): escopo correto, não sobrescrita, cópia de
+  chaves novas, idempotência, descarte pela conta e decisão por usuário.
+- Gates: typecheck 0 · 263 arquivos / 1613 testes · lint 0 erros · build OK ·
+  SEO 100/100 · preview smoke PASS.
+
+Related: [[07-TESTS]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]] · [[areas/supabase-runtime]]

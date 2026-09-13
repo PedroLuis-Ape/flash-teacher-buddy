@@ -1,4 +1,17 @@
 {
+  "guestMerge": {
+    "title": "You studied as a guest on this device",
+    "description": "We found preferences and a study position saved locally. Bring them into your account?",
+    "useDevice": "Use this device's",
+    "keepAccount": "Keep the account's",
+    "deviceApplied": "Imported {{count}} preference(s) from this device.",
+    "nothingToImport": "Nothing new to import from this device.",
+    "accountKept": "Your account preferences were kept.",
+    "inviteTitle": "Take your progress with you",
+    "inviteBody": "Create an account to continue where you left off on any device.",
+    "inviteCta": "Create account",
+    "inviteDismiss": "Not now"
+  },
   "home": {
     "welcome": "Welcome",
     "weeklyPts": "Weekly PTS",

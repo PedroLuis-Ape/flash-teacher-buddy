@@ -1,4 +1,17 @@
 {
+  "guestMerge": {
+    "title": "Vous avez étudié en invité sur cet appareil",
+    "description": "Nous avons trouvé des préférences et une position d'étude enregistrées localement. Les importer dans votre compte ?",
+    "useDevice": "Utiliser celles de cet appareil",
+    "keepAccount": "Garder celles du compte",
+    "deviceApplied": "{{count}} préférence(s) importée(s) de cet appareil.",
+    "nothingToImport": "Rien de nouveau à importer de cet appareil.",
+    "accountKept": "Vos préférences de compte ont été conservées.",
+    "inviteTitle": "Emportez votre progression",
+    "inviteBody": "Créez un compte pour reprendre où vous en étiez sur n'importe quel appareil.",
+    "inviteCta": "Créer un compte",
+    "inviteDismiss": "Plus tard"
+  },
   "home": {
     "welcome": "Bienvenue",
     "weeklyPts": "PTS hebdomadaires",

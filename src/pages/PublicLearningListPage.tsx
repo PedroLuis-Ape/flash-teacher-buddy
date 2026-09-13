@@ -10,6 +10,7 @@ import {
   type PublicLearningListCard,
 } from "@/components/seo/publicLearningListStructuredData";
 import { Button } from "@/components/ui/button";
+import { GuestAccountInvite } from "@/features/guest/GuestAccountInvite";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 
@@ -197,6 +198,8 @@ export default function PublicLearningListPage() {
           <Button asChild variant="secondary"><Link to={`/portal/list/${list.id}/study`}><BookOpen className="mr-2 h-4 w-4" />Estudar flashcards</Link></Button>
           <Button asChild variant="outline"><Link to={`/portal/list/${list.id}/mixed-study?mode=mixed&dir=any&order=random`}>Modo misto</Link></Button>
         </section>
+
+        <GuestAccountInvite />
 
         <section className="mt-12" aria-labelledby="list-preview">
           <div className="flex items-end justify-between gap-4">
