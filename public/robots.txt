@@ -1,8 +1,11 @@
 # APE public discovery policy
 # Public pages are crawlable; authenticated and account-specific areas are not.
 
-# Crawlers de assistentes: liberados explicitamente apenas nas superficies
-# publicas curadas (catalogo e material). O restante segue o bloco abaixo.
+# Crawlers de assistentes: as superficies publicas curadas (catalogo e material)
+# ganham Allow explicito. O protocolo robots nao herda regras do grupo `*`,
+# entao as rotas privadas precisam ser repetidas aqui — sem isso o assistente
+# ficaria com acesso amplo. As demais superficies publicas (portal, pastas,
+# listas e professores publicos) permanecem permitidas, como no grupo `*`.
 User-agent: OAI-SearchBot
 Allow: /pt-br/materiais
 Allow: /pt-br/material/
@@ -14,7 +17,34 @@ Allow: /fr/materiais
 Allow: /fr/material/
 Allow: /it/materiais
 Allow: /it/material/
-Disallow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /folders
+Disallow: /folder/
+Disallow: /list/
+Disallow: /collection/
+Disallow: /admin/
+Disallow: /notes
+Disallow: /goals
+Disallow: /trash
+Disallow: /settings/
+Disallow: /audit
+Disallow: /painel-professor
+Disallow: /professor/
+Disallow: /turmas
+Disallow: /search
+Disallow: /store
+Disallow: /reinos
+Disallow: /reino
+Disallow: /gifts
+Disallow: /import
+Disallow: /my-teachers
+Disallow: /professores/
+Disallow: /glossary
+Disallow: /special-cards
+Disallow: /system-status
+Disallow: /reportar-problema
 
 User-agent: *
 Allow: /

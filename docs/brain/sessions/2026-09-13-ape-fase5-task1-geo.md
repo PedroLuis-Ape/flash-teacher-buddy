@@ -62,3 +62,18 @@ allowlist, limite de payload e throttle).
 
 REVIEW_RECOMMENDED — implementado pelo controller; revisão independente pendente.
 
+
+## Fix round 1 (revisão independente)
+
+- [CRITICAL corrigido] O JSON-LD inventava autoria: `name: "Professor no APE"` e
+  `jobTitle: "Professor"` eram emitidos mesmo sem autor no payload. Agora, sem
+  `author_name` e sem `author_slug`, não existe nó `Person` nem referência
+  `author` — e o validador falha se existir.
+- [IMPORTANT corrigido] O bloco `OAI-SearchBot` usava `Disallow: /`, bloqueando o
+  assistente em outras superfícies públicas curadas (portal, pastas, listas e
+  professores públicos) que o grupo `*` libera. Como o protocolo não herda regras
+  do grupo `*`, o bloco agora repete as rotas privadas e mantém as públicas
+  abertas; o validador falha se qualquer superfície curada aparecer bloqueada.
+- [MINOR corrigido] O `description` do JSON-LD passou a usar o mesmo resumo
+  truncado do `<meta description>` visível, e o validador passou a exigir
+  exatamente um meta robots sem `noindex` no material aprovado.

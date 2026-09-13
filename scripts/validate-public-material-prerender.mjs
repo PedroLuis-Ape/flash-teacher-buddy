@@ -154,6 +154,18 @@ for (const forbidden of ["educationalLevel", "about", "description", "dateModifi
   assert.ok(!(forbidden in sparseResource), `JSON-LD nao pode inventar o campo ${forbidden}`);
 }
 
+// 5c. Sem autor no payload nao pode existir Person nem referencia de autoria.
+const anonymousMaterial = buildMaterialJsonLd({
+  ...materialFixture,
+  list: { ...materialFixture.list, author_name: null, author_slug: null },
+});
+const anonymousTypes = anonymousMaterial["@graph"].map((node) => node["@type"]);
+assert.ok(!anonymousTypes.includes("Person"), "JSON-LD nao pode inventar autor");
+assert.ok(
+  !("author" in anonymousMaterial["@graph"].find((node) => node["@type"] === "LearningResource")),
+  "sem autor no payload nao pode existir referencia de autoria",
+);
+
 // 5b. A injecao do JSON-LD precisa acontecer no HTML final do material.
 const injectedHtml = injectMaterialStructuredData(
   "<html><head><title>x</title></head><body><div id=\"root\"></div></body></html>",
@@ -166,6 +178,13 @@ assert.ok(
 const injectedMatch = injectedHtml.match(/<script id="public-material-jsonld" type="application\/ld\+json">([\s\S]*?)<\/script>/);
 const injectedGraph = JSON.parse(injectedMatch[1].replaceAll("\\u003c", "<"))["@graph"];
 assert.ok(injectedGraph.some((node) => node["@type"] === "LearningResource"), "JSON-LD injetado sem LearningResource");
+const headedMaterial = applyHead(
+  "<html><head><title>x</title><meta name=\"robots\" content=\"index,follow\"><link rel=\"canonical\" href=\"https://www.apeeducation.org/\"></head><body></body></html>",
+  { title: "t", description: "d", canonical: "https://www.apeeducation.org/pt-br/material/exemplo-a1" },
+);
+const materialRobots = headedMaterial.match(/<meta name="robots"[^>]*>/gi) ?? [];
+assert.equal(materialRobots.length, 1, "pagina de material precisa de um unico meta robots");
+assert.ok(!/noindex/i.test(materialRobots[0]), "material aprovado nao pode sair com noindex");
 
 // 6. robots.txt libera o crawler de assistentes apenas nas superficies curadas.
 const robotsTxt = readFileSync(resolve(root, "public", "robots.txt"), "utf8");
@@ -182,10 +201,26 @@ for (const locale of MATERIAL_LOCALES) {
     `robots.txt deve liberar os materiais de ${locale} para assistentes`,
   );
 }
+// Sem herdar o grupo `*`, o bloco precisa repetir as rotas privadas; um
+// `Disallow: /` cru bloquearia superficies publicas curadas.
 assert.ok(
-  assistantBlock.includes("Disallow: /"),
-  "o bloco de assistentes precisa fechar o restante do site",
+  assistantBlock.includes("Disallow: /auth") && assistantBlock.includes("Disallow: /dashboard"),
+  "o bloco de assistentes precisa repetir as rotas privadas do grupo *",
 );
+assert.ok(
+  !/^Disallow: \/$/m.test(assistantBlock),
+  "o bloco de assistentes nao pode bloquear o site inteiro",
+);
+for (const locale of MATERIAL_LOCALES) {
+  const segment = localeUrlSegment(locale);
+  for (const line of robotsTxt.split(/\r?\n/)) {
+    if (!line.startsWith("Disallow:")) continue;
+    assert.ok(
+      !line.includes(`/${segment}/materiais`) && !line.includes(`/${segment}/material`),
+      `robots.txt nao pode bloquear ${line.trim()} — superficie publica curada`,
+    );
+  }
+}
 
 console.log(
   "OK material publico: canonical unico, robots autoritativo, H1, JSON-LD fiel e sitemap sem filtros.",

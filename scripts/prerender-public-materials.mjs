@@ -157,13 +157,20 @@ export function buildMaterialJsonLd(material) {
   const resourceId = `${canonical}#learning-resource`;
   const title = jsonLdText(list.title) ?? "";
   const description = jsonLdText(editorial.summary);
+  // Mesmo texto exibido no HTML: resumo truncado como no <meta description>.
+  const visibleDescription = description ? truncate(description, description) : undefined;
   const level = jsonLdText(editorial.level);
   const theme = jsonLdText(editorial.theme);
   const resourceType = jsonLdText(editorial.resource_type);
   const reviewedAt = jsonLdText(editorial.reviewed_at);
   const authorSlug = jsonLdText(list.author_slug);
+  const authorName = jsonLdText(list.author_name);
+  // Sem autor no payload nao existe no HTML visivel: nao inventamos Person.
+  const hasAuthor = Boolean(authorName || authorSlug);
   const authorProfile = authorSlug ? `${SITE_URL}/portal/professor/${authorSlug}` : undefined;
-  const authorId = authorProfile ? `${authorProfile}#person` : `${canonical}#author`;
+  const authorId = hasAuthor
+    ? (authorProfile ? `${authorProfile}#person` : `${canonical}#person`)
+    : undefined;
   const playPath = jsonLdText(material.play_path) ? absolute(material.play_path) : undefined;
   const languages = compactNodes([
     jsonLdLanguage(list.lang_a),
@@ -179,7 +186,7 @@ export function buildMaterialJsonLd(material) {
     inLanguage: segment === "pt-br" ? "pt-BR" : segment,
     isPartOf: { "@id": `${SITE_URL}/#website` },
     mainEntity: { "@id": resourceId },
-    ...(description ? { description } : {}),
+    ...(visibleDescription ? { description: visibleDescription } : {}),
   };
 
   const resource = {
@@ -191,27 +198,29 @@ export function buildMaterialJsonLd(material) {
     provider: { "@id": `${SITE_URL}/#organization` },
     mainEntityOfPage: { "@id": pageId },
     isPartOf: { "@id": `${SITE_URL}/#website` },
-    ...(description ? { description } : {}),
+    ...(visibleDescription ? { description: visibleDescription } : {}),
     ...(languages.length ? { inLanguage: languages } : {}),
     ...(level ? { educationalLevel: level } : {}),
     ...(theme ? { about: theme } : {}),
     ...(resourceType ? { learningResourceType: resourceType } : {}),
     ...(Number.isFinite(cardCount) && cardCount > 0 ? { numberOfItems: cardCount } : {}),
     ...(reviewedAt ? { dateModified: reviewedAt } : {}),
-    author: { "@id": authorId },
+    ...(authorId ? { author: { "@id": authorId } } : {}),
     ...(playPath
       ? { potentialAction: { "@type": "ViewAction", name: "Jogar agora", target: playPath } }
       : {}),
   };
 
-  const author = {
-    "@type": "Person",
-    "@id": authorId,
-    name: jsonLdText(list.author_name) ?? "Professor no APE",
-    jobTitle: "Professor",
-    memberOf: { "@id": `${SITE_URL}/#organization` },
-    ...(authorProfile ? { url: authorProfile } : {}),
-  };
+  const author = hasAuthor
+    ? {
+        "@type": "Person",
+        "@id": authorId,
+        name: authorName ?? authorSlug,
+        ...(authorName ? { jobTitle: "Professor" } : {}),
+        memberOf: { "@id": `${SITE_URL}/#organization` },
+        ...(authorProfile ? { url: authorProfile } : {}),
+      }
+    : null;
 
   const breadcrumb = {
     "@type": "BreadcrumbList",
