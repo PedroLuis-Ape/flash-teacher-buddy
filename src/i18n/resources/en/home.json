@@ -1,5 +1,20 @@
 {
-  "home": {
+  "publicResource": {
+    "notFoundTitle": "Material not available",
+    "notFoundBody": "This material is not published as a canonical source. It may be under editorial review or no longer public.",
+    "loading": "Loading material…",
+    "backToPortal": "Back to the portal",
+    "explore": "Explore materials",
+    "playNow": "Play now",
+    "cards": "Cards",
+    "author": "Author",
+    "type": "Type",
+    "sampleHeading": "Card preview",
+    "guestNote": "You can practise without an account. Your progress stays on this device.",
+    "partOfApe": "Public material from APE — App Piteco",
+    "fallbackDescription": "Practise {{title}} with interactive activities on APE."
+  },
+ "home": {
     "welcome": "Welcome",
     "weeklyPts": "Weekly PTS",
     "level": "Level",

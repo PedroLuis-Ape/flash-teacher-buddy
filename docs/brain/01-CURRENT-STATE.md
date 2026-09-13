@@ -218,3 +218,23 @@ Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[a
   linhas aprovadas.
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
+
+## Materiais públicos — Fase 4, página canônica (2026-09-13)
+
+- [VERIFIED-REPO] Rota `/:locale/material/:slug`, pública nos cinco locales, e
+  `PublicResourcePage`, que só renderiza com `source === 'editorial'`; qualquer
+  outro caso vira "Material não disponível" com `canonicalPath={null}`.
+- [ROOT-CAUSE] `isAppLocale("pt-br")` é case-sensitive e devolvia falso, então a
+  página caía no estado indisponível **sem sequer chamar a RPC**. Corrigido com
+  `normalizeAppLocale` (URL em minúsculas → code i18n).
+- [VERIFIED-RUNTIME] Em rascunho: "Material não disponível", sem amostras e sem
+  CTA. Com uma linha aprovada (teste revertido em seguida): H1 real,
+  `A1 · VERBO TO BE`, **8 amostras reais** dos cards e CTA "Jogar agora", sem
+  overflow em 390 px; RPC respondendo 200.
+- [DECISION] O canonical é montado do segmento da URL
+  (`/pt-br/material/{slug}`), e não do code do locale, para canonical == URL.
+- [PENDING] Antes de aprovar qualquer material: incluí-lo no pipeline de
+  prerender/sitemap (que já existe para listas públicas). Sem isso a rota não
+  tem HTML inicial e o shell emite um canonical próprio — canonical duplicado.
+
+Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]

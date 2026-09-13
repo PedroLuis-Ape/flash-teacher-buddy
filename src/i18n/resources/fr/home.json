@@ -1,5 +1,20 @@
 {
-  "home": {
+  "publicResource": {
+    "notFoundTitle": "Support indisponible",
+    "notFoundBody": "Ce support n'est pas publié comme source canonique. Il peut être en révision éditoriale ou ne plus être public.",
+    "loading": "Chargement du support…",
+    "backToPortal": "Retour au portail",
+    "explore": "Explorer les supports",
+    "playNow": "Jouer maintenant",
+    "cards": "Cartes",
+    "author": "Auteur",
+    "type": "Type",
+    "sampleHeading": "Aperçu des cartes",
+    "guestNote": "Vous pouvez pratiquer sans compte. Votre progression reste sur cet appareil.",
+    "partOfApe": "Support public d'APE — App Piteco",
+    "fallbackDescription": "Pratiquez {{title}} avec des activités interactives sur APE."
+  },
+ "home": {
     "welcome": "Bienvenue",
     "weeklyPts": "PTS hebdomadaires",
     "level": "Niveau",

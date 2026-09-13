@@ -1,4 +1,9 @@
 const PUBLIC_PREFIXES = [
+  '/pt-br/material',
+  '/en/material',
+  '/es/material',
+  '/fr/material',
+  '/it/material',
   '/auth',
   '/portal',
   '/about',
