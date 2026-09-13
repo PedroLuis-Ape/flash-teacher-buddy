@@ -34,6 +34,19 @@ export interface DeckOrientation {
 export const MINIMUM_CLASSIFIED_CARDS = 8;
 export const REQUIRED_INVERSION_RATIO = 0.8;
 export const MINIMUM_INVERTED_CARDS = 8;
+export const MINIMUM_WORDS_PER_SIDE = 2;
+
+/**
+ * Um lado só vota se tiver conteúdo suficiente para ser evidência: palavra
+ * única ("the", "com", "Hotel.", "Pizza.") não decide orientação de deck.
+ */
+export function isVoteWorthyText(text: string): boolean {
+  const words = String(text ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(word));
+  return words.length >= MINIMUM_WORDS_PER_SIDE;
+}
 
 /**
  * Resolve the effective languages for a deck without mutating cards or
@@ -58,7 +71,10 @@ export function resolveDeckOrientation({
     // "Hotel.", "Pizza."). Esses cards simplesmente não votam. Exigir
     // confiança `high` POR CARD matava o sinal em frases reais e curtas
     // ("Eu sou o Pedro"), então a decisão é agregada: muitos votos concordando.
+    // Além disso, palavra única não vota: sem esta guarda, 8 cards triviais
+    // ("com" → "the") atingiriam o mínimo e inverteriam o deck.
     if (!term || !translation) continue;
+    if (!isVoteWorthyText(card.term) || !isVoteWorthyText(card.translation)) continue;
 
     samples.push({
       term,

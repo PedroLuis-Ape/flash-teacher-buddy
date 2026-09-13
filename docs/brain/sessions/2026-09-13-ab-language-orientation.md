@@ -30,3 +30,22 @@ cssclasses:
 
 - [FOLLOW-UP] `gameCore.ts` mantém resolver duplicado; wrappers MC/Write/Unscramble ainda recalculam direção; `PronunciationStudyView` ainda fala sempre `sideB`. Não expandir este lote para esses caminhos.
 - [RISCO RESIDUAL] Não houve browser/voz real nesta task; a garantia atual é de contrato, unidade e compilação. A heurística continua conservadora e não é tradução geral.
+## Fix round 1 (supervisor, após revisão independente)
+
+- [CORRIGIDO — HIGH] O critério original exigia confiança `high` do classificador **nos dois lados de
+  cada card**. Medido no deck real (`a1c6d475…`, 14 cards): term votava português em **14/14**, mas com
+  `confidence` `medium`/`low`; com isso o deck tinha **0 pares válidos**, não atingia o mínimo de 8 e
+  `inverted` ficava `false` — ou seja, o bug do print continuava na tela.
+- [DECISÃO] A decisão passou a ser por **voto agregado**: o card vota quando o classificador devolve
+  idioma (texto ambíguo/curto devolve `null` e NÃO vota), com mínimo de 8 cards votando dos dois lados,
+  mínimo de 8 cards invertidos e razão ≥ 80%. Continua proibido inverter por 1 card ou por frase curta.
+- [VERIFIED-TEST] Fixture PERMANENTE com os 14 cards reais da lista em
+  `src/features/study/lib/resolveDeckOrientation.realDeck.test.ts`: term pt 14/14, translation en 12/14,
+  `inverted = true`. "No.", "OK.", "Hotel.", "Pizza." continuam retornando `null` (não votam).
+- [CORRIGIDO — MEDIUM] `ttsEnabled` não chegava ao modo Pronúncia: a lista com TTS desligado seguia
+  falando. Agora `Study.tsx` repassa e a view honra (handler, `speakOnHintClick` e botão desabilitado),
+  coberto por `pronunciationTts.contract.test.ts`.
+- [LIÇÃO DURÁVEL] Portão de confiança **por item** mata sinal em frases curtas e reais; o limiar deve ser
+  **agregado**, e o teste precisa usar uma amostra REAL do acervo — fixture sintética não pega esse erro.
+  O repositório não tem ambiente DOM de teste (sem jsdom/testing-library): contrato de view é por leitura
+  de fonte + lógica pura testada.

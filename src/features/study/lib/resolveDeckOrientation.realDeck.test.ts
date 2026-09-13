@@ -40,5 +40,11 @@ describe("deck real da lista a1c6d475 (conteúdo invertido vs metadata)", () => 
     expect(result.inverted).toBe(false);
     expect(result.langA).toBe("en");
   });
-});
 
+  it("nao inverte com cards triviais de uma palavra (regressao apontada na revisao)", () => {
+    const trivial = Array.from({ length: 10 }, () => ({ term: "com", translation: "the" }));
+    const result = resolveDeckOrientation({ langA: "en", langB: "pt", cards: trivial });
+    expect(result.inverted).toBe(false);
+    expect(result.evidence.classifiedCards).toBe(0);
+  });
+});
