@@ -219,6 +219,23 @@ Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[a
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
 
+## Materiais públicos — Fase 4, prerender e sitemap (2026-09-13)
+
+- [VERIFIED-REPO] Pipeline próprio do prerender: `scripts/public-material-data.mjs`
+  lê `list_public_resources_v1` (só aprovado) e hidrata amostras por
+  `get_public_resource_v1`; `scripts/prerender-public-materials.mjs` gera
+  HTML inicial crawlable, canonical único e `sitemap-materials.xml`, e falha
+  se faltar H1, canonical correto ou CTA.
+- [VERIFIED-BUILD] Com uma linha aprovada em teste, o build gerou
+  `dist/pt-br/material/verbo-to-be-presente-afirmativo/index.html` (14,8 KB)
+  com **1 canonical** correto, H1 real, CTA e **8 amostras no HTML** — visível
+  sem JavaScript. O `sitemap.xml` passou a listar `sitemap-materials.xml`.
+  A linha foi revertida para rascunho em seguida.
+- [DECISION] O canonical é reescrito no HTML (o shell carrega um canonical
+  próprio), garantindo exatamente um por página pré-renderizada.
+
+Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
+
 ## Materiais públicos — Fase 4, página canônica (2026-09-13)
 
 - [VERIFIED-REPO] Rota `/:locale/material/:slug`, pública nos cinco locales, e
