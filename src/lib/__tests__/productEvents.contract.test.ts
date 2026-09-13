@@ -60,9 +60,35 @@ describe("contrato de eventos first-party (Fase 5)", () => {
   });
 
   it("nao grava identificador pessoal nem usuario", () => {
-    for (const forbidden of ["user_id", "email", "device_id", "ip_address", "answer"]) {
-      expect(normalized).not.toContain(forbidden);
+    // A defesa real nao e 'nao mencionar a palavra', e sim nunca aceitar
+    // valor composto nem texto livre fora de token.
+    expect(normalized).toContain("jsonb_typeof(entry.value) in ('string', 'number', 'boolean')");
+    expect(normalized).toContain("invalid_locale");
+    expect(normalized).toContain("invalid_surface");
+    expect(normalized).toContain("^[a-z0-9-]{1,64}$");
+    // Nenhuma chave de texto livre pode virar campo permitido.
+    for (const forbiddenKey of ["term", "query", "comment", "user_id", "email", "device_id"]) {
+      expect(normalized).not.toContain(`'${forbiddenKey}'`);
     }
+  });
+
+  it("trata chave permitida com valor composto como descarte", () => {
+    expect(normalized).toContain("and jsonb_typeof(entry.value) in ('string', 'number', 'boolean')");
+  });
+
+  it("serializa o throttle com advisory lock", () => {
+    expect(normalized).toContain("pg_advisory_xact_lock(hashtext('product_event:' || _name))");
+  });
+
+  it("revoga a sequencia do bigserial", () => {
+    expect(normalized).toContain(
+      "revoke all on sequence public.product_event_id_seq from public, anon, authenticated",
+    );
+  });
+
+  it("registra o backup de producao no proprio arquivo", () => {
+    expect(normalized).toContain("backup de producao antes desta migration");
+    expect(normalized).toContain("to_regclass('public.product_event')");
   });
 
   it("documenta o rollback no proprio arquivo", () => {
@@ -71,4 +97,3 @@ describe("contrato de eventos first-party (Fase 5)", () => {
     expect(normalized).toContain("drop table if exists public.product_event");
   });
 });
-

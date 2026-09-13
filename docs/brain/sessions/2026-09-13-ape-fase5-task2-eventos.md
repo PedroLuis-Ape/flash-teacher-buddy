@@ -57,4 +57,26 @@ superfícies públicas.
 ## Classification
 
 REVIEW_RECOMMENDED — implementado pelo controller; revisão independente pendente.
+## Fix round 1 (revisão independente)
 
+- [IMPORTANT corrigido] A allowlist de chaves filtrava só o primeiro nível: um
+  objeto aninhado dentro de uma chave permitida era gravado inteiro e virava
+  canal de PII (reproduzido em produção pelo revisor). Agora só sobrevivem
+  valores escalares — `jsonb_typeof(entry.value) in ('string','number','boolean')`.
+  Verificado em produção: o objeto aninhado foi descartado.
+- [IMPORTANT corrigido] `_locale` e `_surface` eram texto livre (até 16/64 bytes),
+  ou seja, uma caixa de texto anônima. Agora são validados como token
+  (`^[A-Za-z-]{2,16}$` e `^[a-z0-9-]{1,64}$`); superfície fora do padrão devolve
+  `invalid_surface` — verificado em produção.
+- [IMPORTANT corrigido] O throttle era um check-then-insert não atômico: rajadas
+  concorrentes estouravam o limite. Agora a contagem é serializada por
+  `pg_advisory_xact_lock(hashtext('product_event:' || _name))`.
+- [IMPORTANT corrigido] Faltava o bloco de backup de produção exigido pelo
+  programa. Registrado no arquivo: o objeto não existia antes da migration
+  (`to_regclass` = null, 0 funções).
+- [MINOR corrigido] `revoke all on sequence public.product_event_id_seq` para
+  `anon`/`authenticated`; verificado: `has_sequence_privilege` = false.
+- [MINOR corrigido] O teste que checava PII era vazio (a palavra não aparecia no
+  SQL). Passou a afirmar as defesas reais.
+- [PENDING] Retenção da tabela insert-only ainda não tem política de expurgo;
+  decisão registrada como pendência antes de haver tráfego real.
