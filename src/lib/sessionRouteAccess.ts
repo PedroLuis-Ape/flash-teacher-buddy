@@ -31,7 +31,11 @@ export function isPublicClassSharePath(pathname: string): boolean {
 }
 
 export function isProtectedPath(pathname: string): boolean {
-  if (PUBLIC_EXACT.has(pathname)) return false;
-  if (isPublicClassSharePath(pathname)) return false;
-  return !PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  // O segmento de locale é sempre minúsculo na URL canônica; normalizar evita
+  // que um link com `pt-BR` (code do banco) ou digitado à mão caia no gate de
+  // rota protegida e devolva página vazia para visitante anônimo.
+  const normalized = pathname.toLowerCase();
+  if (PUBLIC_EXACT.has(normalized)) return false;
+  if (isPublicClassSharePath(normalized)) return false;
+  return !PUBLIC_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }

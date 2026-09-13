@@ -91,3 +91,25 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[areas/sup
   desta task, mas o pipeline SEO compartilhado deve eliminar a duplicidade.
 
 Related: [[01-CURRENT-STATE]] · [[07-TESTS]] · [[sessions/2026-09-13-public-catalog-task-2]]
+## R-2026-09-13-01 — Autoria inventada em JSON-LD de páginas públicas irmãs (P2)
+
+[VERIFIED-REPO] O defeito corrigido na Fase 5 no material curado (`name:
+"Professor no APE"` + `jobTitle: "Professor"` emitidos sem autor no payload)
+**continua presente** em quatro caminhos públicos que já estão no ar:
+
+- `scripts/prerender-public-learning-resources.mjs:136-137` (nó `Person`) e `:128`
+  (referência `author`)
+- `scripts/prerender-public-learning-lists.mjs:103-104` e `:92`
+- `src/components/seo/publicLearningResourceStructuredData.ts:90-91` e `:82`
+- `src/components/seo/publicLearningListStructuredData.ts:95-96` e `:79`
+
+Correção exigida (mesma do material): só emitir o nó `Person` e a referência
+`author` quando existir `author_display_name` ou `author_slug`; sem autor, o
+`@graph` não pode conter `Person` nem `author`.
+
+Por que não foi corrigido junto: cada arquivo exige dois gates (nó + referência)
+em quatro arquivos de fases anteriores, e um gate malfeito deixa referência
+pendurada em dados estruturados de páginas vivas. Exige task própria com teste.
+
+[DECISION] Registrado como dívida acionável em vez de corrigido às pressas sem
+revisão dedicada.

@@ -447,3 +447,16 @@ Related: [[07-TESTS]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]] · [[a
   SEO 100/100.
 
 Related: [[sessions/2026-09-13-ape-fase5-task3-eventos-cliente]] · [[07-TESTS]] · [[08-RISKS]]
+
+## Catálogo público — correções finais (2026-09-13)
+
+- [CONFLITO corrigido] `canonical_path` saía com o code do locale (`/pt-BR/...`)
+  enquanto rota, gate e prerender usam `/pt-br/...`; o primeiro material
+  aprovado levaria visitante anônimo a página vazia. Corrigido nos dois RPCs
+  (migration `20260913210000`, aplicada em produção) e blindado no gate de rota.
+- [I18N corrigido] A copy do catálogo pré-renderizado vem agora do i18n real;
+  antes os 4 locales não-pt-BR serviam texto em português no HTML.
+- [DECISION] `noindex` de URL filtrada é runtime; o que protege a indexação é o
+  canonical para a base e a ausência de URLs com filtro no sitemap.
+
+Related: [[sessions/2026-09-13-catalogo-canonical-e-i18n]] · [[07-TESTS]] · [[08-RISKS]]
