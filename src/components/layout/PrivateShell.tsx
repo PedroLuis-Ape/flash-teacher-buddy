@@ -22,6 +22,7 @@ import { formatVersionLabel } from "@/lib/versionManager";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
+import { GuestStateMergePrompt } from "@/features/guest/GuestStateMergePrompt";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
 import { PrivateGalaxyGate } from "@/components/layout/PrivateGalaxyGate";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
@@ -185,6 +186,7 @@ export function PrivateShell({ children }: PrivateShellProps) {
     <EconomyProvider>
       <InstitutionProvider>
         <PrivateShellInner>{children}</PrivateShellInner>
+        <GuestStateMergePrompt />
       </InstitutionProvider>
     </EconomyProvider>
   );
