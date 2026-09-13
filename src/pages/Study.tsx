@@ -1553,6 +1553,8 @@ const Study = () => {
     currentIndex,
     currentCardId: engineCurrentCardId ?? null,
     layerIndex: hasLayers ? safeLayerIdx : null,
+    // Deck vazio = sessão ainda carregando: nunca publica ponteiro sem card.
+    deckReady: cardsOrder.length > 0,
     finished: isFinished,
   });
 

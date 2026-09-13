@@ -1,8 +1,12 @@
 /**
  * Compatibilidade e detecção da extensão "Salvar nas Notas".
  *
- * Detecção por capacidade (chrome.runtime.sendMessage) + Client Hints de
- * mobile, com fallback de user-agent apenas quando userAgentData não existe.
+ * Duas perguntas separadas, com fontes diferentes:
+ *
+ * 1. COMPATIBILIDADE (o convite pode existir?) — sinais do navegador:
+ *    Client Hints/user-agent provando Chromium desktop. NUNCA chrome.runtime.
+ * 2. DETECÇÃO (a extensão já está instalada?) — o único uso de
+ *    chrome.runtime.sendMessage: canal ausente, erro ou timeout = "missing".
  */
 
 import {
@@ -20,19 +24,57 @@ import {
 const MOBILE_USER_AGENT =
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i;
 
+/**
+ * Marcas de User-Agent Client Hints que provam motor Chromium. Catálogo real:
+ * Chrome = "Chromium" + "Google Chrome"; Edge = "Chromium" + "Microsoft Edge".
+ * Marcas do tipo "Not_A Brand" (GREASE) não casam aqui.
+ */
+const CHROMIUM_HINT_BRAND =
+  /^(chromium|google chrome|microsoft edge|opera|brave|vivaldi|samsung internet|oculus)/i;
+
+/** Token de user-agent que prova Chromium (fallback sem Client Hints). */
+const CHROMIUM_USER_AGENT = /(Chrome|Chromium|CriOS|EdgA?|EdgiOS|OPR|SamsungBrowser)\//;
+
+/** Gecko (Firefox) não suporta extensões do Chrome. */
+const GECKO_USER_AGENT = /Firefox\/|FxiOS\//;
+
+/**
+ * WebKit puro (Safari). O token "Safari/" TAMBÉM aparece no user-agent do
+ * Chrome, por isso esta checagem só vale depois da checagem de Chromium.
+ */
+const WEBKIT_USER_AGENT = /Safari\//;
+
 export function isMobileEnvironment(env: CompatibilityEnvironment): boolean {
   if (env.userAgentMobile === true) return true;
   if (env.userAgentMobile === false) return false;
   return MOBILE_USER_AGENT.test(env.userAgent ?? "");
 }
 
+export function isChromiumBrandList(brands: readonly string[] | undefined): boolean {
+  if (!brands || brands.length === 0) return false;
+  return brands.some((brand) => CHROMIUM_HINT_BRAND.test(brand.trim()));
+}
+
 /**
- * Desktop + navegador Chromium. Sem chrome.runtime não existe canal externo
- * (Firefox, Safari, mobile) — nesse caso o convite nunca deve aparecer.
+ * Desktop + navegador Chromium — a ÚNICA pergunta de compatibilidade.
+ *
+ * Deliberadamente NÃO usa `chrome.runtime`: em uma página comum o canal só
+ * existe quando alguma extensão instalada declara `externally_connectable` para
+ * aquele domínio. Exigir o canal escondia o convite exatamente da persona-alvo
+ * (Chromium desktop sem a extensão). O canal é usado só para DETECTAR a
+ * extensão (ping em `pingExtension`).
+ *
+ * Fail-closed: mobile, Firefox, Safari e navegador não reconhecido → false.
  */
 export function detectExtensionCompatibility(env: CompatibilityEnvironment): boolean {
-  if (!env.extensionMessaging) return false;
-  return !isMobileEnvironment(env);
+  if (isMobileEnvironment(env)) return false;
+  if (isChromiumBrandList(env.brands)) return true;
+
+  const userAgent = env.userAgent ?? "";
+  if (GECKO_USER_AGENT.test(userAgent)) return false;
+  if (CHROMIUM_USER_AGENT.test(userAgent)) return true;
+  if (WEBKIT_USER_AGENT.test(userAgent)) return false;
+  return false;
 }
 
 export type ExtensionPingResult = "installed" | "missing";

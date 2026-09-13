@@ -14,9 +14,11 @@ export interface BrowserExtensionStatus {
 /**
  * Status da extensão no navegador atual.
  *
- * - "unsupported": sem canal externo (Firefox/Safari/mobile) ou mobile
+ * - "unsupported": navegador fora do alvo (Firefox/Safari/mobile) — decidido
+ *   por sinais do navegador, NUNCA pela ausência de chrome.runtime
  * - "unknown": ainda verificando
- * - "installed" / "missing": resultado do ping
+ * - "installed" / "missing": resultado do ping (canal ausente, erro ou timeout
+ *   contam como "missing": é exatamente o caso de quem ainda não instalou)
  *
  * Consulta sempre que montado: não existe mais superfície "autenticada" como
  * pré-condição (a landing pública também precisa saber o status).

@@ -25,6 +25,14 @@ export interface StudyResumePublisherInput {
   currentIndex: number;
   currentCardId?: string | null;
   layerIndex?: number | null;
+  /**
+   * O deck já carregou com pelo menos um card jogável?
+   *
+   * Guarda restaurada em 2026-09-13: sem ela o ponteiro era publicado antes de
+   * o deck carregar (currentIndex 0, nenhum card), e o card "Voltar para onde
+   * parou" da Home passava a apontar para uma sessão vazia.
+   */
+  deckReady: boolean;
   /** Rodada/deck encerrado: mantém o ponteiro anterior, nunca republica. */
   finished?: boolean;
 }
@@ -54,10 +62,12 @@ export function useStudyResumePublisher(
     currentIndex,
     currentCardId,
     layerIndex,
+    deckReady,
   } = input;
 
   const publish = useCallback(() => {
     if (!target || !userId || !sessionId || !resourceId || !gameMode || !path) return;
+    if (!deckReady) return;
     writeStudyResumePointer({
       userId,
       sessionId,
@@ -74,6 +84,7 @@ export function useStudyResumePublisher(
   }, [
     currentCardId,
     currentIndex,
+    deckReady,
     gameMode,
     institutionId,
     layerIndex,

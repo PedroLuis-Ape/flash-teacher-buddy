@@ -29,6 +29,7 @@ const baseInput: StudyResumePublisherInput = {
   currentIndex: 4,
   currentCardId: "card-4",
   layerIndex: null,
+  deckReady: true,
 };
 
 let storage = createStorage();
@@ -99,6 +100,30 @@ describe("publicação do ponteiro de retomada (camada comum de todas as superf�
 
     await act(async () => { renderer?.unmount(); renderer = undefined; });
     await mount({ ...baseInput, resourceId: null });
+    expect(storage.map.size).toBe(0);
+  });
+
+  it("não publica com deck vazio (currentIndex 0 antes de o deck carregar)", async () => {
+    await mount({ ...baseInput, deckReady: false, currentIndex: 0, currentCardId: null });
+    expect(storage.map.size).toBe(0);
+
+    // Deck carregado: o ponteiro passa a apontar para a posição real.
+    await act(async () => {
+      renderer?.update(
+        <Harness {...baseInput} deckReady currentIndex={3} currentCardId="card-3" />,
+      );
+    });
+
+    const pointer = readStudyResumePointer("u1", storage);
+    expect(pointer?.currentIndex).toBe(3);
+    expect(pointer?.currentCardId).toBe("card-3");
+  });
+
+  it("publish() manual também respeita o deck vazio (contrato de 'Salvar e sair')", async () => {
+    await mount({ ...baseInput, deckReady: false, currentIndex: 0, currentCardId: null });
+    await act(async () => {
+      publish();
+    });
     expect(storage.map.size).toBe(0);
   });
 

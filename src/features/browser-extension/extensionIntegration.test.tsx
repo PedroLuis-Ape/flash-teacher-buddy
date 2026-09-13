@@ -26,6 +26,7 @@ import {
   WEB_STORE_URL,
 } from "./extensionConfig";
 import { detectExtensionCompatibility, pingExtension } from "./extensionStatus";
+import type { ExtensionPromptGateSnapshot } from "./extensionPromptPolicy";
 
 /** Sessão simulada do ponto de montagem (`GlobalLayout` → `useAuth`). */
 const authState = vi.hoisted(() => ({ status: "anonymous" as string }));
@@ -51,6 +52,12 @@ interface BrowserHarness {
 const GLOBAL_KEYS = ["window", "document", "localStorage", "sessionStorage", "chrome"];
 const DESKTOP_CHROME_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const DESKTOP_FIREFOX_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0";
+const DESKTOP_SAFARI_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15";
+/** Catálogo real de Client Hints do Chrome desktop. */
+const CHROME_BRANDS = ["Not_A Brand", "Chromium", "Google Chrome"];
 
 function createMemoryStorage(): Storage {
   const map = new Map<string, string>();
@@ -80,6 +87,7 @@ function installBrowser(options: {
   handler?: SendMessageHandler;
   mobile?: boolean;
   userAgent?: string;
+  brands?: readonly string[];
   hasChannel?: boolean;
 } = {}): BrowserHarness {
   const scope = globalThis as unknown as Record<string, unknown>;
@@ -107,7 +115,10 @@ function installBrowser(options: {
     configurable: true,
     value: {
       userAgent: options.userAgent ?? DESKTOP_CHROME_UA,
-      userAgentData: options.mobile === undefined ? undefined : { mobile: options.mobile },
+      userAgentData:
+        options.mobile === undefined && options.brands === undefined
+          ? undefined
+          : { mobile: options.mobile, brands: options.brands },
     },
   });
 
@@ -163,6 +174,15 @@ function statusLabel(renderer: ReactTestRenderer): string {
   return node.children.join("");
 }
 
+/** Snapshot auditável dos gates (`window.pitecoExtensionPromptDebug`, só em DEV). */
+function readGateSnapshot(): ExtensionPromptGateSnapshot {
+  const snapshot = (
+    globalThis as unknown as { pitecoExtensionPromptDebug?: ExtensionPromptGateSnapshot }
+  ).pitecoExtensionPromptDebug;
+  expect(snapshot).toBeDefined();
+  return snapshot as ExtensionPromptGateSnapshot;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-09-13T12:00:00.000Z"));
@@ -214,8 +234,8 @@ describe("convite da extensão — cenários A..J", () => {
     ).toBe(false);
   });
 
-  it("C — navegador sem canal externo (Firefox/Safari) fica incompatível", async () => {
-    installBrowser({ hasChannel: false, mobile: false });
+  it("C — Firefox/Safari desktop ficam incompatíveis (sem canal externo)", async () => {
+    installBrowser({ hasChannel: false, mobile: false, userAgent: DESKTOP_FIREFOX_UA });
     const prompt = await render(<ExtensionInstallPrompt />);
     const settings = await render(<BrowserExtensionSettingsSection />);
 
@@ -223,7 +243,12 @@ describe("convite da extensão — cenários A..J", () => {
 
     expect(prompt.toJSON()).toBeNull();
     expect(statusLabel(settings)).toBe("Indisponível neste navegador");
-    expect(detectExtensionCompatibility({ userAgent: "", extensionMessaging: false })).toBe(false);
+    expect(
+      detectExtensionCompatibility({ userAgent: DESKTOP_FIREFOX_UA, extensionMessaging: false }),
+    ).toBe(false);
+    expect(
+      detectExtensionCompatibility({ userAgent: DESKTOP_SAFARI_UA, extensionMessaging: false }),
+    ).toBe(false);
   });
 
   it("D — desktop Chromium com extensão instalada: ping correto e sem convite", async () => {
@@ -402,14 +427,118 @@ describe("convite na landing pública — matriz de gates sem login", () => {
     expect(harness.sendMessage).not.toHaveBeenCalled();
   });
 
-  it("K5 — navegador sem canal externo (Firefox/Safari) nunca vê o convite", async () => {
-    const harness = installBrowser({ hasChannel: false, mobile: false });
+  it("K5 — Firefox/Safari nunca veem o convite", async () => {
+    const harness = installBrowser({ hasChannel: false, mobile: false, userAgent: DESKTOP_SAFARI_UA });
     const renderer = await render(<ExtensionInstallPrompt />);
 
     await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
 
     expect(renderer.toJSON()).toBeNull();
     expect(harness.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("convite sem a extensão instalada — o caso real de produção", () => {
+  it("L1 — Chromium desktop SEM chrome.runtime é compatível, fica 'missing' e é elegível", async () => {
+    // apeeducation.org sem a extensão: nenhuma extensão declara externally_connectable
+    // para o domínio, então window.chrome.runtime NÃO existe. Antes desta correção o
+    // veredito era 'browser-incompatible' e o convite nunca aparecia.
+    const harness = installBrowser({ hasChannel: false, mobile: false, brands: CHROME_BRANDS });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    await advance(SHOW_DELAY_MS);
+
+    const gates = readGateSnapshot();
+    expect(gates.browserCompatible).toBe(true);
+    expect(gates.extensionDetected).toBe(false);
+    expect(gates.finalEligibility).toBe(true);
+    expect(gates.reasonNotShown).toBeNull();
+    expect(renderer.toJSON()).not.toBeNull();
+    // Sem canal: nada foi chamado e nada lançou.
+    expect(harness.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("L2 — canal presente com ping válido → 'installed' → convite oculto", async () => {
+    const harness = installBrowser({
+      handler: installedExtension(),
+      mobile: false,
+      brands: CHROME_BRANDS,
+    });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+    const gates = readGateSnapshot();
+    expect(harness.sendMessage).toHaveBeenCalled();
+    expect(gates.extensionDetected).toBe(true);
+    expect(gates.browserCompatible).toBe(true);
+    expect(gates.finalEligibility).toBe(false);
+    expect(gates.reasonNotShown).toBe("extension-installed");
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("L3 — canal presente com ping que estoura → 'missing' e elegível, sem erro visível", async () => {
+    const harness = installBrowser({
+      handler: () => {
+        throw new Error("Could not establish connection. Receiving end does not exist.");
+      },
+      mobile: false,
+      brands: CHROME_BRANDS,
+    });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await settle();
+    await advance(SHOW_DELAY_MS);
+
+    const gates = readGateSnapshot();
+    expect(harness.sendMessage).toHaveBeenCalled();
+    expect(gates.extensionDetected).toBe(false);
+    expect(gates.browserCompatible).toBe(true);
+    expect(gates.finalEligibility).toBe(true);
+    expect(renderer.toJSON()).not.toBeNull();
+  });
+
+  it("L4 — canal presente com timeout → 'missing' e elegível", async () => {
+    installBrowser({ handler: () => undefined, mobile: false, brands: CHROME_BRANDS });
+    const renderer = await render(<ExtensionInstallPrompt />);
+
+    await advance(PING_TIMEOUT_MS);
+    expect(readGateSnapshot().extensionDetected).toBe(false);
+
+    await advance(SHOW_DELAY_MS);
+    expect(readGateSnapshot().finalEligibility).toBe(true);
+    expect(renderer.toJSON()).not.toBeNull();
+  });
+
+  it("L5 — Firefox, Safari e mobile não são elegíveis e não consultam a extensão", async () => {
+    const cases = [
+      { userAgent: DESKTOP_FIREFOX_UA, mobile: undefined },
+      { userAgent: DESKTOP_SAFARI_UA, mobile: undefined },
+      { userAgent: DESKTOP_CHROME_UA, mobile: true },
+    ];
+
+    for (const scenario of cases) {
+      const harness = installBrowser({
+        hasChannel: false,
+        mobile: scenario.mobile,
+        userAgent: scenario.userAgent,
+      });
+      const prompt = await render(<ExtensionInstallPrompt />);
+      const settings = await render(<BrowserExtensionSettingsSection />);
+
+      await advance(SHOW_DELAY_MS + AUTO_DISMISS_MS);
+
+      expect(prompt.toJSON()).toBeNull();
+      expect(statusLabel(settings)).toBe("Indisponível neste navegador");
+      expect(harness.sendMessage).not.toHaveBeenCalled();
+
+      await act(async () => {
+        prompt.unmount();
+        settings.unmount();
+      });
+    }
   });
 });
 

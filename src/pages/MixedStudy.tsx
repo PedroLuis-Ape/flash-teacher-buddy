@@ -887,6 +887,8 @@ export default function MixedStudy() {
     currentIndex: mixed.state?.currentIndex ?? 0,
     currentCardId: mixed.currentCardId ?? null,
     layerIndex: null,
+    // Mesma guarda do Study: deck vazio (sessão ainda carregando) não publica.
+    deckReady: (mixed.state?.allCardIds.length ?? 0) > 0,
     finished: mixedJourneyComplete,
   });
 

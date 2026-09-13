@@ -181,10 +181,14 @@ documentação interna no ZIP. SHA-256:
 
 ## Integração App Piteco ↔ extensão 1.9.0 — 2026-09-13
 
-[FATO CONFIRMADO] O app passou a detectar a extensão por mensagem externa
+[FATO CONFIRMADO] O app detecta a extensão por mensagem externa
 (`chrome.runtime.sendMessage(<EXTENSION_ID>, { type: "PITECO_EXTENSION_PING" })`)
-com timeout curto; ausência de `chrome.runtime` (Firefox/Safari/mobile) é tratada
-como "unsupported" e nunca lança.
+com timeout curto; canal ausente, erro do canal ou timeout contam como "missing"
+(não instalada) e nunca lançam.
+[POSSIVELMENTE OBSOLETO — corrigido em 2026-09-13] A redação anterior dizia que
+"ausência de `chrome.runtime` (Firefox/Safari/mobile) é tratada como 'unsupported'".
+Isso confundia compatibilidade de navegador com canal externo; ver a seção
+"Compatibilidade decidida pelo navegador, não por `chrome.runtime`" no fim desta nota.
 
 [DECISAO VIGENTE] Configuração única em `src/features/browser-extension/extensionConfig.ts`:
 `EXTENSION_ID` (`gomkkomamhecmmomcpjmioikjadpddnh`), `WEB_STORE_URL` sem UTM,
@@ -253,3 +257,34 @@ em `src`).
 
 Related: [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] ·
 [[learning/lessons/2026-09-13-gate-auth-em-superficie-publica]] · [[07-TESTS]]
+
+## Compatibilidade decidida pelo navegador, não por `chrome.runtime` (2026-09-13)
+
+[DECISAO SUBSTITUIDA] O veredito `browserCompatible` vinha de `env.extensionMessaging`
+(existência de `chrome.runtime.sendMessage`), tanto em `ExtensionInstallPrompt.tsx` quanto em
+`detectExtensionCompatibility`. Em uma página comum esse canal só existe quando ALGUMA extensão
+instalada declara `externally_connectable` para aquele domínio — ou seja, ele falta exatamente
+na persona-alvo do convite (Chromium desktop SEM a extensão). Consequência medida: veredito
+`browser-incompatible` e o convite nunca aparecendo em produção, apesar de toda a correção de
+superfície/login.
+
+[DECISAO VIGENTE] `detectExtensionCompatibility` (`extensionStatus.ts`) decide por sinais de
+navegador: `navigator.userAgentData.brands` provando Chromium (`Chromium`, `Google Chrome`,
+`Microsoft Edge`, `Opera`, `Brave`, ...) e, sem Client Hints, token de user-agent
+`Chrome|Chromium|Edg|OPR|SamsungBrowser`; exclusão explícita de mobile
+(`userAgentData.mobile` com fallback de UA Android/iPhone) e de Gecko/WebKit puro (Firefox/Safari);
+fail-closed para navegador não reconhecido. `chrome.runtime` deixou de ser gate: é apenas o meio de
+DETECTAR a extensão (ping de 1,2 s). Canal ausente, erro do canal ou timeout → `missing` →
+elegível, sujeito a snooze de 7 dias e à marca de sessão.
+
+[VERIFIED-TEST] `extensionCompatibility.test.ts` (matriz de marcas/UA/mobile) e cenários L1–L5 em
+`extensionIntegration.test.tsx`: Chromium desktop sem `chrome.runtime` → compatível + `missing` +
+elegível; canal com ping válido → `installed` + oculto; canal com erro/timeout → `missing` +
+elegível; Firefox/Safari/mobile → não elegível.
+
+[DECISAO VIGENTE] Guarda do ponteiro de retomada restaurada na camada comum
+(`useStudyResumePublisher.deckReady`): o Study publica com `cardsOrder.length > 0` e a Prática
+Mista com `state.allCardIds.length > 0`. Deck vazio (sessão ainda carregando) não publica mais
+ponteiro de sessão vazia.
+
+Related: [[07-TESTS]] · [[06-BUGS]] · [[08-RISKS]]

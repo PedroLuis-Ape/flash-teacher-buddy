@@ -29,7 +29,7 @@ import {
   wasPromptSeenThisSession,
 } from "./extensionPromptStorage";
 import { evaluateExtensionPromptGates, publishExtensionPromptDebug } from "./extensionPromptPolicy";
-import { isMobileEnvironment } from "./extensionStatus";
+import { detectExtensionCompatibility, isMobileEnvironment } from "./extensionStatus";
 import { readCompatibilityEnvironment } from "./extensionRuntime";
 import { useBrowserExtensionStatus } from "./useBrowserExtensionStatus";
 
@@ -62,7 +62,10 @@ export function ExtensionInstallPrompt({
   const gates = evaluateExtensionPromptGates({
     route,
     authenticatedSession,
-    browserCompatible: environment.extensionMessaging,
+    // Compatibilidade = sinais do navegador (Chromium desktop). O canal
+    // chrome.runtime NÃO decide compatibilidade: ele falta justamente em quem
+    // ainda não instalou a extensão. Ver extensionStatus.detectExtensionCompatibility.
+    browserCompatible: detectExtensionCompatibility(environment),
     isDesktop: !isMobileEnvironment(environment),
     extensionStatus: status,
     snoozeActive: snoozed,
