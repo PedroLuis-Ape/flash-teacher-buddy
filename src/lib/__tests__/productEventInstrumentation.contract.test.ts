@@ -36,7 +36,7 @@ describe("instrumentacao de eventos nas superficies", () => {
   it("mede busca do catalogo sem enviar o termo digitado", () => {
     const source = read(SURFACES.catalog);
     expect(source).toContain("public_search_used");
-    expect(source).toContain("result_count: data.total");
+    expect(source).toContain("buildPublicSearchEventPayload({ resultCount: data.total");
     expect(source).not.toMatch(/trackProductEvent\(\s*"public_search_used"[\s\S]{0,120}?\bq\b/);
   });
 

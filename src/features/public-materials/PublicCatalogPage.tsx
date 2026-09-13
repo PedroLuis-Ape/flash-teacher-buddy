@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeAppLocale } from "@/i18n/languages";
+import { buildPublicSearchEventPayload } from "@/features/public-materials/publicSearchEventPayload";
 import { trackProductEvent } from "@/lib/productEvents";
 import {
   type PublicResourceCatalogFacet,
@@ -136,10 +137,10 @@ export default function PublicCatalogPage() {
     if (!data || !hasActiveFilters) return;
     void trackProductEvent(
       "public_search_used",
-      { result_count: data.total, has_filters: true },
+      buildPublicSearchEventPayload({ resultCount: data.total, level, theme, type }),
       { locale: locale ?? "pt-BR", surface: "catalog" },
     );
-  }, [data, hasActiveFilters, locale]);
+  }, [data, hasActiveFilters, locale, level, theme, type]);
 
   useEffect(() => {
     if (searchValue.trim() === q) return;

@@ -60,4 +60,24 @@ próximo passo (Modo Reino Beta público).
 ## Classification
 
 REVIEW_RECOMMENDED — implementado pelo controller; revisão independente pendente.
+## Fix round 1 (revisão independente)
+
+- [IMPORTANT corrigido] `has_filters` era constante `true`: toda busca por texto
+  era registrada como uso de filtro. Extraído para
+  `buildPublicSearchEventPayload`, que marca `true` só quando há nível, tema ou
+  tipo — com teste de comportamento.
+- [IMPORTANT corrigido] Superfícies que não informavam locale caíam no default
+  `pt-BR`, rotulando visitantes de /en, /es, /fr e /it como pt-BR. O default
+  deixou de existir: sem locale conhecido, a coluna grava nulo.
+- [IMPORTANT corrigido] Não havia portão de ambiente e o cliente público cai em
+  produção quando o ambiente não está configurado — `npm run dev` gravaria na
+  tabela real. `productEventsEnabled()` só libera em `apeeducation.org` (e
+  subdomínios); localhost, `.local` e ambiente sem `window` retornam `false`.
+- [IMPORTANT parcialmente corrigido] Os testes de contrato eram greps de texto.
+  O payload de busca passou a ter teste de comportamento; os demais contratos
+  seguem como checagem de presença, o que continua sendo cobertura fraca.
+- [MINOR documentado] `resource_slug` carrega dois espaços de identificador
+  (UUID da lista no destaque, slug do material na página canônica); o carrossel
+  reporta `slide_index` apenas nas setas; e `guest_game_complete` não envia
+  `round_count`. Registrado aqui em vez de silenciado.
 

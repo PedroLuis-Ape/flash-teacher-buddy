@@ -5,16 +5,48 @@ const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/integrations/supabase/publicClient", () => ({ publicSupabase: { rpc } }));
 
 import {
+  productEventsEnabled,
   resetProductEventOnceForTests,
   sanitizeProductPayload,
   trackProductEvent,
   trackProductEventOnce,
 } from "@/lib/productEvents";
 
+const setHostname = (hostname: string | null) => {
+  if (hostname === null) {
+    delete (globalThis as { window?: unknown }).window;
+    return;
+  }
+  (globalThis as { window?: unknown }).window = { location: { hostname } };
+};
+
 describe("trackProductEvent", () => {
   beforeEach(() => {
     rpc.mockReset();
     resetProductEventOnceForTests();
+    setHostname("www.apeeducation.org");
+  });
+
+  it("nao envia em desenvolvimento nem sem window", async () => {
+    setHostname("localhost");
+    expect(productEventsEnabled()).toBe(false);
+    await expect(trackProductEvent("guest_resume", { mode: "mixed" })).resolves.toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+
+    setHostname(null);
+    expect(productEventsEnabled()).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("nao rotula locale quando a superficie nao informa", async () => {
+    rpc.mockResolvedValue({ error: null });
+    await trackProductEvent("guest_resume", { mode: "mixed" });
+    expect(rpc).toHaveBeenCalledWith("record_product_event_v1", {
+      _name: "guest_resume",
+      _payload: { mode: "mixed" },
+      _locale: null,
+      _surface: null,
+    });
   });
 
   it("mantem apenas as chaves da allowlist do evento", () => {
@@ -71,4 +103,3 @@ describe("trackProductEvent", () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 });
-

@@ -40,6 +40,23 @@ const ALLOWED_KEYS: Record<ProductEventName, readonly string[]> = {
 const MAX_STRING_LENGTH = 120;
 const seenOnce = new Set<string>();
 
+/**
+ * Evento so sai em producao real. O cliente publico cai em producao quando o
+ * ambiente nao esta configurado, entao sem este portao `npm run dev` gravaria
+ * na tabela de producao.
+ */
+export function productEventsEnabled(): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    const host = window.location.hostname;
+    if (!host) return false;
+    if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) return false;
+    return host === "apeeducation.org" || host.endsWith(".apeeducation.org");
+  } catch {
+    return false;
+  }
+}
+
 export interface ProductEventOptions {
   locale?: string;
   surface?: string;
@@ -77,6 +94,7 @@ export async function trackProductEvent(
 ): Promise<boolean> {
   const safe = sanitizeProductPayload(name, payload);
   if (safe === null) return false;
+  if (!productEventsEnabled()) return false;
   try {
     const { error } = await (publicSupabase.rpc as never as (
       fn: string,
@@ -84,7 +102,8 @@ export async function trackProductEvent(
     ) => Promise<{ error: unknown }>)("record_product_event_v1", {
       _name: name,
       _payload: safe,
-      _locale: options.locale ?? "pt-BR",
+      // Sem locale conhecido, grava nulo: rotular todo mundo como pt-BR mentia.
+      _locale: options.locale ?? null,
       _surface: options.surface ?? null,
     });
     return !error;
@@ -109,4 +128,3 @@ export async function trackProductEventOnce(
 export function resetProductEventOnceForTests() {
   seenOnce.clear();
 }
-
