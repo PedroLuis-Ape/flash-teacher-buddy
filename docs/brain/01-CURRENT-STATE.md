@@ -360,3 +360,19 @@ Related: [[sessions/2026-09-13-public-catalog-task-3]] · [[09-ASTRA-HANDOFF]] �
   validado por fixture, não por página real.
 
 Related: [[sessions/2026-09-13-ape-fase5-task1-geo]] · [[07-TESTS]] · [[08-RISKS]]
+## Fase 5 — Medição: eventos first-party (2026-09-13)
+
+- [VERIFIED-DB] `public.product_event` existe em produção com RLS habilitada,
+  **zero policies** e sem SELECT/INSERT para `anon`. O cliente só escreve via
+  `record_product_event_v1(text, jsonb, text, text)` (`SECURITY DEFINER`,
+  `search_path = public`).
+- [VERIFIED-DB] Allowlist fechada de 11 eventos e de chaves por evento: em teste
+  real, `public_search_used` aceitou `{result_count, has_filters}` e **descartou**
+  uma chave fora da lista antes do insert; nome inexistente devolveu
+  `unknown_event` sem gravar nada.
+- [DECISION] Throttle de 300 eventos por nome por minuto com limite global
+  documentado — sem PII não há como identificar origem.
+- [PENDING] Nenhum evento real de usuário foi coletado ainda; a instrumentação
+  do cliente é a Task 3 da Fase 5.
+
+Related: [[sessions/2026-09-13-ape-fase5-task2-eventos]] · [[07-TESTS]] · [[08-RISKS]]
