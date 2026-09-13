@@ -74,8 +74,8 @@ export async function loadPublicMaterials() {
       if (isMissingRpc(error, "list_public_resources_v1")) continue;
       throw error;
     }
-    if (Array.isArray(data)) {
-      for (const entry of data) entries.push({ locale, ...entry });
+    if (Array.isArray(data?.items)) {
+      for (const entry of data.items) entries.push({ locale, ...entry });
     }
   }
 
@@ -94,4 +94,3 @@ export async function loadPublicMaterials() {
     materials: materials.filter(Boolean),
   };
 }
-

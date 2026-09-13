@@ -219,6 +219,28 @@ Related: [[24-SECURITY-AUDIT-2026-09-12]] · [[08-RISKS]] · [[07-TESTS]] · [[a
 
 Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
 
+## Materiais públicos — Fase 4, catálogo com busca e facetas (2026-09-13)
+
+- [VERIFIED-DB] `list_public_resources_v1` substituiu a assinatura legada de
+  três parâmetros pela assinatura
+  `(_locale, _q, _level, _theme, _resource_type, _limit, _offset)`. O retorno
+  agora é um objeto `{items, total, has_more, facets}`, não um array; as
+  facetas `levels`, `themes` e `resource_types` são calculadas no conjunto
+  aprovado/indexável elegível da locale, independentemente dos filtros atuais.
+- [DECISION] Itens, contagem e facetas derivam da mesma elegibilidade pública:
+  regra vigente do portal mais ≥8 cards ativos e ≥90% de termos únicos. Busca
+  (`title`, `summary`, `theme`) e filtros exatos case-insensitive rodam na RPC;
+  valores vazios não filtram. Isso não altera `status` nem `is_indexable`.
+- [VERIFIED-DB] Smoke no banco real retornou `items: []`, `total: 0`,
+  `has_more: false` e facetas vazias para `pt-BR`, resultado esperado enquanto
+  não há curadoria aprovada/indexável. `pg_proc` confirmou uma única sobrecarga
+  de sete parâmetros, com EXECUTE somente para `anon`, `authenticated` e
+  `service_role`.
+- [VERIFIED-REPO] `scripts/public-material-data.mjs` passou a consumir
+  `data.items`, preservando seu comportamento de prerender/sitemap.
+
+Related: [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[24-SECURITY-AUDIT-2026-09-12]]
+
 ## Materiais públicos — Fase 4, prerender e sitemap (2026-09-13)
 
 - [VERIFIED-REPO] Pipeline próprio do prerender: `scripts/public-material-data.mjs`
