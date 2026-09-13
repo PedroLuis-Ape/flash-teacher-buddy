@@ -113,3 +113,15 @@ pendurada em dados estruturados de páginas vivas. Exige task própria com teste
 
 [DECISION] Registrado como dívida acionável em vez de corrigido às pressas sem
 revisão dedicada.
+
+### Desfecho — RESOLVIDO — 2026-09-13
+
+- [FATO CONFIRMADO] R-2026-09-13-01 foi resolvido pelo commit `1112091a`.
+  Os quatro builders de JSON-LD agora só emitem `Person` e a referência
+  `author` quando existe `author_display_name` ou `author_slug`.
+- [FATO CONFIRMADO] O teste Vitest de autoria, os dois validadores de
+  pré-render, typecheck e build/SEO foram executados; a varredura do `dist`
+  registrou 35 blocos JSON-LD, 0 referências penduradas e 0 `null`/`undefined`.
+- [NEEDS_RECONCILIATION] O ramo sem autor foi validado por fixture sintética;
+  revalidar quando existir pasta/lista pública real sem autor. Isso é uma
+  limitação de cobertura, não uma reabertura do risco corrigido.

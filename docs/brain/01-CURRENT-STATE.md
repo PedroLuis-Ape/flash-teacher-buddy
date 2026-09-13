@@ -2,13 +2,15 @@
 cssclasses:
   - ape-ai-note
 type: current-state
-status: merged
+status: active
 area: visual-polish
 related:
   - "[[10-CONTEXT-FEEDING-RULE]]"
   - "[[areas/visual-polish]]"
   - "[[07-TESTS]]"
   - "[[08-RISKS]]"
+  - "[[09-ASTRA-HANDOFF]]"
+  - "[[25-PUBLIC-ACTIVATION-PROGRAM]]"
   - "[[12-PROCESS-LOG-2026-09-11]]"
   - "[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]"
   - "[[README]]"
@@ -28,9 +30,16 @@ related:
 
 ## Fase atual
 
-Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio, Supabase, autenticação, progresso, sessões, importação e algoritmos de estudo estão fora do escopo.
+Integração local de fechamento do programa Descobrir/Ativar: Home de ativação,
+identidade cromática, continuidade visitante, materiais + catálogo curado e
+GEO + medição estão reunidos na branch
+`integration/ape-program-20260913`. A publicação continua sendo decisão do
+Pedro.
 
-## Governança operacional — 2026-09-11
+[HISTORICO] O checkpoint anterior era de polimento visual responsivo e mantinha
+as áreas de negócio fora do escopo; esse limite não vale para o programa atual.
+
+## [HISTORICO] Governança operacional — 2026-09-11
 
 - As Skills oficiais `piteco-second-brain-protocol` e
   `piteco-adaptive-learning-loop` foram instaladas em
@@ -38,9 +47,9 @@ Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio,
 - O vault existente foi migrado sem apagar a origem para `docs/brain/`, com
   `.obsidian`, Properties, wikilinks e histórico preservados.
 - O learning hub e o checker passaram: 34 notas ativas, 192 wikilinks e
-  `BRAIN_CHECK_PASS`. Esta integração está na branch
-  `codex/piteco-memory-skills-20260911`, commit `4966a6ef`; aguarda revisão do
-  usuário e eventual merge.
+  `BRAIN_CHECK_PASS`. [HISTORICO] A integração inicial estava na branch
+  `codex/piteco-memory-skills-20260911`, commit `4966a6ef`; esse estado foi
+  substituído pela integração atual abaixo.
 - O contrato de ambientes Supabase foi revisado contra o código atual e está
   documentado em [[areas/supabase-runtime]]. O core usa o backend de dados
   `ymahldldyxvwjeruaxpr`; consumidores auxiliares que leem variáveis de
@@ -49,13 +58,21 @@ Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio,
   foi aprovada e a primeira fatia do Games Hub foi implementada; a expansão
   para outras superfícies aguarda revisão visual autenticada.
 
-## Worktree autoritativo
+## Worktree autoritativo — histórico da etapa visual
 
 - Repositório: `C:\Users\pedro\Documents\APP PITECO`
 - Worktree isolado de implementação: `C:\Users\pedro\AppData\Local\Temp\ape-mobile-visual-20260910`
 - Branch do worktree isolado: `fix/mobile-visual-audit-20260910`
 - Worktree de integração: `C:\Users\pedro\AppData\Local\Temp\ape-main-integration-20260911`, branch `main`, apontando para `ddc6f89a`.
 - Branch visual contém `1fb8186c` (handoff Lovable), `61784295` (limitação de acesso Lovable), `6e67bdcd` (relatório), `ef9b1148`, `1d2b4e02`, `007709f7`, `bb2c7e15`, `b3f0cfc1`, `8181c66e`, `cc6ccc45`, `75479f4c`, `a3782283`, `a6f2c151` e `4f1c2346`.
+
+## Worktree da integração atual — 2026-09-13
+
+- [FATO CONFIRMADO] Worktree: `C:\Users\pedro\Documents\App-Piteco-Worktrees\ape-discovery-activation-20260913`.
+- [FATO CONFIRMADO] Branch: `integration/ape-program-20260913`; HEAD:
+  `0298f10f`.
+- [DECISAO VIGENTE] Esta branch é local: não foi pushada, mesclada nem
+  publicada na Lovable. Publicar ou integrar é decisão do Pedro.
 
 ## Concluído
 
@@ -86,7 +103,7 @@ Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio,
 - `npm`/`npx` não estão disponíveis no PowerShell desta máquina; os binários versionados em `node_modules` foram usados.
 - O Chrome usa `devicePixelRatio=1.75`; a matriz foi calibrada multiplicando o viewport físico para obter exatamente o viewport CSS solicitado.
 
-## Estado de release visual
+## [HISTORICO] Estado de release visual
 
 Os gates técnicos e a matriz visual do escopo passaram. A branch `main` foi sincronizada com o `origin/main` divergente, resolvida no commit `ddc6f89a`, validada e enviada ao GitHub. Isso integra o polimento visual no repositório remoto, mas não publica automaticamente no Lovable. Ver [[07-TESTS]], [[08-RISKS]] e [[12-PROCESS-LOG-2026-09-11]].
 
@@ -460,3 +477,30 @@ Related: [[sessions/2026-09-13-ape-fase5-task3-eventos-cliente]] · [[07-TESTS]]
   canonical para a base e a ausência de URLs com filtro no sitemap.
 
 Related: [[sessions/2026-09-13-catalogo-canonical-e-i18n]] · [[07-TESTS]] · [[08-RISKS]]
+
+## Estado final consolidado — programa SEO/GEO e ativação — 2026-09-13
+
+- [FATO CONFIRMADO] As cinco fases — Home de ativação, identidade cromática,
+  continuidade visitante, materiais + catálogo curado e GEO + medição — estão
+  integradas nesta branch. Os achados das revisões (autoria, allowlists/PII,
+  tokens, throttle, backup, `has_filters`, locale, portão de ambiente,
+  canonical e i18n) têm correções registradas nos commits `cf87e385`,
+  `114df294`, `890ec291`, `1112091a` e `cc6e8f8a`.
+- [FATO CONFIRMADO] As sessões registram typecheck sem erros, suíte final de
+  276 arquivos/1709 testes, lint sem erros, build com SEO 100/100, validação
+  de pré-render/canonical/robots/sitemap e QA browser mobile sem overflow;
+  as verificações de banco confirmaram as RPCs e os contratos de medição.
+- [DECISAO VIGENTE] As cinco curadorias continuam `draft` e
+  `is_indexable=false`; não há conteúdo público aprovado, dado fictício ou
+  publicação automática. JSON-LD só é emitido no pré-render; autoria só existe
+  quando o payload fornece autor; eventos são first-party, allowlisted e sem
+  PII.
+- [NEEDS_RECONCILIATION] Permanecem a aprovação editorial e a revisão final/
+  decisão de integração da branch, a ausência de tráfego real para validar a
+  medição, a duplicidade do canonical no shell SPA e as limitações já ligadas
+  em [[08-RISKS]] (incluindo `/portal/list/:id` e glossário público).
+- [INFERENCIA] Sem aprovação editorial, QA visual de cards reais e validação
+  do ramo JSON-LD sem autor continuam impossíveis; a fixture cobre apenas o
+  contrato anônimo.
+
+Próximo passo e ordem de retomada: [[09-ASTRA-HANDOFF]].

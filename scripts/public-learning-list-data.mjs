@@ -70,7 +70,7 @@ export function sanitizePublicLearningList(row) {
     folder_title: typeof row.folder_title === "string" && row.folder_title.trim() ? row.folder_title.trim() : "Material público",
     author_display_name: typeof row.author_display_name === "string" && row.author_display_name.trim()
       ? row.author_display_name.trim()
-      : "Professor no APE",
+      : null,
     author_slug: authorSlug || null,
     author_avatar_url: typeof row.author_avatar_url === "string" && row.author_avatar_url.trim()
       ? row.author_avatar_url.trim()

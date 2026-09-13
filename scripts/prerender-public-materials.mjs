@@ -160,8 +160,12 @@ export function buildMaterialJsonLd(material) {
   const reviewedAt = jsonLdText(editorial.reviewed_at);
   const authorSlug = jsonLdText(list.author_slug);
   const authorName = jsonLdText(list.author_name);
-  // Sem autor no payload nao existe no HTML visivel: nao inventamos Person.
-  const hasAuthor = Boolean(authorName || authorSlug);
+  // O RPC usa este rotulo como texto de interface quando o perfil nao tem
+  // nome. Em dados estruturados ele NAO pode contar como autoria real.
+  const isPlaceholderAuthor = authorName ? authorName === "Professor no APE" : false;
+  const realAuthorName = isPlaceholderAuthor ? undefined : authorName;
+  // Sem autor real no payload, nao inventamos Person.
+  const hasAuthor = Boolean(realAuthorName || authorSlug);
   const authorProfile = authorSlug ? `${SITE_URL}/portal/professor/${authorSlug}` : undefined;
   const authorId = hasAuthor
     ? (authorProfile ? `${authorProfile}#person` : `${canonical}#person`)
@@ -210,8 +214,8 @@ export function buildMaterialJsonLd(material) {
     ? {
         "@type": "Person",
         "@id": authorId,
-        name: authorName ?? authorSlug,
-        ...(authorName ? { jobTitle: "Professor" } : {}),
+        name: realAuthorName ?? authorSlug,
+        ...(realAuthorName ? { jobTitle: "Professor" } : {}),
         memberOf: { "@id": `${SITE_URL}/#organization` },
         ...(authorProfile ? { url: authorProfile } : {}),
       }

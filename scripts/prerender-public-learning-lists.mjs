@@ -102,7 +102,7 @@ export function buildPublicLearningListJsonLd(list) {
       ...(hasAuthor ? [{
         "@type": "Person",
         "@id": authorId,
-        name: list.author_display_name || "Professor no APE",
+        name: list.author_display_name || list.author_slug,
         jobTitle: "Professor",
         ...(authorUrl ? { url: authorUrl } : {}),
         ...(list.author_avatar_url ? { image: list.author_avatar_url } : {}),

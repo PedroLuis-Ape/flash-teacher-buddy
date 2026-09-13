@@ -51,7 +51,9 @@ async function loadLegacyPublicList(id: string): Promise<PublicLearningList | nu
   return {
     ...listResponse.data,
     folder_title: folder.title || "Material publico",
-    author_display_name: "Professor no APE",
+    // Sem autoria real no payload legado: nao inventamos nome. O builder de
+    // JSON-LD omite `Person`/`author` quando nao ha autor (R-2026-09-13-01).
+    author_display_name: null,
     author_slug: null,
     author_avatar_url: null,
     card_count: 0,

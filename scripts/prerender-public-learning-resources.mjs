@@ -135,7 +135,7 @@ export function buildLearningResourceJsonLd(resource) {
       ...(hasAuthor ? [{
         "@type": "Person",
         "@id": authorId,
-        name: resource.author_display_name || "Professor no APE",
+        name: resource.author_display_name || resource.author_slug,
         jobTitle: "Professor",
         ...(authorProfile ? { url: authorProfile } : {}),
         ...(resource.author_avatar_url ? { image: resource.author_avatar_url } : {}),

@@ -66,12 +66,13 @@ mudança principal, nunca em `main`.
   para qualquer visitante. **O visitante não conseguia jogar.** Corrigido
   envolvendo as quatro rotas; contrato de regressão em
   `src/features/public-home/publicActivation.contract.test.ts`.
-- [ABERTO] A página de material `/portal/list/:id` mostra "Lista pública
+- [HISTORICO] A página de material `/portal/list/:id` mostrava "Lista pública
   indisponível": as RPCs `get_public_learning_list` e
   `get_public_learning_list_card_preview` **existem no repositório mas não no
   banco de produção** (definidas em
-  `supabase/migrations/20260713152000_public_learning_list_pages.sql`). Bloqueia
-  a Fase 4.
+  `supabase/migrations/20260713152000_public_learning_list_pages.sql`). Isso
+  bloqueava a rota antiga, mas não bloqueia a Fase 4 entregue pelas novas rotas
+  de material e catálogo; a rota antiga continua pendente em [[08-RISKS]].
 - [ABERTO] No estudo público o glossário retorna 401 (rota pública usando
   cliente autenticado); a tela degrada com aviso e continua jogável.
 
@@ -88,11 +89,28 @@ mudança principal, nunca em `main`.
 - Fluxo do visitante testado ponta a ponta: catálogo → pasta → hub de jogos →
   `mixed-study` renderizando o card real ("Eles estão cansados").
 
-## Pendências e próximo passo real
+## Estado final da integração — 2026-09-13
 
-- Fase 2 (identidade cromática), Fase 3 (guest/merge), Fase 4 (páginas de
-  material + catálogo + i18n), Fase 5 (GEO + medição) seguem abertas.
-- Prioridade antes da Fase 4: aplicar as migrations de páginas de material no
-  banco de produção, porque a superfície de aquisição depende delas.
+- [FATO CONFIRMADO] As fases 1–5 estão integradas na branch local
+  `integration/ape-program-20260913`, com os achados de revisão corrigidos e
+  evidências consolidadas em [[01-CURRENT-STATE]] e nas sessões recentes.
+- [DECISAO VIGENTE] Curadorias continuam em `draft` / `is_indexable = false`;
+  a aprovação editorial, a publicação e a integração da branch dependem do
+  Pedro. Nenhum dado fictício é permitido para preencher o catálogo.
+- [FATO CONFIRMADO] A infraestrutura de SEO/GEO está validada localmente e as
+  RPCs de catálogo, canonical e medição foram verificadas conforme as sessões
+  de 2026-09-13; isso não prova publicação na Lovable nem descoberta externa.
+- [NEEDS_RECONCILIATION] Permanecem as limitações de tráfego real, QA com
+  cards aprovados, canonical do shell SPA e os caminhos públicos antigos
+  registrados em [[08-RISKS]].
+
+## Próximo passo real
+
+**Próximo passo planejado: implementar o Modo Reino Beta público, com SEO, Guest Mode e uso exclusivo do modo misto gamificado.**
+
+Nada deve começar antes de o Pedro decidir. A especificação
+`APE_Modo_Reino_Beta_Prompt_e_JSON_v1_1.json` ainda não foi lida nem
+versionada; o primeiro ato, depois da decisão, será lê-la e reconciliá-la com
+[[13-SEO-PUBLIC-WEB]], o Guest Mode e o Study Engine.
 
 Related: [[01-CURRENT-STATE]] · [[08-RISKS]] · [[24-SECURITY-AUDIT-2026-09-12]] · [[10-CONTEXT-FEEDING-RULE]]

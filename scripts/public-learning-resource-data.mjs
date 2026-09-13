@@ -64,7 +64,7 @@ function sanitizeResource(row) {
     tts_enabled: row.tts_enabled !== false,
     created_at: asIsoDate(row.created_at),
     updated_at: asIsoDate(row.updated_at),
-    author_display_name: authorName || "Professor no APE",
+    author_display_name: authorName || null,
     author_slug: authorSlug || null,
     author_avatar_url: typeof row.author_avatar_url === "string" && row.author_avatar_url.trim() ? row.author_avatar_url.trim() : null,
     list_count: asCount(row.list_count),
