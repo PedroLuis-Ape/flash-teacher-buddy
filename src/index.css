@@ -232,50 +232,50 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 40px -8px hsl(286 80% 64% / 0.45);
   }
 
-  .dark {
-    /* APE dark — premium deep purple */
-    --background: 258 22% 9%;
-    --foreground: 270 18% 94%;
+    .dark {
+      /* APE dark — identidade teal + indigo + ambar (sem dependencia de roxo) */
+      --background: 222 20% 7%;
+      --foreground: 220 16% 95%;
 
-    --card: 260 20% 14%;
-    --card-foreground: 270 18% 94%;
+      --card: 222 17% 11%;
+      --card-foreground: 220 16% 95%;
 
-    --popover: 260 22% 12%;
-    --popover-foreground: 270 18% 94%;
+      --popover: 222 18% 9%;
+      --popover-foreground: 220 16% 95%;
 
-    --primary: 262 60% 64%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 278 65% 72%;
+      --primary: 172 70% 50%;
+      --primary-foreground: 222 45% 8%;
+      --primary-glow: 174 72% 60%;
 
-    --secondary: 224 50% 58%;
-    --secondary-foreground: 0 0% 100%;
+      --secondary: 232 60% 55%;
+      --secondary-foreground: 0 0% 100%;
 
-    --muted: 260 14% 20%;
-    --muted-foreground: 270 10% 74%;
+      --muted: 222 14% 16%;
+      --muted-foreground: 220 12% 72%;
 
-    --accent: 286 58% 66%;
-    --accent-foreground: 0 0% 100%;
+      --accent: 38 92% 58%;
+      --accent-foreground: 30 45% 12%;
 
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 0 0% 100%;
+      --destructive: 0 72% 47%;
+      --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 50%;
-    --success-foreground: 0 0% 100%;
-    
-    --warning: 38 92% 60%;
-    --warning-foreground: 0 0% 10%;
+      --success: 152 62% 42%;
+      --success-foreground: 0 0% 100%;
+      
+      --warning: 38 92% 58%;
+      --warning-foreground: 30 45% 12%;
 
-    --border: 260 16% 22%;
-    --input: 260 16% 20%;
-    --ring: 262 60% 64%;
+      --border: 222 13% 22%;
+      --input: 222 13% 18%;
+      --ring: 172 70% 50%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(262 60% 64%), hsl(286 58% 66%));
-    --gradient-card: linear-gradient(145deg, hsl(260 20% 14%), hsl(264 22% 17%));
-    --gradient-auth: linear-gradient(160deg, hsl(258 40% 12%) 0%, hsl(272 42% 22%) 50%, hsl(286 48% 32%) 100%);
-    --shadow-card: 0 6px 24px -10px hsl(0 0% 0% / 0.55);
-    --shadow-hover: 0 10px 30px -10px hsl(262 50% 50% / 0.35);
-    --shadow-glow: 0 0 32px -14px hsl(286 55% 60% / 0.32);
-  }
+      --gradient-hero: linear-gradient(135deg, hsl(172 70% 50%), hsl(232 48% 52%));
+      --gradient-card: linear-gradient(145deg, hsl(222 17% 11%), hsl(222 18% 14%));
+      --gradient-auth: linear-gradient(160deg, hsl(222 30% 10%) 0%, hsl(200 35% 18%) 50%, hsl(172 45% 26%) 100%);
+      --shadow-card: 0 6px 24px -10px hsl(0 0% 0% / 0.55);
+      --shadow-hover: 0 10px 30px -10px hsl(172 60% 40% / 0.30);
+      --shadow-glow: 0 0 32px -14px hsl(174 70% 50% / 0.30);
+    }
 
   /* ────────────────────────────────────────────────────────────
    * APE PALETTES — applied via html[data-palette="..."]
@@ -408,22 +408,22 @@ All colors MUST be HSL.
    * Pure CSS — no images, no animations, mobile-safe.
    * Light mode keeps the original flat background untouched.
    * ──────────────────────────────────────────────────────────── */
-  html.dark body {
-    background-color: hsl(258 25% 7%);
-    background-image:
-      /* nebula glows — softened */
-      radial-gradient(ellipse 80% 60% at 20% 0%, hsl(268 55% 28% / 0.22), transparent 60%),
-      radial-gradient(ellipse 70% 50% at 85% 15%, hsl(286 55% 30% / 0.18), transparent 65%),
-      radial-gradient(ellipse 60% 40% at 50% 100%, hsl(224 50% 26% / 0.16), transparent 70%),
-      /* star field (two layers, different densities) */
+    html.dark body {
+      background-color: hsl(222 24% 6%);
+      background-image:
+        /* nebula glows — softened */
+        radial-gradient(ellipse 80% 60% at 20% 0%, hsl(172 60% 22% / 0.22), transparent 60%),
+        radial-gradient(ellipse 70% 50% at 85% 15%, hsl(232 55% 26% / 0.20), transparent 65%),
+        radial-gradient(ellipse 60% 40% at 50% 100%, hsl(38 70% 22% / 0.14), transparent 70%),
+        /* star field (two layers, different densities) */
       radial-gradient(1px 1px at 23% 17%, hsl(0 0% 100% / 0.35), transparent 50%),
       radial-gradient(1px 1px at 67% 42%, hsl(0 0% 100% / 0.28), transparent 50%),
       radial-gradient(1px 1px at 12% 78%, hsl(0 0% 100% / 0.32), transparent 50%),
       radial-gradient(1px 1px at 88% 81%, hsl(0 0% 100% / 0.26), transparent 50%),
       radial-gradient(1px 1px at 41% 91%, hsl(0 0% 100% / 0.30), transparent 50%),
-      radial-gradient(1.5px 1.5px at 78% 12%, hsl(280 40% 88% / 0.38), transparent 50%),
-      radial-gradient(1.5px 1.5px at 8% 38%, hsl(280 40% 88% / 0.32), transparent 50%),
-      radial-gradient(1.5px 1.5px at 55% 65%, hsl(280 40% 88% / 0.35), transparent 50%);
+        radial-gradient(1.5px 1.5px at 78% 12%, hsl(196 30% 90% / 0.38), transparent 50%),
+        radial-gradient(1.5px 1.5px at 8% 38%, hsl(196 30% 90% / 0.32), transparent 50%),
+        radial-gradient(1.5px 1.5px at 55% 65%, hsl(196 30% 90% / 0.35), transparent 50%);
     background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed;
     background-size:
       100% 100%,

@@ -124,7 +124,7 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
         disabled={installState.installed || installing}
         onClick={handleInstall}
         className={cn(
-          "gap-2 border-0 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 text-white shadow-md shadow-primary/20 hover:brightness-110",
+          "gap-2 border-0 bg-gradient-to-r from-teal-600 via-cyan-600 to-indigo-600 text-white shadow-md shadow-primary/20 hover:brightness-110",
           compact ? "px-2.5" : "px-3.5",
           className,
         )}

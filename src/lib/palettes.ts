@@ -24,8 +24,8 @@ export const PALETTES: PaletteMeta[] = [
     id: "black",
     name: "APE Preto",
     shortName: "Preto",
-    description: "Escuro, sóbrio e leve. Recomendado para uso diário.",
-    swatch: ["0 0% 7%", "258 18% 14%", "264 55% 62%"],
+    description: "Escuro, sóbrio e leve. Teal e âmbar como identidade. Recomendado para uso diário.",
+    swatch: ["222 20% 7%", "172 70% 50%", "38 92% 58%"],
     base: "dark",
   },
   {

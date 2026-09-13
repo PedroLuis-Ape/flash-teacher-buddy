@@ -242,7 +242,7 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
           ) : report.top_cards.slice(0, 5).map((card, index) => (
             <div key={card.card_id} className="rounded-xl border p-2.5 sm:p-3">
               <div className="flex min-w-0 gap-2 sm:gap-3">
-                <span className="shrink-0 font-mono text-xs text-violet-600">#{index + 1}</span>
+                <span className="shrink-0 font-mono text-xs text-primary">#{index + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-medium">{card.term || "Card sem texto"}</p>
                   <p className="line-clamp-1 text-xs text-muted-foreground">{card.translation}</p>
