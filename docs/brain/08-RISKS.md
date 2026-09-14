@@ -198,3 +198,13 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27
 - [MITIGADO NO PR] No PR #399 o único check que eu quebrei foi `mcp: função gerenciada privada deve declarar verify_jwt = true` — revertido (o function `mcp` fica não declarado, como estava). O gate local `node scripts/audit-security.mjs` volta a passar.
 - [FOLLOW-UP] Consertar os dois checks de CI acima é trabalho SEPARADO deste programa (SEO/robots e preview smoke), fora do escopo do MCP.
 
+## R-2026-09-14-01 — emoji por pasta depende da migration para sincronização
+
+- [FATO CONFIRMADO] O código consulta e atualiza `folders.emoji`, mas a coluna não existia no schema conhecido desta rodada.
+- [MITIGACAO] A leitura recua automaticamente para a seleção anterior quando a coluna está ausente; a preferência local continua disponível e a UI informa quando a sincronização em nuvem não foi possível.
+- [LIMITE] Até aplicar `supabase/migrations/20260914010000_folder_emoji.sql`, o emoji é específico do dispositivo. Não prometer sincronização entre navegadores/dispositivos.
+- [MITIGACAO] A ordem de pastas não é mais uma preferência global acidental: o armazenamento local é separado por usuário/instituição; a ordem de listas é separada por pasta.
+- [NEXT] Aplicar a migration em ambiente controlado, verificar RLS/política de update existente e testar marcar → sair → entrar em outro dispositivo; então remover este risco ou atualizar sua evidência.
+
+Related: [[areas/visual-polish]] · [[01-CURRENT-STATE]] · [[07-TESTS]] · [[areas/supabase-runtime]]
+

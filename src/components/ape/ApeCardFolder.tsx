@@ -8,6 +8,7 @@ interface ApeCardFolderProps {
   title: string;
   listCount?: number;
   cardCount?: number;
+  emoji?: string | null;
   isLocked?: boolean;
   onClick?: () => void;
   className?: string;
@@ -18,6 +19,7 @@ export function ApeCardFolder({
   title,
   listCount,
   cardCount,
+  emoji,
   isLocked = false,
   onClick,
   className,
@@ -50,7 +52,7 @@ export function ApeCardFolder({
           <Lock className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         ) : (
           <span aria-hidden className="relative text-2xl leading-none transition-transform group-hover:scale-110">
-            {"\u{1F4C1}"}
+            {emoji?.trim() || "📁"}
           </span>
         )}
       </div>

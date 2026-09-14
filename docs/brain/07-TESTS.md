@@ -162,6 +162,19 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
 
+## Biblioteca — modos e emoji por pasta — 2026-09-14
+
+- [VERIFIED-TEST] `src/features/library/folderEmoji.test.ts`: prioridade nuvem → local → `📁`, normalização de espaços, persistência/remoção local, picker entre 36 e 48 opções e default preservado.
+- [VERIFIED-TEST] `src/features/library/viewPreferences.test.ts`: leitura/gravação de modo, ordenação local estável, listas por pasta, grupos de favoritas, isolamento por usuário/instituição, ids desconhecidos ignorados e regressão que não aplica rank vazio.
+- [VERIFIED-GATE] Typecheck app/node: exit 0.
+- [VERIFIED-GATE] Build de produção: exit 0; pré-render e validações editoriais concluídos; SEO visibility score 100/100; orçamento de bundle aprovado.
+- [VERIFIED-GATE] ESLint: 0 erros e 72 avisos já existentes no repositório.
+- [VERIFIED-GATE] `node scripts/brain-check.mjs`: `BRAIN_CHECK_PASS` (64 notas, 744 wikilinks).
+- [LIMITATION] A suíte completa executou 310 arquivos: 1.963 testes passaram; `scripts/contextPacket.test.mjs` falhou ao ser coletado por `SyntaxError: Invalid or unexpected token`, embora `node --check` do arquivo passe. A falha é fora do diff de biblioteca e precisa ser tratada separadamente antes de usar a suíte global como gate verde.
+- [PENDENTE] QA visual autenticado e teste de sincronização entre dispositivos após aplicar `20260914010000_folder_emoji.sql`.
+
+Related: [[areas/visual-polish]] · [[01-CURRENT-STATE]] · [[08-RISKS]]
+
 ## Fechamento — card "Voltar para onde parou" (2026-09-13)
 
 - RED observado antes do fix: studyResumeIntegration.test.ts falhou em 2 casos

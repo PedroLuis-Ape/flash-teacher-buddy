@@ -54,3 +54,13 @@ O snapshot visual foi integrado à `main` em `1fb8186c`. A implementação perma
   320/360/375/390/430.
 
 Related: [[01-CURRENT-STATE]] · [[04-DECISIONS]] · [[07-TESTS]] · [[08-RISKS]]
+
+## Biblioteca — apresentação configurável — 2026-09-14
+
+- [FATO CONFIRMADO] `FoldersOptimized` agora permite alternar pastas entre grade responsiva e lista compacta, ordenar pastas neste dispositivo e manter seleção, busca, favoritos, atenção, mover e exclusão nos dois modos.
+- [FATO CONFIRMADO] `Folder` agora oferece lista ou grade responsiva para as listas da pasta, preservando seleção, busca, favoritos, ponto de atenção, edição, exclusão e navegação para jogar.
+- [DECISAO VIGENTE] A ordenação de pastas é local nesta fase porque `folders` não possui `order_index`; a preferência é isolada por usuário/instituição. A ordenação de listas é local por pasta. Ordem em nuvem exige migration e permanece fora deste lote.
+- [DECISAO VIGENTE] A identidade visual da pasta mantém `📁` como default e aceita emoji customizado. O seletor é acessível, tem alvo mínimo de toque e permite restaurar o default.
+- [FATO CONFIRMADO] A integração de nuvem é best-effort até a coluna `folders.emoji` existir; a ausência da coluna não impede a navegação nem a renderização da biblioteca.
+
+Related: [[01-CURRENT-STATE]] · [[07-TESTS]] · [[08-RISKS]]

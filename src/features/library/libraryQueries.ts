@@ -6,6 +6,7 @@ export interface LibraryFolder {
   description: string | null;
   visibility: string;
   owner_id: string;
+  emoji?: string | null;
   list_count: number;
   card_count: number;
   isOwner: true;
@@ -65,6 +66,7 @@ export function normalizeLibrarySnapshot(input: {
       description: folder.description ?? null,
       visibility: folder.visibility,
       owner_id: folder.owner_id,
+      emoji: folder.emoji ?? null,
       list_count: activeLists.length,
       card_count: activeLists.reduce(
         (sum: number, list: any) => sum + (counts.get(list.id) ?? 0),
@@ -112,14 +114,22 @@ export async function fetchLibrarySnapshot(
   institutionId: string | null,
 ): Promise<LibrarySnapshot> {
   const client = supabase as any;
-  let foldersQuery = client
-    .from("folders")
-    .select("id,title,description,visibility,owner_id,institution_id,system_kind,lists(id,deleted_at,system_kind)")
-    .eq("owner_id", userId)
-    .eq("system_kind", "user")
-    .is("class_id", null)
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
+  const buildFoldersQuery = (includeEmoji: boolean) => {
+    let query = client
+      .from("folders")
+      .select(`${includeEmoji ? "emoji," : ""}id,title,description,visibility,owner_id,institution_id,system_kind,lists(id,deleted_at,system_kind)`)
+      .eq("owner_id", userId)
+      .eq("system_kind", "user")
+      .is("class_id", null)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
+
+    if (institutionId) query = query.eq("institution_id", institutionId);
+    else query = query.is("institution_id", null);
+    return query;
+  };
+
+  const foldersQuery = buildFoldersQuery(true);
 
   let listsQuery = client
     .from("lists")
@@ -131,14 +141,12 @@ export async function fetchLibrarySnapshot(
     .is("deleted_at", null);
 
   if (institutionId) {
-    foldersQuery = foldersQuery.eq("institution_id", institutionId);
     listsQuery = listsQuery.eq("folders.institution_id", institutionId);
   } else {
-    foldersQuery = foldersQuery.is("institution_id", null);
     listsQuery = listsQuery.is("folders.institution_id", null);
   }
 
-  const [foldersResult, listsResult, countsResult] = await Promise.all([
+  const [initialFoldersResult, listsResult, countsResult] = await Promise.all([
     foldersQuery,
     listsQuery,
     client.rpc("get_user_card_counts", {
@@ -146,6 +154,12 @@ export async function fetchLibrarySnapshot(
       _institution_id: institutionId,
     }),
   ]);
+
+  let foldersResult = initialFoldersResult;
+  if (foldersResult.error) {
+    // Keep the library usable before the optional emoji column is migrated.
+    foldersResult = await buildFoldersQuery(false);
+  }
 
   if (foldersResult.error) throw foldersResult.error;
   if (listsResult.error) throw listsResult.error;

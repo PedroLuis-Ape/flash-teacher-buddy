@@ -28,3 +28,11 @@ Testes estáticos não substituem screenshot, interação real e inspeção do c
 ## Integração
 
 Commits lógicos e reversíveis. Não fazer merge, push ou publicação sem o gate final e revisão do diff.
+
+## Biblioteca — preferências locais e emoji por pasta — 2026-09-14
+
+- [DECISAO VIGENTE] O produto oferece dois modos de visualização sem remover o modo existente: listas começam em lista; pastas começam em grade; a escolha é persistida por dispositivo.
+- [DECISAO VIGENTE] A pasta mantém `📁` como representação padrão, permite emoji específico e oferece reversão explícita para o padrão. A ação nunca altera conteúdo, progresso ou a estrutura da pasta.
+- [DECISAO VIGENTE] A personalização usa sincronização na nuvem quando `folders.emoji` estiver disponível e fallback local enquanto a migration não for aplicada. A UI deve continuar honesta sobre esse estado.
+
+Related: [[areas/visual-polish]] · [[01-CURRENT-STATE]] · [[08-RISKS]]
