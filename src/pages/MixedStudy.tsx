@@ -55,7 +55,11 @@ import {
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
-import type { StudySettingsSnapshotV3 } from "@/features/study/lib/studySettingsSnapshotV3";
+import {
+  resolveEffectiveStudyDirection,
+  type StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
+import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,

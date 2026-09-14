@@ -73,10 +73,12 @@ import {
   parseRequestedResumeSessionId,
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
-import type {
-  StudySettingsPatchV3,
-  StudySettingsSnapshotV3,
+import {
+  resolveEffectiveStudyDirection,
+  type StudySettingsPatchV3,
+  type StudySettingsSnapshotV3,
 } from "@/features/study/lib/studySettingsSnapshotV3";
+import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
