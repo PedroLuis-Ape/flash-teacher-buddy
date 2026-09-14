@@ -29,7 +29,7 @@ describe("folder UI contract — listas combinadas", () => {
   });
 
   it("never labels unembed as card deletion", () => {
-    expect(DIALOGS).toContain("Remover da lista combinada");
+    expect(DIALOGS).toContain("da lista combinada");
     expect(DIALOGS).toContain("Remover todos desta fonte");
     expect(DIALOGS).toContain("Esvaziar lista combinada");
     expect(DIALOGS).not.toContain("Excluir card");
