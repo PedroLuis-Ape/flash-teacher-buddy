@@ -205,3 +205,10 @@ para a FASE 3 reutilizando esta camada. Ver
 - Ver [[sessions/2026-09-13-mcp-phase5-7]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]].
 - [LIMITE] A invalidação é por processo (Map em memória do isolate); o TTL de
   60 s é o limite de obsolescência nos demais isolates. Ver [[08-RISKS]].
+
+## Bundle Deno (contrato de publicação)
+
+- `supabase/functions/mcp/index.ts` é artefato GERADO. Nunca editar à mão.
+- No Windows, o plugin Vite gera import inválido; use `npm run mcp:bundle` (gerador próprio, entrada relativa) e `npm run mcp:bundle:check` como gate.
+- O bundle commitado é a versão válida com as 24 tools; um build Linux pode regerá-lo por cima sem conflito (mesmo banner).
+

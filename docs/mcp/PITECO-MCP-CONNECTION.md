@@ -510,3 +510,23 @@ Isso é uma decisão de continuidade para o humano/supervisor, não uma reconcil
 - Área: [[areas/mcp-agent-api]] · Riscos: [[08-RISKS]] (R-2026-09-13-03) · Estado: [[01-CURRENT-STATE]]
 - Sessão anterior: [[sessions/2026-09-13-mcp-fase1-2-read]]
 - Script executável: `docs/mcp/smoke-mcp.mjs`
+
+## Bundle Deno correto também no Windows (2026-09-13)
+
+O plugin Vite do `@lovable.dev/mcp-js` monta o wrapper com o caminho ABSOLUTO da entrada e externa
+qualquer especificador que não comece com `.` ou `/` como `npm:<path>`. No Windows isso produzia
+`import mcp from "npm:C:\\...\\src\\lib\\mcp\\index.ts"` — inválido no Deno e sem as tools.
+
+Solução local (mesmo build do plugin, entrada relativa):
+
+```sh
+npm run mcp:bundle         # regenera supabase/functions/mcp/index.ts com as 24 tools
+npm run mcp:bundle:check   # falha se o bundle commitado divergir do gerado
+```
+
+Evidência: bundle com 202108 bytes, 24 tools, imports `npm:@lovable.dev/mcp-js@0.20.1` e
+`npm:zod@^3.23.8`, nenhuma ocorrência de `npm:C:`. Paridade exata com `.lovable/mcp/manifest.json`.
+O banner gerado é idêntico ao do plugin, então um build no Linux pode regerar o arquivo sem conflito.
+
+Não verificado localmente: execução do bundle sob Deno (Deno não está instalado nesta máquina).
+

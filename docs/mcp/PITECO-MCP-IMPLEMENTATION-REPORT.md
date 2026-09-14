@@ -104,8 +104,11 @@ Detalhes, schemas e annotations: `docs/mcp/PITECO-MCP-TOOLS.json`.
 
 ## 8. Riscos conhecidos
 
-- **R-2026-09-13-03**: o plugin Vite regera o bundle; no Windows sai import `npm:C:\...` **inválido para
-  Deno**. O bundle oficial precisa ser regenerado no pipeline Linux/Lovable.
+- **R-2026-09-13-03 — MITIGADO**: o plugin Vite monta o wrapper com o caminho **absoluto** da entrada e
+  externaliza tudo que não começa com `.` ou `/` — no Windows isso gerava `npm:C:\...`, inválido no
+  Deno. Criado `scripts/build-mcp-deno-bundle.mjs` (`npm run mcp:bundle`), que reproduz o MESMO build do
+  plugin usando um especificador **relativo**; `npm run mcp:bundle:check` falha se o bundle commitado
+  divergir. O bundle commitado agora contém as **24 tools** com imports `npm:` válidos.
 - O MCP **publicado hoje serve apenas `echo`** (v0.1.0): endpoint no ar e OAuth correto, mas as 24 tools
   ainda não foram deployadas.
 - `config.toml` não declara `[functions.mcp]`; se o deploy aplicar `verify_jwt=on` (default), o gateway

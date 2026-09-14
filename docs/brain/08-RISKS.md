@@ -179,3 +179,11 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07
   RLS e aprovação explícita antes de qualquer migration de produção.
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]]
+
+## R-2026-09-13-03 — RESOLVIDO (mitigação commitada) — 2026-09-13
+
+- [FATO CONFIRMADO] Causa raiz: o resolver do plugin externaliza qualquer caminho que não comece com `.` ou `/`, então o caminho absoluto do Windows (`C:\...`) virava `npm:C:\...`, inválido no Deno.
+- [RESOLVIDO] `scripts/build-mcp-deno-bundle.mjs` reproduz o build do plugin com especificador relativo: `npm run mcp:bundle` gera o bundle com as 24 tools e `npm run mcp:bundle:check` detecta divergência.
+- [VERIFIED-GATE] Bundle gerado: 202108 bytes, 24 tools, imports `npm:@lovable.dev/mcp-js@0.20.1` / `npm:zod@^3.23.8`, zero `npm:C:`; paridade exata com `.lovable/mcp/manifest.json`.
+- [REVALIDATE] Execução sob Deno e deploy real continuam não verificados (Deno ausente na máquina; deploy depende de decisão humana).
+

@@ -5,8 +5,8 @@
   "byte_basis": "utf8-bytes-lf-normalized",
   "note_count": 101,
   "historical_note_count": 38,
-  "total_bytes": 377974,
-  "brain_version": "29f1454835e938f56c59e1fd13c31979ff1245fdf170deb80736e98615088e86",
+  "total_bytes": 379673,
+  "brain_version": "fc69746dfe13737082f1235ff807252d4f5d2b82b16a6ea9373380529deadda4",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -142,7 +142,7 @@
     },
     "current-state": {
       "notes": 1,
-      "bytes": 44655,
+      "bytes": 45144,
       "historical_notes": 0,
       "canonical_document": "01-CURRENT-STATE.md",
       "canonical_confidence": "declared"
@@ -191,7 +191,7 @@
     },
     "mcp": {
       "notes": 4,
-      "bytes": 32475,
+      "bytes": 32879,
       "historical_notes": 0,
       "canonical_document": "areas/mcp-agent-api.md",
       "canonical_confidence": "declared"
@@ -219,7 +219,7 @@
     },
     "release": {
       "notes": 1,
-      "bytes": 11768,
+      "bytes": 12574,
       "historical_notes": 0,
       "canonical_document": "08-RISKS.md",
       "canonical_confidence": "declared"
@@ -321,8 +321,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 44655,
-      "sha256": "e6390b6d5b74f678ec4509fabf3fcafee9fe9f8f30a4ec63902e428a689c87ce"
+      "bytes": 45144,
+      "sha256": "82f22b23887b6bf9c3d4e559df2c24ec241c22355ed6bb5ec995003038333ba8"
     },
     {
       "path": "02-MASTER-PLAN.md",
@@ -419,8 +419,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 11768,
-      "sha256": "f6fe9384a7ac92ee40cbf5719049bb3ae134c45b6fc2a80b3e9b8a4db2ea9eda"
+      "bytes": 12574,
+      "sha256": "437c2736be4762cac7beaa039ca9ee3b408203fa589d981ab0d50e1cbe4a848f"
     },
     {
       "path": "09-ASTRA-HANDOFF.md",
@@ -643,8 +643,8 @@
       "status": "active",
       "last_reviewed": "2026-09-13",
       "historical": false,
-      "bytes": 11014,
-      "sha256": "843cb6f6937edb48504715e46352d7eba2b5eef2bc98e0985686a5025fbe547f"
+      "bytes": 11418,
+      "sha256": "b3b500c5f84de308891b161e43a9860b873cddc49c95682a0345b4704c2fb306"
     },
     {
       "path": "areas/mcp-vocabulary-analysis.md",

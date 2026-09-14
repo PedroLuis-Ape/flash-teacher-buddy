@@ -2,35 +2,5023 @@
 // To take ownership, delete this banner line; the plugin then leaves the file alone.
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
+// <define:import.meta.env>
+var define_import_meta_env_default = {};
+
 // src/lib/mcp/index.ts
-import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
+
+// src/lib/mcp/tools/analyzeText.ts
+import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/client.ts
+import { createClient } from "npm:@supabase/supabase-js@^2.106.2";
+
+// src/integrations/supabase/platformRuntime.ts
+var PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
+var PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
+var PRODUCTION_DATA_PUBLIC_VALUE = [
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+  ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
+  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w"
+].join("");
+var PRODUCTION_DATA_RUNTIME = Object.freeze({
+  projectId: PRODUCTION_DATA_PROJECT_ID,
+  url: PRODUCTION_DATA_URL,
+  publicValue: PRODUCTION_DATA_PUBLIC_VALUE
+});
+function normalize(value) {
+  const result = value?.trim();
+  return result || void 0;
+}
+function completeRuntime(input) {
+  const url = normalize(input?.url);
+  const publicValue = normalize(input?.publicValue);
+  const projectId = normalize(input?.projectId);
+  return url && publicValue ? { projectId, url, publicValue } : null;
+}
+function assertProductionDataRuntime(runtime) {
+  const parsed = new URL(runtime.url);
+  const projectId = runtime.projectId ?? parsed.hostname.split(".")[0];
+  if (projectId !== PRODUCTION_DATA_PROJECT_ID || parsed.protocol !== "https:" || parsed.hostname !== `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`) {
+    throw new Error("A configura\xE7\xE3o n\xE3o aponta para o backend de dados em produ\xE7\xE3o.");
+  }
+  return { ...runtime, projectId };
+}
+function readIfProductionData(input) {
+  const runtime = completeRuntime(input);
+  if (!runtime) return null;
+  try {
+    return assertProductionDataRuntime(runtime);
+  } catch (error) {
+    console.warn("[PlatformRuntime] Configura\xE7\xE3o externa ignorada; mantendo o backend com os dados existentes.", error);
+    return null;
+  }
+}
+function resolvePlatformRuntime(input, testMode = false, installed) {
+  if (testMode) {
+    return {
+      projectId: "test-project",
+      url: "https://example.supabase.co",
+      publicValue: "test-public-value"
+    };
+  }
+  return readIfProductionData(installed) ?? readIfProductionData(input) ?? { ...PRODUCTION_DATA_RUNTIME };
+}
+function readPlatformRuntime() {
+  return resolvePlatformRuntime(
+    {
+      projectId: define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID,
+      url: define_import_meta_env_default.VITE_SUPABASE_URL,
+      publicValue: define_import_meta_env_default.VITE_SUPABASE_PUBLISHABLE_KEY
+    },
+    define_import_meta_env_default.MODE === "test",
+    typeof window !== "undefined" ? window.__APE_PLATFORM_RUNTIME__ : void 0
+  );
+}
+
+// src/lib/mcp/domain/errors.ts
+var McpDomainError = class extends Error {
+  code;
+  hint;
+  constructor(code, message, options = {}) {
+    super(message);
+    this.name = "McpDomainError";
+    this.code = code;
+    if (options.hint) this.hint = options.hint;
+    if (options.cause !== void 0) {
+      Object.defineProperty(this, "cause", { value: options.cause, enumerable: false });
+    }
+  }
+};
+function isMcpDomainError(value) {
+  return value instanceof McpDomainError;
+}
+var ERROR_CODE_MAP = {
+  "42501": "forbidden",
+  // insufficient_privilege (RLS denial, system guard)
+  "42P01": "unavailable",
+  // undefined_table
+  "57014": "unavailable",
+  // query_canceled (statement timeout)
+  "53300": "unavailable",
+  // too_many_connections
+  "22P02": "invalid_input",
+  // invalid_text_representation (malformed uuid)
+  "22023": "invalid_input",
+  // invalid_parameter_value
+  "23514": "invalid_input",
+  // check_violation (dominio fechado: study_type, visibility, primary_side)
+  "23503": "invalid_input",
+  // foreign_key_violation
+  "23505": "conflict",
+  // unique_violation
+  PGRST116: "not_found",
+  PGRST301: "unavailable"
+};
+var CODE_MESSAGES = {
+  unauthenticated: "Esta opera\xE7\xE3o exige uma conta APE Piteco autenticada.",
+  forbidden: "A conta autenticada n\xE3o tem permiss\xE3o para acessar este conte\xFAdo.",
+  not_found: "O objeto solicitado n\xE3o existe na biblioteca desta conta.",
+  ambiguous: "O nome informado corresponde a mais de um objeto na biblioteca.",
+  invalid_input: "A entrada enviada \xE9 inv\xE1lida para esta opera\xE7\xE3o.",
+  conflict: "A opera\xE7\xE3o conflita com o estado atual da biblioteca.",
+  confirmation_required: "Esta opera\xE7\xE3o \xE9 material e exige confirma\xE7\xE3o em dois passos (preview + token).",
+  unavailable: "O backend da biblioteca n\xE3o respondeu como esperado. Tente novamente."
+};
+function readErrorField(error, field) {
+  if (!error || typeof error !== "object") return void 0;
+  const value = error[field];
+  return typeof value === "string" && value.trim() ? value.trim() : void 0;
+}
+function toMcpDomainError(error, fallbackMessage) {
+  if (isMcpDomainError(error)) return error;
+  const providerCode = readErrorField(error, "code");
+  const mapped = providerCode ? ERROR_CODE_MAP[providerCode.toUpperCase()] : void 0;
+  if (mapped) {
+    return new McpDomainError(mapped, CODE_MESSAGES[mapped], { cause: error });
+  }
+  if (providerCode) {
+    return new McpDomainError("unavailable", CODE_MESSAGES.unavailable, { cause: error });
+  }
+  return new McpDomainError("unavailable", fallbackMessage, { cause: error });
+}
+function logDomainFailure(toolContext, error) {
+  try {
+    console.error("[ape-piteco-mcp] tool failed", {
+      tool: toolContext,
+      code: error.code,
+      message: error.message.slice(0, 200)
+    });
+  } catch {
+  }
+}
+function toolSuccess(payload) {
+  return { content: [{ type: "text", text: JSON.stringify({ ok: true, ...payload }) }] };
+}
+function toolErrorResult(error, toolContext) {
+  const domainError = toMcpDomainError(error, "A opera\xE7\xE3o falhou.");
+  logDomainFailure(toolContext, domainError);
+  const payload = {
+    ok: false,
+    error: {
+      code: domainError.code,
+      message: domainError.message,
+      ...domainError.hint ? { hint: domainError.hint } : {}
+    }
+  };
+  return { content: [{ type: "text", text: JSON.stringify(payload) }], isError: true };
+}
+
+// src/lib/mcp/domain/client.ts
+function requireAuthenticatedUser(ctx) {
+  const userId = ctx?.getUserId?.();
+  const token = ctx?.getToken?.();
+  if (!userId || !token) {
+    throw new McpDomainError(
+      "unauthenticated",
+      "Esta opera\xE7\xE3o exige uma conta APE Piteco autenticada.",
+      { hint: "Reconecte o cliente MCP \xE0 sua conta Piteco e repita a chamada." }
+    );
+  }
+  return { userId, token };
+}
+function createUserScopedClient(token) {
+  const runtime = readPlatformRuntime();
+  return createClient(runtime.url, runtime.publicValue, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  });
+}
+function createUserScopedDb(ctx) {
+  const { userId, token } = requireAuthenticatedUser(ctx);
+  return { client: createUserScopedClient(token), userId };
+}
+function createToolIdentity(ctx) {
+  const { userId, token } = requireAuthenticatedUser(ctx);
+  return {
+    db: { client: createUserScopedClient(token), userId },
+    confirmationKey: token
+  };
+}
+
+// src/lib/mcp/learning/types.ts
+var ANALYSIS_LANGUAGES = ["en", "pt"];
+var INVENTORY_VERSION = 1;
+var KNOWN_STATUSES = [
+  "KNOWN_EXACT",
+  "KNOWN_VARIANT",
+  "KNOWN_LEMMA",
+  "KNOWN_EXPRESSION"
+];
+var STATUS_PRIORITY = {
+  KNOWN_EXACT: 0,
+  KNOWN_VARIANT: 1,
+  KNOWN_EXPRESSION: 2,
+  KNOWN_LEMMA: 3,
+  AMBIGUOUS: 4,
+  POSSIBLE_DUPLICATE: 5,
+  NEW: 6,
+  IGNORE_BASIC: 7
+};
+function emptyStatusCounts() {
+  return {
+    IGNORE_BASIC: 0,
+    KNOWN_EXACT: 0,
+    KNOWN_VARIANT: 0,
+    KNOWN_LEMMA: 0,
+    KNOWN_EXPRESSION: 0,
+    POSSIBLE_DUPLICATE: 0,
+    NEW: 0,
+    AMBIGUOUS: 0
+  };
+}
+
+// src/lib/mcp/learning/normalize.ts
+var CASE_FOLD_SPECIALS = {
+  "\xDF": "ss",
+  // sharp s
+  "\xE6": "ae",
+  "\u0153": "oe",
+  "\xF8": "o",
+  "\u0111": "d",
+  "\xF0": "d",
+  "\xFE": "th",
+  "\u0142": "l",
+  "\u0131": "i"
+};
+var APOSTROPHES = /[‘’ʼ´`]/g;
+var DASHES = /[‐‑‒–—―]/g;
+var NON_WORD = /[^\p{L}\p{N}\s'\-]/gu;
+var COMBINING_MARKS = /\p{M}+/gu;
+function casefold(value) {
+  const lowered = value.normalize("NFKC").toLowerCase();
+  let out = "";
+  for (const char of lowered) out += CASE_FOLD_SPECIALS[char] ?? char;
+  return out;
+}
+function foldApostrophes(value) {
+  return value.replace(APOSTROPHES, "'").replace(DASHES, "-");
+}
+function stripAccents(value) {
+  return value.normalize("NFD").replace(COMBINING_MARKS, "").normalize("NFC");
+}
+function collapseSpaces(value) {
+  return value.replace(/\s+/g, " ").trim();
+}
+function normalizeSurface(value) {
+  const cleaned = foldApostrophes(String(value ?? "")).replace(NON_WORD, " ").replace(/\s+/g, " ").trim().replace(/^['\-]+/, "").replace(/['\-]+$/, "");
+  return collapseSpaces(casefold(cleaned));
+}
+function normalizeTerm(value) {
+  return collapseSpaces(foldApostrophes(String(value ?? "")).replace(/\s+/g, " ").trim());
+}
+var EN_CONTRACTIONS = {
+  "can't": "cannot",
+  cant: "cannot",
+  "won't": "will not",
+  wont: "will not",
+  "ain't": "is not",
+  aint: "is not",
+  "i'm": "i am",
+  im: "i am",
+  "let's": "let us",
+  lets: "let us",
+  "y'all": "you all",
+  yall: "you all",
+  gonna: "going to",
+  wanna: "want to",
+  gotta: "got to",
+  dunno: "do not know"
+};
+var EN_CONTRACTION_REVERSE = {
+  "cannot": "can't",
+  "will not": "won't",
+  "i am": "i'm",
+  "let us": "let's",
+  "going to": "gonna",
+  "want to": "wanna",
+  "do not": "don't",
+  "is not": "isn't",
+  "are not": "aren't",
+  "was not": "wasn't",
+  "were not": "weren't",
+  "did not": "didn't",
+  "does not": "doesn't",
+  "have not": "haven't",
+  "has not": "hasn't",
+  "had not": "hadn't",
+  "would not": "wouldn't",
+  "could not": "couldn't",
+  "should not": "shouldn't"
+};
+var PT_CONTRACTIONS = {
+  do: "de o",
+  da: "de a",
+  dos: "de os",
+  das: "de as",
+  no: "em o",
+  na: "em a",
+  nos: "em os",
+  nas: "em as",
+  pelo: "por o",
+  pela: "por a",
+  pelos: "por os",
+  pelas: "por as",
+  num: "em um",
+  numa: "em uma",
+  duma: "de uma",
+  dum: "de um",
+  ao: "a o",
+  aos: "a os",
+  \u00E0: "a a",
+  \u00E0s: "a as",
+  deste: "de este",
+  desta: "de esta",
+  destes: "de estes",
+  destas: "de estas",
+  neste: "em este",
+  nesta: "em esta",
+  nestes: "em estes",
+  nestas: "em estas",
+  daquele: "de aquele",
+  daquela: "de aquela",
+  naquele: "em aquele",
+  naquela: "em aquela",
+  disso: "de isso",
+  nisso: "em isso",
+  disto: "de isto",
+  nisto: "em isto"
+};
+var PT_CONTRACTION_REVERSE = {
+  "de o": "do",
+  "de a": "da",
+  "de os": "dos",
+  "de as": "das",
+  "em o": "no",
+  "em a": "na",
+  "em os": "nos",
+  "em as": "nas",
+  "por o": "pelo",
+  "por a": "pela",
+  "em um": "num",
+  "em uma": "numa",
+  "de um": "dum",
+  "de uma": "duma",
+  "a o": "ao",
+  "a os": "aos",
+  "a a": "\xE0",
+  "de este": "deste",
+  "em este": "neste",
+  "de aquele": "daquele",
+  "em aquele": "naquele"
+};
+function expandContractionToken(key, language) {
+  if (language === "en") {
+    if (EN_CONTRACTIONS[key]) return EN_CONTRACTIONS[key];
+    if (key.length > 3 && key.endsWith("n't")) return key.slice(0, -3) + " not";
+    if (key.length > 3 && key.endsWith("nt") && EN_CONTRACTIONS[key]) return EN_CONTRACTIONS[key];
+    if (key.endsWith("'re")) return key.slice(0, -3) + " are";
+    if (key.endsWith("'ve")) return key.slice(0, -3) + " have";
+    if (key.endsWith("'ll")) return key.slice(0, -3) + " will";
+    if (key.endsWith("'m")) return key.slice(0, -2) + " am";
+    return "";
+  }
+  return PT_CONTRACTIONS[key] ?? "";
+}
+function contractPhrase(key, language) {
+  if (language === "en") return EN_CONTRACTION_REVERSE[key] ?? "";
+  return PT_CONTRACTION_REVERSE[key] ?? "";
+}
+var ORTHOGRAPHIC_PAIRS = [
+  ["colour", "color"],
+  ["favourite", "favorite"],
+  ["honour", "honor"],
+  ["behaviour", "behavior"],
+  ["centre", "center"],
+  ["theatre", "theater"],
+  ["metre", "meter"],
+  ["litre", "liter"],
+  ["realise", "realize"],
+  ["organise", "organize"],
+  ["recognise", "recognize"],
+  ["analyse", "analyze"],
+  ["travelled", "traveled"],
+  ["travelling", "traveling"],
+  ["cancelled", "canceled"],
+  ["grey", "gray"],
+  ["licence", "license"],
+  ["practise", "practice"],
+  ["programme", "program"],
+  ["catalogue", "catalog"],
+  ["dialogue", "dialog"],
+  ["judgement", "judgment"],
+  ["jewellery", "jewelry"],
+  ["aeroplane", "airplane"],
+  ["aluminium", "aluminum"],
+  ["towards", "toward"],
+  ["whilst", "while"],
+  ["learnt", "learned"],
+  ["spelt", "spelled"],
+  ["burnt", "burned"],
+  ["dreamt", "dreamed"],
+  ["defence", "defense"],
+  ["offence", "offense"],
+  ["ideia", "id\xE9ia"],
+  ["voo", "v\xF4o"],
+  ["jiboia", "jib\xF3ia"]
+];
+var ORTHOGRAPHIC_FORWARD = /* @__PURE__ */ new Map();
+for (const [a, b] of ORTHOGRAPHIC_PAIRS) {
+  ORTHOGRAPHIC_FORWARD.set(normalizeSurface(a), normalizeSurface(b));
+}
+var ORTHOGRAPHIC_NORMALIZED = ORTHOGRAPHIC_PAIRS.map(([a, b]) => [
+  normalizeSurface(a),
+  normalizeSurface(b)
+]).filter(([a, b]) => a.length > 0 && b.length > 0 && a !== b);
+function orthographicVariants(key) {
+  const out = /* @__PURE__ */ new Set();
+  const direct = ORTHOGRAPHIC_FORWARD.get(key);
+  if (direct) out.add(direct);
+  for (const [left, right] of ORTHOGRAPHIC_NORMALIZED) {
+    if (key === right) out.add(left);
+  }
+  for (const [left, right] of ORTHOGRAPHIC_NORMALIZED) {
+    if (key.includes(left) && key !== left) out.add(key.split(left).join(right));
+    if (key.includes(right) && key !== right) out.add(key.split(right).join(left));
+  }
+  return [...out].filter((value) => value && value !== key);
+}
+function tokenVariants(key, language) {
+  const out = /* @__PURE__ */ new Set();
+  const folded = stripAccents(key);
+  if (folded !== key) out.add(folded);
+  const noApostrophe = key.replace(/'/g, "");
+  if (noApostrophe !== key && noApostrophe) out.add(noApostrophe);
+  const hyphenAsSpace = key.replace(/-/g, " ");
+  if (hyphenAsSpace !== key) out.add(hyphenAsSpace);
+  const hyphenRemoved = key.replace(/-/g, "");
+  if (hyphenRemoved !== key) out.add(hyphenRemoved);
+  const expanded = expandContractionToken(key, language);
+  if (expanded) out.add(expanded);
+  for (const variant of orthographicVariants(key)) out.add(variant);
+  out.delete(key);
+  return [...out].filter(Boolean);
+}
+function phraseVariants(keys, language) {
+  const out = /* @__PURE__ */ new Set();
+  const joined = keys.join(" ");
+  const expanded = keys.map((key) => expandContractionToken(key, language) || key).join(" ");
+  if (expanded !== joined) out.add(expanded);
+  const contracted = contractPhrase(joined, language);
+  if (contracted) out.add(contracted);
+  const contractedExpanded = contractPhrase(expanded, language);
+  if (contractedExpanded) out.add(contractedExpanded);
+  const noApostrophe = joined.replace(/'/g, "");
+  if (noApostrophe !== joined && noApostrophe) out.add(noApostrophe);
+  const folded = stripAccents(joined);
+  if (folded !== joined) out.add(folded);
+  const hyphenJoined = joined.replace(/\s+/g, "-");
+  if (keys.length > 1) out.add(hyphenJoined);
+  const hyphenAsSpace = joined.replace(/-/g, " ");
+  if (hyphenAsSpace !== joined) out.add(hyphenAsSpace);
+  const hyphenRemoved = joined.replace(/-/g, "");
+  if (hyphenRemoved !== joined) out.add(hyphenRemoved);
+  for (const variant of orthographicVariants(joined)) out.add(variant);
+  keys.forEach((key, index) => {
+    for (const variant of orthographicVariants(key)) {
+      const copy = [...keys];
+      copy[index] = variant;
+      out.add(copy.join(" "));
+    }
+    const foldedToken = stripAccents(key);
+    if (foldedToken !== key) {
+      const copy = [...keys];
+      copy[index] = foldedToken;
+      out.add(copy.join(" "));
+    }
+  });
+  out.delete(joined);
+  out.delete("");
+  return [...out].filter(Boolean);
+}
+var TOKEN_PATTERN = /\p{L}[\p{L}\p{N}]*(?:['\-]\p{L}[\p{L}\p{N}]*)*/gu;
+function tokenizeText(text, language) {
+  const tokens = [];
+  const normalized = foldApostrophes(text);
+  const pattern = new RegExp(TOKEN_PATTERN.source, "gu");
+  let match;
+  while ((match = pattern.exec(normalized)) !== null) {
+    const raw = match[0];
+    const key = normalizeSurface(raw);
+    if (!key) continue;
+    tokens.push({
+      raw,
+      key,
+      folded: stripAccents(key),
+      variants: tokenVariants(key, language),
+      start: match.index,
+      end: match.index + raw.length
+    });
+  }
+  return tokens;
+}
+function sentenceAround(text, start, end, maxLength = 200) {
+  const safeStart = Math.max(0, Math.min(start, text.length));
+  const safeEnd = Math.max(safeStart, Math.min(end, text.length));
+  let left = 0;
+  for (let i = safeStart - 1; i >= 0; i -= 1) {
+    if (text[i] === "." || text[i] === "!" || text[i] === "?" || text[i] === "\n") {
+      left = i + 1;
+      break;
+    }
+  }
+  let right = text.length;
+  for (let i = safeEnd; i < text.length; i += 1) {
+    if (text[i] === "." || text[i] === "!" || text[i] === "?" || text[i] === "\n") {
+      right = i + 1;
+      break;
+    }
+  }
+  const sentence = text.slice(left, right).replace(/\s+/g, " ").trim();
+  if (sentence.length <= maxLength) return sentence;
+  return sentence.slice(0, maxLength - 1) + "\u2026";
+}
+function editDistanceAtMost(a, b, max) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return null;
+  if (!a || !b) return Math.max(a.length, b.length) <= max ? Math.max(a.length, b.length) : null;
+  let previousPrevious = null;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let value = Math.min(
+        (previous[j] ?? 0) + 1,
+        (current[j - 1] ?? 0) + 1,
+        (previous[j - 1] ?? 0) + cost
+      );
+      if (previousPrevious && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        value = Math.min(value, (previousPrevious[j - 2] ?? 0) + 1);
+      }
+      current[j] = value;
+      if (value < rowMin) rowMin = value;
+    }
+    if (rowMin > max) return null;
+    previousPrevious = previous;
+    previous = current;
+  }
+  return (previous[b.length] ?? max + 1) <= max ? previous[b.length] : null;
+}
+
+// src/lib/mcp/learning/lemmas.ts
+var EN_VERB_IRREGULAR = {
+  am: ["be"],
+  is: ["be"],
+  are: ["be"],
+  was: ["be"],
+  were: ["be"],
+  been: ["be"],
+  being: ["be"],
+  has: ["have"],
+  had: ["have"],
+  having: ["have"],
+  does: ["do"],
+  did: ["do"],
+  done: ["do"],
+  doing: ["do"],
+  went: ["go"],
+  gone: ["go"],
+  goes: ["go"],
+  made: ["make"],
+  making: ["make"],
+  took: ["take"],
+  taken: ["take"],
+  got: ["get"],
+  gotten: ["get"],
+  gave: ["give"],
+  given: ["give"],
+  came: ["come"],
+  saw: ["see"],
+  seen: ["see"],
+  knew: ["know"],
+  known: ["know"],
+  thought: ["think"],
+  said: ["say"],
+  found: ["find"],
+  told: ["tell"],
+  became: ["become"],
+  left: ["leave"],
+  felt: ["feel"],
+  brought: ["bring"],
+  began: ["begin"],
+  begun: ["begin"],
+  kept: ["keep"],
+  held: ["hold"],
+  wrote: ["write"],
+  written: ["write"],
+  stood: ["stand"],
+  heard: ["hear"],
+  meant: ["mean"],
+  met: ["meet"],
+  ran: ["run"],
+  paid: ["pay"],
+  sat: ["sit"],
+  spoke: ["speak"],
+  spoken: ["speak"],
+  led: ["lead"],
+  read: ["read"],
+  grew: ["grow"],
+  grown: ["grow"],
+  lost: ["lose"],
+  fell: ["fall"],
+  fallen: ["fall"],
+  sent: ["send"],
+  built: ["build"],
+  understood: ["understand"],
+  drew: ["draw"],
+  drawn: ["draw"],
+  broke: ["break"],
+  broken: ["break"],
+  spent: ["spend"],
+  rose: ["rise"],
+  risen: ["rise"],
+  drove: ["drive"],
+  driven: ["drive"],
+  bought: ["buy"],
+  wore: ["wear"],
+  worn: ["wear"],
+  chose: ["choose"],
+  chosen: ["choose"],
+  ate: ["eat"],
+  eaten: ["eat"],
+  drank: ["drink"],
+  drunk: ["drink"],
+  slept: ["sleep"],
+  swam: ["swim"],
+  swum: ["swim"],
+  taught: ["teach"],
+  caught: ["catch"],
+  fought: ["fight"],
+  flew: ["fly"],
+  flown: ["fly"],
+  forgot: ["forget"],
+  forgotten: ["forget"],
+  hid: ["hide"],
+  hidden: ["hide"],
+  won: ["win"],
+  sold: ["sell"],
+  sang: ["sing"],
+  sung: ["sing"],
+  stole: ["steal"],
+  stolen: ["steal"],
+  threw: ["throw"],
+  thrown: ["throw"],
+  woke: ["wake"],
+  woken: ["wake"],
+  beat: ["beat"],
+  beaten: ["beat"],
+  bent: ["bend"],
+  bit: ["bite"],
+  bitten: ["bite"],
+  blew: ["blow"],
+  blown: ["blow"],
+  burnt: ["burn"],
+  burned: ["burn"],
+  dealt: ["deal"],
+  dug: ["dig"],
+  fed: ["feed"],
+  froze: ["freeze"],
+  frozen: ["freeze"],
+  hung: ["hang"],
+  laid: ["lay"],
+  lent: ["lend"],
+  lit: ["light"],
+  rode: ["ride"],
+  ridden: ["ride"],
+  rang: ["ring"],
+  rung: ["ring"],
+  sought: ["seek"],
+  shook: ["shake"],
+  shaken: ["shake"],
+  shone: ["shine"],
+  shot: ["shoot"],
+  showed: ["show"],
+  shown: ["show"],
+  shut: ["shut"],
+  sank: ["sink"],
+  sunk: ["sink"],
+  slid: ["slide"],
+  smelt: ["smell"],
+  smelled: ["smell"],
+  spread: ["spread"],
+  stuck: ["stick"],
+  struck: ["strike"],
+  swept: ["sweep"],
+  tore: ["tear"],
+  torn: ["tear"],
+  put: ["put"],
+  cut: ["cut"],
+  hit: ["hit"],
+  hurt: ["hurt"],
+  set: ["set"],
+  let: ["let"],
+  cost: ["cost"],
+  quit: ["quit"]
+};
+var EN_NOUN_IRREGULAR = {
+  children: ["child"],
+  men: ["man"],
+  women: ["woman"],
+  people: ["person"],
+  teeth: ["tooth"],
+  feet: ["foot"],
+  mice: ["mouse"],
+  geese: ["goose"],
+  oxen: ["ox"],
+  criteria: ["criterion"],
+  phenomena: ["phenomenon"],
+  analyses: ["analysis"],
+  theses: ["thesis"],
+  crises: ["crisis"],
+  indices: ["index"],
+  matrices: ["matrix"],
+  data: ["datum", "data"],
+  media: ["medium", "media"]
+};
+var EN_COMPARATIVE_IRREGULAR = {
+  better: ["good", "well"],
+  best: ["good", "well"],
+  worse: ["bad"],
+  worst: ["bad"],
+  more: ["much", "many"],
+  most: ["much", "many"],
+  less: ["little"],
+  least: ["little"]
+};
+var PT_VERB_IRREGULAR = {
+  foi: ["ser", "ir"],
+  foram: ["ser", "ir"],
+  era: ["ser"],
+  eram: ["ser"],
+  \u00E9: ["ser"],
+  s\u00E3o: ["ser"],
+  sou: ["ser"],
+  fui: ["ser", "ir"],
+  ser\u00E1: ["ser"],
+  ser\u00E3o: ["ser"],
+  est\u00E1: ["estar"],
+  est\u00E3o: ["estar"],
+  estou: ["estar"],
+  estava: ["estar"],
+  estavam: ["estar"],
+  estive: ["estar"],
+  tem: ["ter"],
+  t\u00EAm: ["ter"],
+  tinha: ["ter"],
+  tinham: ["ter"],
+  tive: ["ter"],
+  teve: ["ter"],
+  h\u00E1: ["haver"],
+  havia: ["haver"],
+  houve: ["haver"],
+  vai: ["ir"],
+  v\u00E3o: ["ir"],
+  vou: ["ir"],
+  veio: ["vir"],
+  vieram: ["vir"],
+  viu: ["ver"],
+  viram: ["ver"],
+  deu: ["dar"],
+  deram: ["dar"],
+  fez: ["fazer"],
+  fizeram: ["fazer"],
+  disse: ["dizer"],
+  disseram: ["dizer"],
+  p\u00F4s: ["p\xF4r"],
+  quis: ["querer"],
+  quiseram: ["querer"],
+  soube: ["saber"],
+  souberam: ["saber"],
+  trouxe: ["trazer"],
+  trouxeram: ["trazer"],
+  p\u00F4de: ["poder"],
+  puderam: ["poder"],
+  faz: ["fazer"],
+  fazem: ["fazer"],
+  diz: ["dizer"],
+  dizem: ["dizer"],
+  vem: ["vir"],
+  v\u00EAm: ["vir"],
+  d\u00E1: ["dar"],
+  d\u00E3o: ["dar"],
+  v\u00EA: ["ver"],
+  veem: ["ver"]
+};
+var PT_NOUN_IRREGULAR = {
+  homens: ["homem"],
+  mulheres: ["mulher"],
+  c\u00E3es: ["c\xE3o"],
+  p\u00E3es: ["p\xE3o"],
+  m\u00E3es: ["m\xE3e"],
+  pais: ["pai"]
+};
+function unique(values) {
+  const out = /* @__PURE__ */ new Set();
+  for (const value of values) if (value) out.add(value);
+  return [...out];
+}
+function englishNounLemmas(key) {
+  const out = [];
+  if (key.length > 3 && key.endsWith("ies")) out.push(key.slice(0, -3) + "y");
+  if (key.length > 3 && key.endsWith("ves")) {
+    out.push(key.slice(0, -3) + "f");
+    out.push(key.slice(0, -3) + "fe");
+  }
+  if (key.length > 3 && (key.endsWith("ches") || key.endsWith("shes") || key.endsWith("xes") || key.endsWith("zes"))) {
+    out.push(key.slice(0, -2));
+    out.push(key.slice(0, -1));
+  }
+  if (key.length > 3 && key.endsWith("ses")) {
+    out.push(key.slice(0, -2));
+    out.push(key.slice(0, -1));
+  }
+  if (key.length > 3 && key.endsWith("oes")) out.push(key.slice(0, -2));
+  if (key.length > 2 && key.endsWith("s") && !key.endsWith("ss") && !key.endsWith("us") && !key.endsWith("is")) {
+    out.push(key.slice(0, -1));
+  }
+  return out;
+}
+function englishVerbLemmas(key) {
+  const out = [];
+  if (key.length > 4 && key.endsWith("ied")) out.push(key.slice(0, -3) + "y");
+  if (key.length > 3 && key.endsWith("ed")) {
+    const stem = key.slice(0, -2);
+    out.push(stem);
+    out.push(key.slice(0, -1));
+    if (stem.length > 2 && stem.at(-1) === stem.at(-2)) out.push(stem.slice(0, -1));
+  }
+  if (key.length > 4 && key.endsWith("ing")) {
+    const stem = key.slice(0, -3);
+    out.push(stem);
+    out.push(stem + "e");
+    if (stem.length > 2 && stem.at(-1) === stem.at(-2)) out.push(stem.slice(0, -1));
+    if (stem.endsWith("y")) out.push(stem);
+  }
+  if (key.length > 3 && key.endsWith("es")) out.push(key.slice(0, -2));
+  if (key.length > 2 && key.endsWith("s") && !key.endsWith("ss")) out.push(key.slice(0, -1));
+  if (key.length > 3 && key.endsWith("ier")) out.push(key.slice(0, -3) + "y");
+  if (key.length > 4 && key.endsWith("iest")) out.push(key.slice(0, -4) + "y");
+  if (key.length > 3 && key.endsWith("er")) {
+    const stem = key.slice(0, -2);
+    out.push(stem);
+    if (stem.length > 2 && stem.at(-1) === stem.at(-2)) out.push(stem.slice(0, -1));
+    out.push(stem + "e");
+  }
+  if (key.length > 4 && key.endsWith("est")) {
+    const stem = key.slice(0, -3);
+    out.push(stem);
+    if (stem.length > 2 && stem.at(-1) === stem.at(-2)) out.push(stem.slice(0, -1));
+    out.push(stem + "e");
+  }
+  return out;
+}
+function portugueseLemmas(key) {
+  const out = [];
+  const pluralEndings = [
+    ["\xF5es", ["\xE3o", "om"]],
+    ["\xE3es", ["\xE3o"]],
+    ["ais", ["al"]],
+    ["eis", ["el"]],
+    ["ois", ["ol"]],
+    ["uis", ["ul"]],
+    ["is", ["il"]],
+    ["ns", ["m"]],
+    ["res", ["r"]],
+    ["zes", ["z"]],
+    ["ses", ["s"]]
+  ];
+  for (const [suffix, stems] of pluralEndings) {
+    if (key.length > suffix.length && key.endsWith(suffix)) {
+      for (const stem of stems) out.push(key.slice(0, -suffix.length) + stem);
+    }
+  }
+  if (key.length > 2 && key.endsWith("s") && !key.endsWith("ss") && !key.endsWith("us")) {
+    out.push(key.slice(0, -1));
+  }
+  if (key.length > 4 && key.endsWith("ando")) out.push(key.slice(0, -4) + "ar");
+  if (key.length > 4 && key.endsWith("endo")) out.push(key.slice(0, -4) + "er");
+  if (key.length > 4 && key.endsWith("indo")) out.push(key.slice(0, -4) + "ir");
+  if (key.length > 4 && key.endsWith("ado")) {
+    out.push(key.slice(0, -3) + "ar");
+  }
+  if (key.length > 4 && key.endsWith("ada")) {
+    out.push(key.slice(0, -3) + "ar");
+  }
+  if (key.length > 4 && (key.endsWith("ados") || key.endsWith("adas"))) {
+    out.push(key.slice(0, -4) + "ar");
+  }
+  if (key.length > 4 && key.endsWith("ido")) {
+    out.push(key.slice(0, -3) + "er");
+    out.push(key.slice(0, -3) + "ir");
+  }
+  if (key.length > 4 && key.endsWith("ida")) {
+    out.push(key.slice(0, -3) + "er");
+    out.push(key.slice(0, -3) + "ir");
+  }
+  if (key.length > 4 && (key.endsWith("idos") || key.endsWith("idas"))) {
+    out.push(key.slice(0, -4) + "er");
+    out.push(key.slice(0, -4) + "ir");
+  }
+  if (key.length > 4 && key.endsWith("ou")) {
+    const stem = key.slice(0, -2);
+    out.push(stem + "ar");
+    out.push(stem + "er");
+    out.push(stem + "ir");
+  }
+  return out;
+}
+function lemmaKeys(key, language) {
+  if (!key) return [];
+  if (language === "en") {
+    const irregular = [
+      ...EN_VERB_IRREGULAR[key] ?? [],
+      ...EN_NOUN_IRREGULAR[key] ?? [],
+      ...EN_COMPARATIVE_IRREGULAR[key] ?? []
+    ];
+    return unique([key, ...irregular, ...englishNounLemmas(key), ...englishVerbLemmas(key)]).filter(
+      (value) => value && value !== key
+    );
+  }
+  const irregularPt = [
+    ...PT_VERB_IRREGULAR[key] ?? [],
+    ...PT_NOUN_IRREGULAR[key] ?? []
+  ];
+  return unique([...irregularPt, ...portugueseLemmas(key)]).filter((value) => value && value !== key);
+}
+function phraseLemmaKeys(keys, language, maxCombinations = 48) {
+  if (!keys.length) return [];
+  const options = keys.map((key) => [key, ...lemmaKeys(key, language)]);
+  const out = /* @__PURE__ */ new Set();
+  const walk = (index, current) => {
+    if (out.size >= maxCombinations) return;
+    if (index === options.length) {
+      out.add(current.join(" "));
+      return;
+    }
+    for (const option of options[index]) {
+      if (out.size >= maxCombinations) break;
+      walk(index + 1, [...current, option]);
+    }
+  };
+  walk(0, []);
+  return [...out];
+}
+
+// src/lib/mcp/learning/inventory.ts
+var INVENTORY_PAGE_SIZE = 1e3;
+var MAX_INVENTORY_PAGES = 40;
+var MAX_INVENTORY_CARDS = MAX_INVENTORY_PAGES * INVENTORY_PAGE_SIZE;
+var INVENTORY_CACHE_TTL_MS = 6e4;
+var INVENTORY_CACHE_MAX_ENTRIES = 8;
+function emptyVocabularyIndex() {
+  return {
+    exact: /* @__PURE__ */ new Map(),
+    variant: /* @__PURE__ */ new Map(),
+    lemma: /* @__PURE__ */ new Map(),
+    expression: /* @__PURE__ */ new Map(),
+    expressionLemma: /* @__PURE__ */ new Map(),
+    components: /* @__PURE__ */ new Map(),
+    byTerm: /* @__PURE__ */ new Map()
+  };
+}
+function push(index, key, entry) {
+  if (!key) return;
+  const bucket = index.get(key);
+  if (bucket) bucket.push(entry);
+  else index.set(key, [entry]);
+}
+function meaningSignature(row) {
+  return normalizeSurface(row.translation ?? "") + "|" + normalizeSurface(row.context_tag ?? "");
+}
+function toVocabularyEntry(row, language) {
+  const term = normalizeTerm(row.term ?? "");
+  const exactKey = normalizeSurface(row.term ?? "");
+  if (!exactKey) return null;
+  const keys = exactKey.split(" ").filter(Boolean);
+  const isExpression = keys.length > 1;
+  return {
+    cardId: String(row.id ?? ""),
+    term,
+    translation: row.translation ? normalizeTerm(row.translation) : void 0,
+    hint: row.hint ? normalizeTerm(row.hint) : void 0,
+    example: row.example_text ? normalizeTerm(row.example_text) : void 0,
+    contextTag: row.context_tag ? normalizeTerm(row.context_tag) : void 0,
+    listId: row.list_id,
+    exactKey,
+    variantKeys: phraseVariants(keys, language),
+    lemmaKeys: isExpression ? [] : lemmaKeys(exactKey, language),
+    tokenCount: keys.length,
+    isExpression,
+    meaningSignature: meaningSignature(row)
+  };
+}
+function fnv1a(value, seed = 2166136261) {
+  let hash = seed >>> 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+function fingerprintEntries(entries, language) {
+  const canonical2 = entries.map((entry) => entry.cardId + ":" + entry.exactKey + ":" + entry.meaningSignature).sort().join("\n");
+  return "v" + INVENTORY_VERSION + "-" + language + "-" + fnv1a(canonical2) + "-" + fnv1a(canonical2, 2654435761) + "-" + entries.length;
+}
+function registerEntry(index, entry, language) {
+  push(index.exact, entry.exactKey, entry);
+  push(index.byTerm, entry.exactKey, entry);
+  for (const variant of entry.variantKeys) push(index.variant, variant, entry);
+  if (!entry.isExpression) {
+    for (const lemma of [entry.exactKey, ...entry.lemmaKeys]) push(index.lemma, lemma, entry);
+  } else {
+    push(index.expression, entry.exactKey, entry);
+    for (const variant of entry.variantKeys) push(index.expression, variant, entry);
+    const tokens = entry.exactKey.split(" ");
+    for (const key of phraseLemmaKeys(tokens, language)) push(index.expressionLemma, key, entry);
+    for (const token of new Set(tokens)) push(index.components, token, entry);
+  }
+}
+function buildVocabularyIndex(rows, language) {
+  const entries = rows.map((row) => toVocabularyEntry(row, language)).filter((entry) => entry !== null).sort((left, right) => {
+    const leftId = String(left.cardId);
+    const rightId = String(right.cardId);
+    return leftId < rightId ? -1 : leftId > rightId ? 1 : 0;
+  });
+  const index = emptyVocabularyIndex();
+  for (const entry of entries) registerEntry(index, entry, language);
+  return { entries, index, fingerprint: fingerprintEntries(entries, language) };
+}
+var inventoryCache = /* @__PURE__ */ new Map();
+function filterKey(filters) {
+  const folders = [...filters.folderIds ?? []].map((value) => value.toLowerCase()).sort().join(",");
+  const lists = [...filters.listIds ?? []].map((value) => value.toLowerCase()).sort().join(",");
+  return "f:" + folders + "|l:" + lists;
+}
+function cacheKeyFor(options) {
+  return (options.cacheKey ?? "anonymous") + "|" + options.language + "|" + filterKey(options.filters ?? {});
+}
+function invalidateVocabularyInventory(cacheKey) {
+  if (!cacheKey) {
+    inventoryCache.clear();
+    return;
+  }
+  const prefix = cacheKey + "|";
+  for (const key of [...inventoryCache.keys()]) {
+    if (key.startsWith(prefix)) inventoryCache.delete(key);
+  }
+}
+function remember(key, inventory, expiresAt) {
+  if (inventoryCache.size >= INVENTORY_CACHE_MAX_ENTRIES) {
+    const oldest = inventoryCache.keys().next().value;
+    if (oldest !== void 0) inventoryCache.delete(oldest);
+  }
+  inventoryCache.set(key, { inventory, expiresAt });
+}
+async function buildVocabularyInventory(source, options) {
+  const startedAt = Date.now();
+  const key = cacheKeyFor(options);
+  const cacheMode = options.cacheKey ? options.cacheMode ?? "use" : "off";
+  const now = options.now ?? (() => Date.now());
+  if (cacheMode === "use") {
+    const cached = inventoryCache.get(key);
+    if (cached && cached.expiresAt > now()) {
+      return {
+        inventory: cached.inventory,
+        fromCache: true,
+        stats: {
+          lists: cached.inventory.lists,
+          cardsTotal: cached.inventory.cardsTotal,
+          cardsScanned: cached.inventory.cardsScanned,
+          pages: cached.inventory.pages,
+          queries: 0,
+          truncated: cached.inventory.truncated,
+          fingerprint: cached.inventory.fingerprint,
+          version: cached.inventory.version,
+          fromCache: true,
+          durationMs: Date.now() - startedAt
+        }
+      };
+    }
+  }
+  const queriesBefore = source.queryCount();
+  const filters = {};
+  if (options.filters?.folderIds?.length) {
+    filters.folderIds = [...new Set(options.filters.folderIds.map((value) => value.toLowerCase()))].sort();
+  }
+  let missingListIds = [];
+  if (options.filters?.listIds?.length) {
+    const requested = [...new Set(options.filters.listIds.map((value) => value.toLowerCase()))].sort();
+    const resolved = await source.resolveListIds(requested);
+    missingListIds = resolved.missing;
+    filters.listIds = resolved.accessible.length ? resolved.accessible : ["00000000-0000-4000-8000-000000000000"];
+  }
+  const [lists, cardsTotal] = await Promise.all([source.countLists(), source.countCards(filters)]);
+  const rows = [];
+  let pages = 0;
+  let offset = 0;
+  while (pages < MAX_INVENTORY_PAGES) {
+    const batch = await source.readCardPage(filters, { limit: INVENTORY_PAGE_SIZE, offset });
+    pages += 1;
+    rows.push(...batch);
+    offset += batch.length;
+    if (batch.length < INVENTORY_PAGE_SIZE) break;
+    if (cardsTotal !== null && rows.length >= cardsTotal) break;
+    if (rows.length >= MAX_INVENTORY_CARDS) break;
+  }
+  const scanned = rows.length;
+  const truncated = cardsTotal === null ? scanned >= MAX_INVENTORY_CARDS : scanned < cardsTotal;
+  const { entries, index, fingerprint } = buildVocabularyIndex(rows, options.language);
+  const queries = source.queryCount() - queriesBefore;
+  const inventory = {
+    version: INVENTORY_VERSION,
+    language: options.language,
+    fingerprint,
+    entries,
+    index,
+    terms: entries.length,
+    expressions: entries.filter((entry) => entry.isExpression).length,
+    cardsIndexed: entries.length,
+    cardsScanned: scanned,
+    cardsTotal,
+    lists,
+    truncated,
+    missingListIds,
+    pages,
+    queries
+  };
+  if (cacheMode !== "off") {
+    remember(key, inventory, now() + INVENTORY_CACHE_TTL_MS);
+  }
+  return {
+    inventory,
+    fromCache: false,
+    stats: {
+      lists,
+      cardsTotal,
+      cardsScanned: scanned,
+      pages,
+      queries,
+      truncated,
+      fingerprint,
+      version: INVENTORY_VERSION,
+      fromCache: false,
+      durationMs: Date.now() - startedAt
+    }
+  };
+}
+
+// src/lib/mcp/domain/query.ts
+var DEFAULT_PAGE_SIZE = 20;
+var MAX_PAGE_SIZE = 50;
+var DEFAULT_CARD_LIMIT = 25;
+var MAX_CARD_LIMIT = 100;
+var MAX_SEARCH_LIMIT = 25;
+var MAX_SEARCH_TERM_LENGTH = 80;
+function resolvePage(input, options = { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE }) {
+  const rawLimit = input.limit;
+  const limitValue = rawLimit === void 0 || rawLimit === null ? options.defaultLimit : Number(rawLimit);
+  if (!Number.isFinite(limitValue) || limitValue < 1) {
+    throw new McpDomainError(
+      "invalid_input",
+      `"limit" precisa ser um n\xFAmero inteiro entre 1 e ${options.maxLimit}.`
+    );
+  }
+  const rawOffset = input.offset;
+  const offsetValue = rawOffset === void 0 || rawOffset === null ? 0 : Number(rawOffset);
+  if (!Number.isFinite(offsetValue) || offsetValue < 0) {
+    throw new McpDomainError("invalid_input", '"offset" precisa ser um n\xFAmero inteiro maior ou igual a 0.');
+  }
+  return {
+    limit: Math.min(Math.trunc(limitValue), options.maxLimit),
+    offset: Math.trunc(offsetValue)
+  };
+}
+var RESERVED_FILTER_CHARACTERS = /[,()*%_\\"']/g;
+function sanitizeSearchTerm(raw, maxLength = MAX_SEARCH_TERM_LENGTH) {
+  const value = typeof raw === "string" ? raw : "";
+  const cleaned = value.normalize("NFKC").replace(RESERVED_FILTER_CHARACTERS, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    throw new McpDomainError(
+      "invalid_input",
+      "O termo de busca n\xE3o cont\xE9m caracteres pesquis\xE1veis.",
+      { hint: "Envie texto simples, sem apenas pontua\xE7\xE3o ou curingas." }
+    );
+  }
+  return cleaned.slice(0, maxLength);
+}
+function asRows(data) {
+  return Array.isArray(data) ? data : [];
+}
+function asRow(data) {
+  return data && typeof data === "object" && !Array.isArray(data) ? data : null;
+}
+function str(row, key) {
+  const value = row?.[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function truncatedStr(row, key, maxLength) {
+  const value = str(row, key);
+  if (value === void 0) return void 0;
+  const trimmed = value.trim();
+  if (!trimmed) return void 0;
+  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength)}\u2026` : trimmed;
+}
+function num(row, key) {
+  const value = row?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+}
+function bool(row, key) {
+  const value = row?.[key];
+  return typeof value === "boolean" ? value : void 0;
+}
+
+// src/lib/mcp/domain/scope.ts
+var PERSONAL_SCOPE = Object.freeze({ kind: "personal" });
+var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(value) {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim());
+}
+function requireUuid(value, field) {
+  if (!isUuid(value)) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um UUID v\xE1lido.`, {
+      hint: `Use as tools de listagem/busca para descobrir o UUID correto de "${field}".`
+    });
+  }
+  return String(value).trim().toLowerCase();
+}
+function scopeName(scope) {
+  return scope.kind === "personal" ? "personal" : "institution";
+}
+async function listAccessibleScopes(db) {
+  const { data, error } = await db.client.from("institutions").select("id,name,owner_id").eq("owner_id", db.userId).order("name", { ascending: true });
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as institui\xE7\xF5es desta conta.");
+  const scopes = [{ kind: "personal", role: "owner" }];
+  for (const row of Array.isArray(data) ? data : []) {
+    const record = asRow(row);
+    const id = str(record, "id");
+    if (!id) continue;
+    const name = str(record, "name");
+    scopes.push({
+      kind: "institution",
+      institution_id: id,
+      ...name ? { name } : {},
+      role: "owner"
+    });
+  }
+  return scopes;
+}
+async function assertScopeAccessible(db, scope) {
+  if (scope.kind === "personal") return;
+  const institutionId = requireUuid(scope.institutionId, "institution_id");
+  const { data, error } = await db.client.from("institutions").select("id").eq("id", institutionId).eq("owner_id", db.userId).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar o escopo institucional.");
+  if (!data) {
+    throw new McpDomainError("not_found", "Institui\xE7\xE3o n\xE3o encontrada para esta conta.", {
+      hint: "Liste os escopos dispon\xEDveis antes de repetir a opera\xE7\xE3o."
+    });
+  }
+}
+
+// src/lib/mcp/domain/inventoryInvalidation.ts
+function scopeForInstitution(institutionId) {
+  return institutionId ? { kind: "institution", institutionId } : { kind: "personal" };
+}
+function inventoryCacheKey(userId, institutionId) {
+  const scope = scopeForInstitution(institutionId);
+  return scope.kind === "institution" ? [userId, scopeName(scope), scope.institutionId].join("|") : [userId, scopeName(scope), "personal"].join("|");
+}
+function invalidateScopeInventory(userId, institutionId) {
+  invalidateVocabularyInventory(inventoryCacheKey(userId, institutionId));
+}
+function listInstitutionId(row) {
+  return str(asRow(row.folders), "institution_id") ?? str(row, "institution_id") ?? null;
+}
+
+// src/lib/mcp/learning/language.ts
+var EN_FUNCTION_WORDS = [
+  "a",
+  "an",
+  "the",
+  "of",
+  "to",
+  "in",
+  "on",
+  "at",
+  "for",
+  "with",
+  "from",
+  "by",
+  "as",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "am",
+  "do",
+  "does",
+  "did",
+  "done",
+  "and",
+  "or",
+  "but",
+  "if",
+  "so",
+  "than",
+  "that",
+  "this",
+  "these",
+  "those",
+  "there",
+  "here",
+  "it",
+  "its",
+  "i",
+  "you",
+  "he",
+  "she",
+  "we",
+  "they",
+  "me",
+  "him",
+  "her",
+  "us",
+  "them",
+  "my",
+  "your",
+  "his",
+  "their",
+  "our",
+  "not",
+  "no",
+  "yes",
+  "will",
+  "would",
+  "can",
+  "could",
+  "shall",
+  "should",
+  "may",
+  "might",
+  "must",
+  "have",
+  "has",
+  "had",
+  "just",
+  "very",
+  "too",
+  "also",
+  "then",
+  "when",
+  "where",
+  "which",
+  "who",
+  "whom",
+  "whose",
+  "what",
+  "how",
+  "why",
+  "while",
+  "into",
+  "over",
+  "up",
+  "down",
+  "out",
+  "off",
+  "about",
+  "after",
+  "before",
+  "again",
+  "all",
+  "any",
+  "some",
+  "each",
+  "every",
+  "both",
+  "few",
+  "more",
+  "most",
+  "other",
+  "such",
+  "only",
+  "own",
+  "same",
+  "am",
+  "s",
+  "t",
+  "d",
+  "ll",
+  "re",
+  "ve",
+  "m"
+];
+var PT_FUNCTION_WORDS = [
+  "o",
+  "a",
+  "os",
+  "as",
+  "um",
+  "uma",
+  "uns",
+  "umas",
+  "de",
+  "do",
+  "da",
+  "dos",
+  "das",
+  "em",
+  "no",
+  "na",
+  "nos",
+  "nas",
+  "por",
+  "pelo",
+  "pela",
+  "pelos",
+  "pelas",
+  "para",
+  "pra",
+  "com",
+  "sem",
+  "sob",
+  "sobre",
+  "entre",
+  "at\xE9",
+  "desde",
+  "que",
+  "qual",
+  "quais",
+  "quem",
+  "quando",
+  "onde",
+  "como",
+  "porque",
+  "se",
+  "e",
+  "ou",
+  "mas",
+  "tamb\xE9m",
+  "n\xE3o",
+  "sim",
+  "\xE9",
+  "s\xE3o",
+  "era",
+  "eram",
+  "foi",
+  "foram",
+  "ser",
+  "estar",
+  "est\xE1",
+  "est\xE3o",
+  "estou",
+  "tem",
+  "t\xEAm",
+  "tinha",
+  "havia",
+  "h\xE1",
+  "eu",
+  "tu",
+  "ele",
+  "ela",
+  "n\xF3s",
+  "v\xF3s",
+  "eles",
+  "elas",
+  "voc\xEA",
+  "voc\xEAs",
+  "me",
+  "te",
+  "lhe",
+  "vos",
+  "lhes",
+  "meu",
+  "minha",
+  "seu",
+  "sua",
+  "nosso",
+  "nossa",
+  "dele",
+  "dela",
+  "isso",
+  "isto",
+  "aquilo",
+  "esse",
+  "essa",
+  "este",
+  "esta",
+  "aquele",
+  "aquela",
+  "muito",
+  "mais",
+  "menos",
+  "j\xE1",
+  "ainda",
+  "s\xF3",
+  "apenas",
+  "bem",
+  "mal",
+  "aqui",
+  "ali",
+  "l\xE1",
+  "ent\xE3o",
+  "portanto",
+  "pois",
+  "ao",
+  "aos",
+  "\xE0",
+  "\xE0s",
+  "num",
+  "numa",
+  "dum",
+  "duma",
+  "cujo",
+  "cuja",
+  "nem",
+  "tambem"
+];
+var BASIC_FUNCTION_WORDS = {
+  en: new Set(EN_FUNCTION_WORDS.map((word) => normalizeSurface(word))),
+  pt: new Set(PT_FUNCTION_WORDS.map((word) => normalizeSurface(word)))
+};
+function isBasicFunctionWord(key, language) {
+  return BASIC_FUNCTION_WORDS[language].has(key);
+}
+var PHRASAL_PARTICLES = {
+  en: /* @__PURE__ */ new Set([
+    "up",
+    "down",
+    "out",
+    "off",
+    "on",
+    "in",
+    "over",
+    "into",
+    "through",
+    "along",
+    "across",
+    "around",
+    "about",
+    "away",
+    "back",
+    "forward",
+    "for",
+    "after",
+    "to",
+    "with",
+    "at",
+    "against",
+    "upon",
+    "apart",
+    "together",
+    "ahead",
+    "by"
+  ]),
+  pt: /* @__PURE__ */ new Set(["de", "em", "com", "por", "para", "a", "ao", "sobre", "at\xE9", "contra"])
+};
+var BASIC_MWE = {
+  en: /* @__PURE__ */ new Set([
+    "look at",
+    "look like",
+    "go to",
+    "come to",
+    "come in",
+    "get in",
+    "be in",
+    "arrive at",
+    "listen to",
+    "talk to",
+    "speak to",
+    "walk to",
+    "live in",
+    "work in",
+    "sit in",
+    "stand in",
+    "wait in",
+    "stay in",
+    "be at",
+    "be on",
+    "be for",
+    "go on",
+    "go in",
+    "come on",
+    "get to",
+    "get on",
+    "get off",
+    "put on",
+    "take on",
+    "try to",
+    "want to",
+    "need to",
+    "have to"
+  ]),
+  pt: /* @__PURE__ */ new Set([
+    "olhar para",
+    "ir a",
+    "ir para",
+    "vir de",
+    "estar em",
+    "ficar em",
+    "morar em",
+    "trabalhar em",
+    "chegar a",
+    "chegar em",
+    "gostar de",
+    "precisar de",
+    "acabar de",
+    "deixar de",
+    "come\xE7ar a"
+  ])
+};
+function isBasicMwe(phraseKey, language) {
+  return BASIC_MWE[language].has(phraseKey);
+}
+var STRONG_PARTICLES = {
+  en: /* @__PURE__ */ new Set([
+    "up",
+    "out",
+    "off",
+    "over",
+    "into",
+    "through",
+    "away",
+    "back",
+    "apart",
+    "together",
+    "ahead",
+    "along",
+    "across",
+    "around",
+    "down",
+    "forward",
+    "upon"
+  ]),
+  pt: /* @__PURE__ */ new Set(["de", "em", "com", "por", "para"])
+};
+var COMMON_PHRASAL = {
+  en: /* @__PURE__ */ new Set([
+    "look for",
+    "look after",
+    "look into",
+    "look up to",
+    "look forward to",
+    "look out for",
+    "wait for",
+    "ask for",
+    "care for",
+    "call for",
+    "hope for",
+    "search for",
+    "reach for",
+    "deal with",
+    "agree with",
+    "disagree with",
+    "reason with",
+    "cope with",
+    "stick with",
+    "depend on",
+    "rely on",
+    "focus on",
+    "work on",
+    "count on",
+    "insist on",
+    "base on",
+    "belong to",
+    "refer to",
+    "listen to",
+    "lead to",
+    "add to",
+    "adapt to",
+    "object to",
+    "laugh at",
+    "point at",
+    "smile at",
+    "glance at",
+    "wonder at",
+    "take after",
+    "take care of",
+    "take part in",
+    "make fun of",
+    "make sure of",
+    "pay attention to",
+    "get rid of",
+    "get away with",
+    "come up with",
+    "put up with",
+    "catch up with",
+    "keep up with",
+    "run out of",
+    "end up with",
+    "deal in"
+  ]),
+  pt: /* @__PURE__ */ new Set([
+    "gostar de",
+    "precisar de",
+    "contar com",
+    "depender de",
+    "cuidar de",
+    "lembrar de",
+    "esquecer de",
+    "precisar de",
+    "acreditar em",
+    "pensar em",
+    "sonhar com",
+    "preocupar com",
+    "concordar com",
+    "discordar de",
+    "duvidar de",
+    "pertencer a",
+    "assistir a",
+    "chegar a"
+  ])
+};
+var EN_MARKERS = [
+  "the",
+  "of",
+  "and",
+  "to",
+  "is",
+  "are",
+  "was",
+  "were",
+  "you",
+  "that",
+  "this",
+  "with",
+  "for",
+  "have",
+  "has",
+  "will",
+  "would",
+  "but",
+  "not",
+  "they",
+  "there",
+  "from",
+  "what",
+  "when",
+  "which",
+  "who",
+  "how",
+  "why",
+  "she",
+  "his",
+  "her",
+  "their",
+  "it",
+  "as",
+  "at",
+  "if",
+  "or",
+  "an",
+  "be"
+];
+var PT_MARKERS = [
+  "que",
+  "n\xE3o",
+  "uma",
+  "um",
+  "com",
+  "para",
+  "por",
+  "mais",
+  "como",
+  "mas",
+  "seu",
+  "sua",
+  "isso",
+  "este",
+  "esta",
+  "s\xE3o",
+  "foi",
+  "ser",
+  "estar",
+  "tem",
+  "t\xEAm",
+  "voc\xEA",
+  "ele",
+  "ela",
+  "n\xF3s",
+  "eles",
+  "elas",
+  "tamb\xE9m",
+  "muito",
+  "quando",
+  "onde",
+  "porque",
+  "dos",
+  "das",
+  "nas",
+  "nos",
+  "pelo",
+  "pela",
+  "aos",
+  "ao",
+  "\xE9",
+  "h\xE1",
+  "j\xE1",
+  "s\xF3"
+];
+var EN_MARKER_SET = new Set(EN_MARKERS);
+var PT_MARKER_SET = new Set(PT_MARKERS);
+function detectLanguage(tokens) {
+  let en = 0;
+  let pt = 0;
+  for (const token of tokens) {
+    if (EN_MARKER_SET.has(token.folded)) en += 1;
+    if (PT_MARKER_SET.has(token.folded)) pt += 1;
+    if (/[ãõç]/.test(token.folded)) pt += 2;
+    if (token.folded === "o" || token.folded === "a") en += 1;
+    if (/(ção|ções|ão)$/.test(token.folded)) pt += 1;
+  }
+  const best = Math.max(en, pt);
+  const second = Math.min(en, pt);
+  const confidence = tokens.length >= 4 && best >= 2 && (second === 0 || best >= second * 2) ? "high" : "low";
+  const language = pt > en ? "pt" : "en";
+  return {
+    language,
+    source: "detected",
+    confidence,
+    scores: { en, pt }
+  };
+}
+function explicitLanguage(language) {
+  return { language, source: "explicit", confidence: "high", scores: { en: 0, pt: 0 } };
+}
+function isContentToken(token, language) {
+  if (isBasicFunctionWord(token.key, language)) return false;
+  return token.key.length > 0;
+}
+
+// src/lib/mcp/learning/analyze.ts
+var MAX_TEXT_CHARS = 2e4;
+var MAX_TEXT_TOKENS = 4e3;
+var MAX_EXPRESSION_TOKENS = 5;
+var MAX_CANDIDATES = 400;
+var MAX_IGNORED_SAMPLE = 25;
+var MAX_RELATED = 3;
+var MAX_SENSES = 5;
+var MAX_FILTER_IDS = 200;
+function firstIn(map, key) {
+  const bucket = map.get(key);
+  return bucket && bucket.length ? bucket[0] : void 0;
+}
+function refOf(entry, matchKind, senseCount) {
+  return {
+    card_id: entry.cardId,
+    term: entry.term,
+    ...entry.translation ? { translation: entry.translation } : {},
+    ...entry.listId ? { list_id: entry.listId } : {},
+    match_kind: matchKind,
+    ...senseCount && senseCount > 1 ? { sense_count: senseCount } : {}
+  };
+}
+function distinctSenses(index, key) {
+  const entries = index.byTerm.get(key) ?? [];
+  if (entries.length < 2) return [];
+  const signatures = new Set(entries.map((entry) => entry.meaningSignature));
+  return signatures.size > 1 ? entries : [];
+}
+function senseRefs(entries) {
+  return entries.slice(0, MAX_SENSES).map((entry) => ({
+    card_id: entry.cardId,
+    ...entry.translation ? { translation: entry.translation } : {},
+    ...entry.contextTag ? { context_tag: entry.contextTag } : {},
+    ...entry.example ? { example: entry.example.slice(0, 160) } : {}
+  }));
+}
+function windowKeys(tokens, start, length, language) {
+  const slice = tokens.slice(start, start + length);
+  const keys = slice.map((token) => token.key);
+  return { exact: keys.join(" "), variants: phraseVariants(keys, language) };
+}
+function lookupExpression(keys, index) {
+  const exact = firstIn(index.expression, keys.exact);
+  if (exact) return { entry: exact, tier: "exact" };
+  for (const key of keys.variants) {
+    const variant = firstIn(index.expression, key);
+    if (variant) return { entry: variant, tier: "variant" };
+  }
+  const viaVariantKey = firstIn(index.variant, keys.exact);
+  if (viaVariantKey && viaVariantKey.isExpression) {
+    return { entry: viaVariantKey, tier: "variant" };
+  }
+  return null;
+}
+function lookupWord(keys, lemmaCandidates, index) {
+  const exact = firstIn(index.exact, keys.exact);
+  if (exact) return { entry: exact, tier: "exact" };
+  for (const key of [keys.exact, ...keys.variants]) {
+    const variant = firstIn(index.variant, key);
+    if (variant) return { entry: variant, tier: "variant" };
+  }
+  for (const key of keys.variants) {
+    const variant = firstIn(index.exact, key);
+    if (variant) return { entry: variant, tier: "variant" };
+  }
+  for (const key of lemmaCandidates) {
+    const lemma = firstIn(index.lemma, key);
+    if (lemma) return { entry: lemma, tier: "lemma" };
+  }
+  return null;
+}
+function nearMissThreshold(length) {
+  if (length >= 9) return 2;
+  if (length >= 6) return 1;
+  return 0;
+}
+function buildNearMissBuckets(index) {
+  const buckets = /* @__PURE__ */ new Map();
+  for (const key of index.exact.keys()) {
+    if (key.includes(" ")) continue;
+    const first = key.slice(0, 1);
+    const bucket = buckets.get(first);
+    if (bucket) bucket.push(key);
+    else buckets.set(first, [key]);
+  }
+  for (const bucket of buckets.values()) bucket.sort();
+  return buckets;
+}
+function findNearMiss(key, buckets) {
+  const threshold = nearMissThreshold(key.length);
+  if (threshold === 0) return null;
+  const bucket = buckets.get(key.slice(0, 1));
+  if (!bucket) return null;
+  let best = null;
+  for (const candidate of bucket) {
+    if (candidate === key) continue;
+    if (Math.abs(candidate.length - key.length) > threshold) continue;
+    const distance = editDistanceAtMost(key, candidate, threshold);
+    if (distance === null) continue;
+    if (!best || distance < best.distance || distance === best.distance && candidate < best.key) {
+      best = { key: candidate, distance };
+    }
+  }
+  return best;
+}
+function findExpressionShape(tokens, start, consumed, language) {
+  const particles = PHRASAL_PARTICLES[language];
+  const strong = STRONG_PARTICLES[language];
+  const curated = COMMON_PHRASAL[language];
+  const total = tokens.length;
+  if (start + 2 < total && !consumed[start + 1] && !consumed[start + 2]) {
+    const three = tokens[start].key + " " + tokens[start + 1].key + " " + tokens[start + 2].key;
+    const particleTail = particles.has(tokens[start + 1].key) && particles.has(tokens[start + 2].key);
+    const strongTail = particles.has(tokens[start + 1].key) && strong.has(tokens[start + 2].key);
+    if ((curated.has(three) || particleTail || strongTail) && !isBasicMwe(three, language)) {
+      return { span: 3, key: three };
+    }
+  }
+  if (start + 1 < total && !consumed[start + 1]) {
+    const two = tokens[start].key + " " + tokens[start + 1].key;
+    const strongParticle = strong.has(tokens[start + 1].key);
+    if ((curated.has(two) || strongParticle) && !isBasicMwe(two, language)) {
+      return { span: 2, key: two };
+    }
+  }
+  return null;
+}
+function mergeCandidates(raw, text) {
+  const merged = /* @__PURE__ */ new Map();
+  for (const item of raw) {
+    const mergeKey = item.kind + "::" + item.key;
+    const existing = merged.get(mergeKey);
+    if (!existing) {
+      merged.set(mergeKey, {
+        candidate: { ...item, occurrences: 1 },
+        context: sentenceAround(text, item.startOffset, item.endOffset, 200)
+      });
+      continue;
+    }
+    const current = existing.candidate;
+    current.occurrences = (current.occurrences ?? 1) + 1;
+    if (item.index < current.index) {
+      current.index = item.index;
+      current.text = item.text;
+      existing.context = sentenceAround(text, item.startOffset, item.endOffset, 200);
+    }
+    if (STATUS_PRIORITY[item.status] < STATUS_PRIORITY[current.status]) {
+      current.status = item.status;
+      current.reason = item.reason;
+      if (item.match) current.match = item.match;
+      if (item.senses?.length) current.senses = item.senses;
+    }
+    if (!current.match && item.match) current.match = item.match;
+    if (item.related?.length) {
+      const combined = [...current.related ?? [], ...item.related];
+      const unique2 = new Map(combined.map((ref) => [ref.term + "|" + (ref.card_id ?? ""), ref]));
+      current.related = [...unique2.values()].slice(0, MAX_RELATED);
+    }
+  }
+  return [...merged.values()].map(({ candidate, context }) => ({
+    text: candidate.text,
+    normalized: candidate.key,
+    kind: candidate.kind,
+    status: candidate.status,
+    occurrences: candidate.occurrences ?? 1,
+    first_index: candidate.index,
+    reason: candidate.reason,
+    ...candidate.match ? { match: candidate.match } : {},
+    ...candidate.related?.length ? { related: candidate.related } : {},
+    ...candidate.senses?.length ? { senses: candidate.senses } : {},
+    context
+  })).sort((left, right) => {
+    if (left.first_index !== right.first_index) return left.first_index - right.first_index;
+    return left.normalized < right.normalized ? -1 : left.normalized > right.normalized ? 1 : 0;
+  });
+}
+function resolveDetection(rawLanguage) {
+  if (typeof rawLanguage !== "string") return null;
+  const candidate = rawLanguage.trim().toLowerCase();
+  return ANALYSIS_LANGUAGES.includes(candidate) ? explicitLanguage(candidate) : null;
+}
+function analyzeTokens(params) {
+  const { text, tokens, inventory, language, ignoreBasic, confidence } = params;
+  const index = inventory.index;
+  const total = tokens.length;
+  const consumed = new Array(total).fill(false);
+  const raw = [];
+  for (let start = 0; start < total; start += 1) {
+    if (consumed[start]) continue;
+    const maxLength = Math.min(MAX_EXPRESSION_TOKENS, total - start);
+    let found = null;
+    for (let length = maxLength; length >= 1 && !found; length -= 1) {
+      const keys = windowKeys(tokens, start, length, language);
+      const direct = lookupExpression(keys, index);
+      if (direct) {
+        found = { entry: direct.entry, tier: direct.tier, span: length };
+        break;
+      }
+      const lemmaKeysForWindow = phraseLemmaKeys(tokens.slice(start, start + length).map((token) => token.key), language);
+      for (const key of lemmaKeysForWindow) {
+        const lemma = firstIn(index.expressionLemma, key);
+        if (lemma) {
+          found = { entry: lemma, tier: "lemma", span: length };
+          break;
+        }
+      }
+    }
+    if (!found) continue;
+    const surface = tokens.slice(start, start + found.span).map((token) => token.raw).join(" ");
+    const senses = distinctSenses(index, found.entry.exactKey);
+    raw.push({
+      text: surface,
+      key: found.entry.exactKey,
+      kind: "expression",
+      status: senses.length ? "POSSIBLE_DUPLICATE" : "KNOWN_EXPRESSION",
+      reason: senses.length ? "existing_senses_differ" : found.tier === "lemma" ? "expression_lemma" : found.tier === "variant" ? "expression_variant" : "expression_exact",
+      index: start,
+      startOffset: tokens[start].start,
+      endOffset: tokens[start + found.span - 1].end,
+      match: refOf(found.entry, found.tier === "lemma" ? "lemma" : found.tier === "variant" ? "variant" : "expression", senses.length),
+      ...senses.length ? { senses: senseRefs(senses) } : {}
+    });
+    for (let offset = 0; offset < found.span; offset += 1) consumed[start + offset] = true;
+    start += found.span - 1;
+  }
+  const expressionHeads = /* @__PURE__ */ new Map();
+  for (let start = 0; start < total; start += 1) {
+    if (consumed[start]) continue;
+    if (!isContentToken(tokens[start], language)) continue;
+    const shape = findExpressionShape(tokens, start, consumed, language);
+    if (!shape) continue;
+    const surface = tokens.slice(start, start + shape.span).map((token) => token.raw).join(" ");
+    expressionHeads.set(start, { text: surface, key: shape.key, span: shape.span });
+    raw.push({
+      text: surface,
+      key: shape.key,
+      kind: "expression",
+      status: "NEW",
+      reason: shape.span >= 3 ? "phrasal_pattern_three_tokens" : "phrasal_pattern",
+      index: start,
+      startOffset: tokens[start].start,
+      endOffset: tokens[start + shape.span - 1].end
+    });
+  }
+  const nearMissBuckets = buildNearMissBuckets(index);
+  for (let position = 0; position < total; position += 1) {
+    if (consumed[position]) continue;
+    const token = tokens[position];
+    const keys = { exact: token.key, variants: token.variants };
+    const hit = lookupWord(keys, lemmaKeys(token.key, language), index);
+    const head = expressionHeads.get(position);
+    const base = {
+      text: token.raw,
+      key: token.key,
+      kind: "word",
+      index: position,
+      startOffset: token.start,
+      endOffset: token.end
+    };
+    if (hit) {
+      const senses = distinctSenses(index, hit.entry.exactKey);
+      if (head) {
+        raw.push({
+          ...base,
+          status: "AMBIGUOUS",
+          reason: "word_only_inside_expression",
+          match: refOf(hit.entry, hit.tier === "lemma" ? "lemma" : hit.tier === "variant" ? "variant" : "exact", senses.length),
+          related: [{ term: head.text, match_kind: "none" }]
+        });
+        continue;
+      }
+      if (senses.length && hit.tier === "exact") {
+        raw.push({
+          ...base,
+          status: "POSSIBLE_DUPLICATE",
+          reason: "existing_senses_differ",
+          match: refOf(hit.entry, "exact", senses.length),
+          senses: senseRefs(senses)
+        });
+        continue;
+      }
+      raw.push({
+        ...base,
+        status: hit.tier === "lemma" ? "KNOWN_LEMMA" : hit.tier === "variant" ? "KNOWN_VARIANT" : "KNOWN_EXACT",
+        reason: hit.tier === "lemma" ? "lemma_match" : hit.tier === "variant" ? "variant_match" : "exact_match",
+        match: refOf(hit.entry, hit.tier === "lemma" ? "lemma" : hit.tier === "variant" ? "variant" : "exact")
+      });
+      continue;
+    }
+    if (isBasicFunctionWord(token.key, language)) {
+      if (!ignoreBasic) {
+        raw.push({ ...base, status: "NEW", reason: "basic_function_word_included" });
+      } else if (confidence === "high") {
+        raw.push({ ...base, status: "IGNORE_BASIC", reason: "basic_function_word" });
+      } else {
+        raw.push({ ...base, status: "AMBIGUOUS", reason: "language_uncertain" });
+      }
+      continue;
+    }
+    const containing = index.components.get(token.key);
+    if (containing?.length) {
+      raw.push({
+        ...base,
+        status: "POSSIBLE_DUPLICATE",
+        reason: "term_contained_in_known_expression",
+        related: containing.slice(0, MAX_RELATED).map((entry) => refOf(entry, "none"))
+      });
+      continue;
+    }
+    const nearMiss = findNearMiss(token.key, nearMissBuckets);
+    if (nearMiss) {
+      const entry = firstIn(index.exact, nearMiss.key);
+      raw.push({
+        ...base,
+        status: "POSSIBLE_DUPLICATE",
+        reason: "near_miss:" + nearMiss.key,
+        ...entry ? { match: refOf(entry, "none") } : {}
+      });
+      continue;
+    }
+    raw.push({
+      ...base,
+      status: "NEW",
+      reason: head ? "part_of_discovered_expression" : "no_match",
+      ...head ? { related: [{ term: head.text, match_kind: "none" }] } : {}
+    });
+  }
+  return mergeCandidates(raw, text);
+}
+async function analyzeTextAgainstLibrary(options) {
+  const rawText = typeof options.text === "string" ? options.text : "";
+  if (!rawText.trim()) {
+    throw new McpDomainError("invalid_input", 'O campo "text" precisa conter o texto a analisar.', {
+      hint: "Envie pelo menos uma frase em " + ANALYSIS_LANGUAGES.join(" ou ") + "."
+    });
+  }
+  if (rawText.length > MAX_TEXT_CHARS) {
+    throw new McpDomainError(
+      "invalid_input",
+      "O texto excede o limite de " + MAX_TEXT_CHARS + " caracteres desta analise.",
+      { hint: "Divida o texto em partes e analise uma por vez." }
+    );
+  }
+  const filters = options.filters ?? {};
+  validateFilters(filters);
+  const detection = resolveDetection(options.language) ?? detectLanguage(tokenizeText(rawText, "en"));
+  const language = detection.language;
+  const tokens = tokenizeText(rawText, language);
+  if (tokens.length > MAX_TEXT_TOKENS) {
+    throw new McpDomainError(
+      "invalid_input",
+      "O texto excede o limite de " + MAX_TEXT_TOKENS + " palavras desta analise.",
+      { hint: "Divida o texto em partes e analise uma por vez." }
+    );
+  }
+  let inventory = options.inventory;
+  let stats = {
+    lists: inventory?.lists ?? null,
+    cardsTotal: inventory?.cardsTotal ?? null,
+    cardsScanned: inventory?.cardsScanned ?? 0,
+    pages: inventory?.pages ?? 0,
+    queries: 0,
+    truncated: inventory?.truncated ?? false,
+    fingerprint: inventory?.fingerprint ?? "",
+    version: inventory?.version ?? 0,
+    fromCache: false,
+    durationMs: 0
+  };
+  if (!inventory) {
+    if (!options.source) {
+      throw new McpDomainError(
+        "unavailable",
+        "O motor de analise precisa de uma fonte de dados ou de um inventario."
+      );
+    }
+    const built = await buildVocabularyInventory(options.source, {
+      language,
+      filters,
+      cacheKey: options.cacheKey,
+      cacheMode: options.cacheMode ?? "use"
+    });
+    inventory = built.inventory;
+    stats = built.stats;
+  }
+  const ignoreBasic = options.ignoreBasicFunctionWords !== false;
+  const candidates = analyzeTokens({
+    text: rawText,
+    tokens,
+    inventory,
+    language,
+    ignoreBasic,
+    confidence: detection.confidence
+  });
+  const alreadyKnownAll = candidates.filter((candidate) => KNOWN_STATUSES.includes(candidate.status));
+  const newAll = candidates.filter((candidate) => candidate.status === "NEW");
+  const ambiguousAll = candidates.filter(
+    (candidate) => candidate.status === "AMBIGUOUS" || candidate.status === "POSSIBLE_DUPLICATE"
+  );
+  const ignoredBasic = candidates.filter((candidate) => candidate.status === "IGNORE_BASIC");
+  const byStatus = emptyStatusCounts();
+  for (const candidate of candidates) byStatus[candidate.status] += 1;
+  const notes = [
+    "analyze_text_against_library apenas analisa: nenhum card e criado, editado ou apagado; confirme com o usuario antes de criar qualquer item."
+  ];
+  if (byStatus.POSSIBLE_DUPLICATE > 0) {
+    notes.push(
+      "Existem candidatos que podem duplicar significados ja existentes (sentido diferente para a mesma forma, expressao que contem termo conhecido ou erro de digitacao): confirme o sentido com o usuario."
+    );
+  }
+  if (byStatus.AMBIGUOUS > 0) {
+    notes.push(
+      "Existem candidatos ambiguos: palavra conhecida usada apenas dentro de uma expressao nova, ou idioma nao identificado com confianca."
+    );
+  }
+  if (stats.truncated) {
+    notes.push("O inventario atingiu o limite de leitura: a analise cobre apenas os cards lidos.");
+  }
+  if (detection.confidence === "low") {
+    notes.push("Idioma sem evidencia suficiente: informe language explicitamente para uma analise mais estavel.");
+  }
+  const summary = {
+    analyzed_language: language,
+    language_source: detection.source,
+    language_confidence: detection.confidence,
+    language_scores: detection.scores,
+    input: {
+      characters: rawText.length,
+      tokens: tokens.length,
+      unique_surfaces: candidates.length,
+      truncated_input: false
+    },
+    library: {
+      fingerprint: inventory.fingerprint,
+      inventory_version: inventory.version,
+      language,
+      lists: inventory.lists,
+      cards_total: inventory.cardsTotal,
+      cards_scanned: inventory.cardsScanned,
+      pages: inventory.pages,
+      queries: stats.queries,
+      from_cache: stats.fromCache,
+      build_ms: stats.durationMs,
+      truncated: inventory.truncated,
+      terms: inventory.terms,
+      expressions: inventory.expressions,
+      missing_list_ids: inventory.missingListIds,
+      folders: [...filters.folderIds ?? []].sort(),
+      lists_filter: [...filters.listIds ?? []].sort()
+    },
+    counts: {
+      total_candidates: candidates.length,
+      known: alreadyKnownAll.length,
+      new: newAll.length,
+      ambiguous: ambiguousAll.filter((candidate) => candidate.status === "AMBIGUOUS").length,
+      possible_duplicate: byStatus.POSSIBLE_DUPLICATE,
+      ignored_basic: ignoredBasic.reduce((sum, candidate) => sum + candidate.occurrences, 0),
+      ignored_basic_unique: ignoredBasic.length,
+      by_status: byStatus
+    },
+    ignored_basic_sample: ignoredBasic.slice(0, MAX_IGNORED_SAMPLE).map((candidate) => candidate.normalized),
+    truncated: {
+      candidates: candidates.length > MAX_CANDIDATES,
+      already_known: alreadyKnownAll.length > MAX_CANDIDATES,
+      new_vocabulary: newAll.length > MAX_CANDIDATES,
+      ambiguous: ambiguousAll.length > MAX_CANDIDATES
+    },
+    notes
+  };
+  return {
+    analyzed_language: language,
+    candidates: candidates.slice(0, MAX_CANDIDATES),
+    already_known: alreadyKnownAll.slice(0, MAX_CANDIDATES),
+    new_vocabulary: newAll.slice(0, MAX_CANDIDATES),
+    ambiguous: ambiguousAll.slice(0, MAX_CANDIDATES),
+    summary
+  };
+}
+function validateFilters(filters) {
+  for (const [field, values] of [
+    ["folder_ids", filters.folderIds],
+    ["list_ids", filters.listIds]
+  ]) {
+    if (!values) continue;
+    if (!Array.isArray(values)) {
+      throw new McpDomainError("invalid_input", 'O campo "' + field + '" precisa ser uma lista de UUIDs.');
+    }
+    if (values.length > MAX_FILTER_IDS) {
+      throw new McpDomainError(
+        "invalid_input",
+        'O campo "' + field + '" aceita no maximo ' + MAX_FILTER_IDS + " ids por analise.",
+        { hint: "Reduza o escopo da analise (por exemplo, uma pasta por vez)." }
+      );
+    }
+  }
+}
+
+// src/lib/mcp/domain/access.ts
+var ACCESSIBLE_LIST_SELECT = "id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at,folders!inner(id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
+function compactList(row) {
+  const folder = asRow(row.folders);
+  return {
+    id: str(row, "id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    folder_id: str(row, "folder_id"),
+    folder_title: str(folder, "title"),
+    lang: str(row, "lang"),
+    lang_a: str(row, "lang_a"),
+    lang_b: str(row, "lang_b"),
+    primary_side: str(row, "primary_side"),
+    order_index: num(row, "order_index"),
+    updated_at: str(row, "updated_at")
+  };
+}
+function compactFolderRef(row) {
+  const folder = asRow(row.folders);
+  const id = str(folder, "id");
+  if (!id) return null;
+  return { id, ...str(folder, "title") ? { title: str(folder, "title") } : {} };
+}
+async function findAccessibleList(db, listId, scope) {
+  const id = requireUuid(listId, "list_id");
+  const base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("id", id).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
+  const scoped = scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", scope.institutionId);
+  const { data, error } = await scoped.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+var OWNED_FOLDER_SELECT = "id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
+function compactFolderSummary(row) {
+  const institutionId = str(row, "institution_id") ?? null;
+  return {
+    id: str(row, "id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    visibility: str(row, "visibility"),
+    institution_id: institutionId,
+    scope: institutionId ? "institution" : "personal"
+  };
+}
+function folderInstitutionId(row) {
+  return str(row, "institution_id") ?? null;
+}
+async function findOwnedFolder(db, folderId, options = {}) {
+  const id = requireUuid(folderId, "folder_id");
+  let query = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("id", id).eq("owner_id", db.userId).eq("system_kind", "user").is("class_id", null);
+  if (!options.includeDeleted) query = query.is("deleted_at", null);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a pasta.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Pasta n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_folders para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+async function findOwnedList(db, listId, options = {}) {
+  const id = requireUuid(listId, "list_id");
+  let query = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("id", id).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").eq("system_kind", "user");
+  if (!options.includeDeleted) {
+    query = query.is("deleted_at", null).is("folders.deleted_at", null).is("folders.class_id", null);
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+
+// src/lib/mcp/domain/flashcards.ts
+var CARD_SELECT = "id,term,translation,hint,example_text,example_translation,context_tag,layer_index,parent_card_id,created_at";
+var MAX_CARD_TEXT_LENGTH = 300;
+function compactCard(row) {
+  return {
+    id: str(row, "id") ?? "",
+    term: truncatedStr(row, "term", MAX_CARD_TEXT_LENGTH) ?? "",
+    translation: truncatedStr(row, "translation", MAX_CARD_TEXT_LENGTH) ?? "",
+    hint: truncatedStr(row, "hint", MAX_CARD_TEXT_LENGTH),
+    example_text: truncatedStr(row, "example_text", MAX_CARD_TEXT_LENGTH),
+    example_translation: truncatedStr(row, "example_translation", MAX_CARD_TEXT_LENGTH),
+    context_tag: str(row, "context_tag"),
+    layer_index: num(row, "layer_index"),
+    parent_card_id: str(row, "parent_card_id"),
+    created_at: str(row, "created_at")
+  };
+}
+async function readCardPage(db, listId, input) {
+  const { limit, offset } = resolvePage(input, { defaultLimit: DEFAULT_CARD_LIMIT, maxLimit: MAX_CARD_LIMIT });
+  const { data, error, count } = await db.client.from("flashcards").select(CARD_SELECT, { count: "exact" }).eq("list_id", listId).is("deleted_at", null).order("created_at", { ascending: true }).order("id", { ascending: true }).range(offset, offset + limit - 1);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler os flashcards da lista.");
+  const items = asRows(data).map((row) => compactCard(asRow(row) ?? {}));
+  const total = typeof count === "number" ? count : null;
+  return {
+    limit,
+    offset,
+    returned: items.length,
+    total_count: total,
+    has_more: total === null ? items.length === limit : offset + items.length < total,
+    items
+  };
+}
+async function countListCards(db, listId) {
+  const { count, error } = await db.client.from("flashcards").select("id", { count: "exact", head: true }).eq("list_id", listId).is("deleted_at", null);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel contar os flashcards da lista.");
+  return typeof count === "number" ? count : null;
+}
+async function getFlashcards(db, input) {
+  const record = await findAccessibleList(db, input.listId, input.scope);
+  const listId = str(record, "id") ?? "";
+  const page = await readCardPage(db, listId, { limit: input.limit, offset: input.offset });
+  return {
+    list: {
+      id: listId,
+      title: str(record, "title") ?? "",
+      ...str(record, "folder_id") ? { folder_id: str(record, "folder_id") } : {}
+    },
+    ...page
+  };
+}
+
+// src/lib/mcp/learning/supabaseSource.ts
+var INVENTORY_CARD_SELECT = CARD_SELECT + ",list_id,lists!inner(id,system_kind,deleted_at,folders!inner(id,owner_id,system_kind,deleted_at,class_id,institution_id))";
+function asBuilder(value) {
+  return value;
+}
+function scopedCards(base, db, scope, filter) {
+  const owned = base.eq("user_id", db.userId).is("deleted_at", null).eq("lists.system_kind", "user").is("lists.deleted_at", null).eq("lists.folders.owner_id", db.userId).eq("lists.folders.system_kind", "user").is("lists.folders.deleted_at", null).is("lists.folders.class_id", null);
+  const scoped = scope.kind === "personal" ? owned.is("lists.folders.institution_id", null) : owned.eq("lists.folders.institution_id", scope.institutionId);
+  const inFolders = filter.folderIds?.length ? scoped.in("lists.folders.id", filter.folderIds) : scoped;
+  return filter.listIds?.length ? inFolders.in("lists.id", filter.listIds) : inFolders;
+}
+function scopedLists(base, db, scope) {
+  const owned = base.eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
+  return scope.kind === "personal" ? owned.is("folders.institution_id", null) : owned.eq("folders.institution_id", scope.institutionId);
+}
+function toCardRow(raw) {
+  const row = asRow(raw);
+  const id = str(row, "id");
+  const term = truncatedStr(row, "term", MAX_CARD_TEXT_LENGTH);
+  if (!id || !term) return null;
+  return {
+    id,
+    term,
+    translation: truncatedStr(row, "translation", MAX_CARD_TEXT_LENGTH),
+    hint: truncatedStr(row, "hint", MAX_CARD_TEXT_LENGTH),
+    example_text: truncatedStr(row, "example_text", MAX_CARD_TEXT_LENGTH),
+    context_tag: str(row, "context_tag"),
+    list_id: str(row, "list_id"),
+    layer_index: num(row, "layer_index"),
+    parent_card_id: str(row, "parent_card_id"),
+    created_at: str(row, "created_at")
+  };
+}
+function createSupabaseVocabularySource(db, scope) {
+  let queries = 0;
+  let scopeChecked = null;
+  const ensureScope = () => {
+    if (!scopeChecked) scopeChecked = assertScopeAccessible(db, scope);
+    return scopeChecked;
+  };
+  return {
+    async countLists() {
+      await ensureScope();
+      queries += 1;
+      const base = asBuilder(db.client.from("lists").select("id", { count: "exact", head: true }));
+      const { count, error } = await scopedLists(base, db, scope);
+      if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel contar as listas desta biblioteca.");
+      return typeof count === "number" ? count : null;
+    },
+    async resolveListIds(listIds) {
+      await ensureScope();
+      queries += 1;
+      const base = asBuilder(db.client.from("lists").select("id,title"));
+      const { data, error } = await scopedLists(base, db, scope).in("id", listIds);
+      if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar as listas informadas.");
+      const accessible = asRows(data).map((row) => str(asRow(row), "id")).filter((value) => Boolean(value));
+      const known = new Set(accessible.map((value) => value.toLowerCase()));
+      return {
+        accessible,
+        missing: listIds.filter((value) => !known.has(value.toLowerCase()))
+      };
+    },
+    async countCards(filter) {
+      await ensureScope();
+      queries += 1;
+      const base = asBuilder(db.client.from("flashcards").select("id", { count: "exact", head: true }));
+      const { count, error } = await scopedCards(base, db, scope, filter);
+      if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel contar os flashcards desta biblioteca.");
+      return typeof count === "number" ? count : null;
+    },
+    async readCardPage(filter, page) {
+      await ensureScope();
+      queries += 1;
+      const base = asBuilder(db.client.from("flashcards").select(INVENTORY_CARD_SELECT, { count: "exact" }));
+      const { data, error } = await scopedCards(base, db, scope, filter).order("created_at", { ascending: true }).order("id", { ascending: true }).range(page.offset, page.offset + page.limit - 1);
+      if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler os flashcards desta biblioteca.");
+      return asRows(data).map((row) => toCardRow(row)).filter((row) => row !== null);
+    },
+    queryCount() {
+      return queries;
+    }
+  };
+}
+
+// src/lib/mcp/tools/analyzeText.ts
+var scopeSchema = z.object({
+  kind: z.enum(["personal", "institution"]).describe('Escopo da biblioteca: "personal" (padrao) ou "institution".'),
+  institution_id: z.string().uuid().optional().describe('Obrigatorio quando kind = "institution"; descubra o id com get_my_profile.')
+}).strict();
+function resolveScope(raw) {
+  if (!raw || raw.kind === "personal") return PERSONAL_SCOPE;
+  if (!raw.institution_id) {
+    throw new McpDomainError("invalid_input", 'O escopo "institution" exige "institution_id".', {
+      hint: "Use get_my_profile para descobrir os escopos disponiveis desta conta."
+    });
+  }
+  return { kind: "institution", institutionId: requireUuid(raw.institution_id, "institution_id") };
+}
+var analyzeText_default = defineTool({
+  name: "analyze_text_against_library",
+  title: "Analyze text against my vocabulary",
+  description: `Linguistic analysis of a text against the authenticated account's own library: which words/expressions the learner ALREADY has (exact form, spelling variant, inflection/lemma, phrasal verb or multi-word expression) and which are genuinely NEW to this library. Normalization is real: casefold, punctuation, contractions, plural/singular, verb inflection, spelling variants and multi-word expressions are compared as whole units, so "look", "look for", "look after" and "look up to" are never collapsed into each other. Very basic function words (articles, particles, prepositions) are ignored by default, but expressions that contain them are still analyzed; set ignore_basic_function_words=true/false to include them. Each candidate is classified as IGNORE_BASIC, KNOWN_EXACT, KNOWN_VARIANT, KNOWN_LEMMA, KNOWN_EXPRESSION, POSSIBLE_DUPLICATE, NEW or AMBIGUOUS, with evidence (matched card, existing senses, context sentence). Duplicates are not decided by term alone: translation, definition, example and context are considered, so a second sense of an existing term ("bank" as a river margin vs a financial bank) is reported as POSSIBLE_DUPLICATE instead of being silently treated as known. This tool ONLY analyzes: it never creates, edits or deletes cards. The heavy work (building the library index with aggregated, paginated queries) runs on the server; the model receives only the candidates that appear in the text. Always confirm with the user before creating anything, and never claim a word is new without reading the returned evidence.`,
+  inputSchema: {
+    text: z.string().min(1).max(MAX_TEXT_CHARS).describe(
+      "Text to analyze (any language). Hard limits: " + MAX_TEXT_CHARS + " characters and " + MAX_TEXT_TOKENS + " words per call; split longer texts."
+    ),
+    language: z.enum(["en", "pt"]).optional().describe("Language of the text. Omit to let the engine detect it (the result reports analyzed_language and confidence)."),
+    scope: scopeSchema.optional().describe("Library scope to compare against. Default: personal library."),
+    folder_ids: z.array(z.string().uuid()).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these folders (max " + MAX_FILTER_IDS + " ids)."),
+    list_ids: z.array(z.string().uuid()).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these lists (max " + MAX_FILTER_IDS + " ids)."),
+    ignore_basic_function_words: z.boolean().optional().describe("Default true: basic articles/particles/prepositions are classified IGNORE_BASIC. Set false to treat them as normal candidates.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const scope = resolveScope(args.scope);
+      const result = await analyzeTextAgainstLibrary({
+        text: args.text,
+        language: args.language,
+        source: createSupabaseVocabularySource(db, scope),
+        filters: { folderIds: args.folder_ids, listIds: args.list_ids },
+        ignoreBasicFunctionWords: args.ignore_basic_function_words,
+        cacheKey: inventoryCacheKey(db.userId, scope.kind === "institution" ? scope.institutionId : null),
+        cacheMode: "use",
+        scopeName: scopeName(scope)
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "analyze_text_against_library");
+    }
+  }
+});
 
 // src/lib/mcp/tools/echo.ts
-import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
-import { z } from "npm:zod@^3.23.8";
-var echo_default = defineTool({
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z2 } from "npm:zod@^3.23.8";
+var echo_default = defineTool2({
   name: "echo",
   title: "Echo",
   description: "Echo the input text back to the caller. Use to verify connectivity.",
-  inputSchema: { text: z.string().min(1).describe("Text to echo back.") },
+  inputSchema: { text: z2.string().min(1).describe("Text to echo back.") },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: ({ text }) => ({ content: [{ type: "text", text }] })
 });
 
+// src/lib/mcp/tools/getFlashcards.ts
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z3 } from "npm:zod@^3.23.8";
+var getFlashcards_default = defineTool3({
+  name: "get_flashcards",
+  title: "Get flashcards of a list",
+  description: "Returns one bounded page of flashcards of a list owned by the authenticated account, ordered like the study deck (created_at, id). Responses are always paginated: read returned/total_count/has_more and continue with offset when the user really asked for more. Never use this to dump a whole library into the conversation; for vocabulary analysis prefer search_my_content and narrow queries.",
+  inputSchema: {
+    list_id: z3.string().uuid().describe("List uuid discovered via list_lists or search_my_content."),
+    limit: z3.number().int().min(1).max(100).optional().describe("Cards per page. Default 25, hard cap 100."),
+    offset: z3.number().int().min(0).optional().describe("Pagination offset, default 0.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await getFlashcards(db, {
+        scope: PERSONAL_SCOPE,
+        listId: args.list_id,
+        limit: args.limit,
+        offset: args.offset
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "get_flashcards");
+    }
+  }
+});
+
+// src/lib/mcp/tools/getList.ts
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z4 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/lists.ts
+async function listLists(db, input) {
+  await assertScopeAccessible(db, input.scope);
+  const { limit, offset } = resolvePage(input, { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE });
+  const folderId = input.folderId === void 0 || input.folderId === null ? void 0 : requireUuid(input.folderId, "folder_id");
+  const search = input.search === void 0 || input.search === null ? void 0 : sanitizeSearchTerm(input.search);
+  const base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT, { count: "exact" }).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
+  const scoped = input.scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", input.scope.institutionId);
+  const inFolder = folderId ? scoped.eq("folder_id", folderId) : scoped;
+  const filtered = search ? inFolder.or(`title.ilike.%${search}%,description.ilike.%${search}%`) : inFolder;
+  const { data, error, count } = await filtered.order("updated_at", { ascending: false }).order("id", { ascending: true }).range(offset, offset + limit - 1);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as listas.");
+  const items = asRows(data).map((row) => compactList(asRow(row) ?? {}));
+  const total = typeof count === "number" ? count : null;
+  return {
+    scope: scopeName(input.scope),
+    folder_id: folderId ?? null,
+    limit,
+    offset,
+    returned: items.length,
+    total_count: total,
+    has_more: total === null ? items.length === limit : offset + items.length < total,
+    items
+  };
+}
+async function getList(db, input) {
+  await assertScopeAccessible(db, input.scope);
+  const record = await findAccessibleList(db, input.listId, input.scope);
+  const listId = String(record.id);
+  const payload = {
+    scope: scopeName(input.scope),
+    list: compactList(record),
+    folder: compactFolderRef(record),
+    card_count: await countListCards(db, listId)
+  };
+  if (input.includeCards === true) {
+    const page = await readCardPage(db, listId, {
+      limit: input.cardsLimit ?? DEFAULT_CARD_LIMIT,
+      offset: input.cardsOffset ?? 0
+    });
+    payload.cards = page.items;
+    payload.cards_page = {
+      limit: page.limit,
+      offset: page.offset,
+      returned: page.returned,
+      has_more: page.has_more,
+      total_count: page.total_count
+    };
+  }
+  return payload;
+}
+
+// src/lib/mcp/tools/getList.ts
+var getList_default = defineTool4({
+  name: "get_list",
+  title: "Get one list",
+  description: "Returns one list of the authenticated account: metadata, owning folder, and the exact card_count. Cards are returned only when include_cards is true, and then as one bounded page (cards_limit, cards_offset). Calling it with an id that is not in this account returns a controlled not_found \u2014 do not retry the same id, resolve it with list_lists or search_my_content instead.",
+  inputSchema: {
+    list_id: z4.string().uuid().describe("List uuid, discovered via list_lists or search_my_content."),
+    include_cards: z4.boolean().optional().describe("When true, also returns a page of cards. Default false keeps the response small."),
+    cards_limit: z4.number().int().min(1).max(100).optional().describe("Cards per page when include_cards is true. Default 25, hard cap 100."),
+    cards_offset: z4.number().int().min(0).optional().describe("Card pagination offset when include_cards is true. Default 0.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await getList(db, {
+        scope: PERSONAL_SCOPE,
+        listId: args.list_id,
+        includeCards: args.include_cards,
+        cardsLimit: args.cards_limit,
+        cardsOffset: args.cards_offset
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "get_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/getMyProfile.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.1";
+
+// src/lib/mcp/domain/profile.ts
+var PROFILE_SELECT = "id,first_name,avatar_url,is_teacher,level,public_slug";
+async function getMyProfile(db) {
+  const { data, error } = await db.client.from("profiles").select(PROFILE_SELECT).eq("id", db.userId).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler o perfil da conta.");
+  const record = asRow(data);
+  const profile = record ? {
+    first_name: str(record, "first_name"),
+    avatar_url: str(record, "avatar_url"),
+    is_teacher: bool(record, "is_teacher"),
+    level: num(record, "level"),
+    public_slug: str(record, "public_slug")
+  } : null;
+  return {
+    user_id: db.userId,
+    profile,
+    scopes: await listAccessibleScopes(db)
+  };
+}
+
+// src/lib/mcp/tools/getMyProfile.ts
+var getMyProfile_default = defineTool5({
+  name: "get_my_profile",
+  title: "Get my APE Piteco account",
+  description: "Returns the authenticated APE Piteco account: user id, minimal profile fields, and the library scopes available (personal library plus every institution hub the account owns). Call this first to answer 'where am I' before listing or searching content. Read-only, no arguments. Response: {ok:true,user_id,profile,scopes} or {ok:false,error:{code,message,hint}}.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (_args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await getMyProfile(db);
+      return toolSuccess({ scope: "personal", ...result });
+    } catch (error) {
+      return toolErrorResult(error, "get_my_profile");
+    }
+  }
+});
+
+// src/lib/mcp/tools/listFolders.ts
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z5 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/folders.ts
+var FOLDER_SELECT = "id,title,description,visibility,lang_a,lang_b,tts_enabled,updated_at,lists(id,deleted_at,system_kind)";
+function countUserLists(embedded) {
+  return asRows(embedded).filter((item) => {
+    const record = asRow(item);
+    if (!record) return false;
+    return record.deleted_at == null && (record.system_kind == null || record.system_kind === "user");
+  }).length;
+}
+function compactFolder(row) {
+  return {
+    id: str(row, "id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    visibility: str(row, "visibility"),
+    lang_a: str(row, "lang_a"),
+    lang_b: str(row, "lang_b"),
+    tts_enabled: bool(row, "tts_enabled"),
+    list_count: countUserLists(row.lists),
+    updated_at: str(row, "updated_at")
+  };
+}
+async function listFolders(db, input) {
+  await assertScopeAccessible(db, input.scope);
+  const { limit, offset } = resolvePage(input, { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE });
+  const search = input.search === void 0 || input.search === null ? void 0 : sanitizeSearchTerm(input.search);
+  const base = db.client.from("folders").select(FOLDER_SELECT, { count: "exact" }).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).is("class_id", null);
+  const scoped = input.scope.kind === "personal" ? base.is("institution_id", null) : base.eq("institution_id", input.scope.institutionId);
+  const filtered = search ? scoped.or(`title.ilike.%${search}%,description.ilike.%${search}%`) : scoped;
+  const { data, error, count } = await filtered.order("updated_at", { ascending: false }).order("id", { ascending: true }).range(offset, offset + limit - 1);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as pastas.");
+  const items = asRows(data).map((row) => compactFolder(asRow(row) ?? {}));
+  const total = typeof count === "number" ? count : null;
+  return {
+    scope: scopeName(input.scope),
+    limit,
+    offset,
+    returned: items.length,
+    total_count: total,
+    has_more: total === null ? items.length === limit : offset + items.length < total,
+    items
+  };
+}
+
+// src/lib/mcp/tools/listFolders.ts
+var listFolders_default = defineTool6({
+  name: "list_folders",
+  title: "List my folders",
+  description: "Lists folders of the authenticated account's personal library (newest activity first), with the number of user lists inside each folder. Excludes trash, system collections (Refor\xE7o / Pontos de aten\xE7\xE3o) and classroom content. Paginated: use limit/offset and read returned/total_count/has_more. Use this to resolve a folder name spoken by the user into a folder_id; never invent or reuse ids from memory.",
+  inputSchema: {
+    search: z5.string().min(1).max(80).optional().describe("Optional plain-text filter over folder title and description. Wildcards are ignored."),
+    limit: z5.number().int().min(1).max(50).optional().describe("Folders per page. Default 20, hard cap 50."),
+    offset: z5.number().int().min(0).optional().describe("Pagination offset, default 0. Combine with has_more/total_count.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await listFolders(db, {
+        scope: PERSONAL_SCOPE,
+        search: args.search,
+        limit: args.limit,
+        offset: args.offset
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "list_folders");
+    }
+  }
+});
+
+// src/lib/mcp/tools/listLists.ts
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z6 } from "npm:zod@^3.23.8";
+var listLists_default = defineTool7({
+  name: "list_lists",
+  title: "List my lists",
+  description: "Lists study lists of the authenticated account's personal library, newest activity first, optionally restricted to one folder. Excludes trash, system collections (Refor\xE7o / Pontos de aten\xE7\xE3o) and classroom content. Paginated via limit/offset (returned/total_count/has_more). Each item carries folder_id/folder_title so you can navigate without extra calls. Resolve folder_id with list_folders first; never invent ids.",
+  inputSchema: {
+    folder_id: z6.string().uuid().optional().describe("Restrict the result to this folder (uuid from list_folders)."),
+    search: z6.string().min(1).max(80).optional().describe("Optional plain-text filter over list title and description."),
+    limit: z6.number().int().min(1).max(50).optional().describe("Lists per page. Default 20, hard cap 50."),
+    offset: z6.number().int().min(0).optional().describe("Pagination offset, default 0.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await listLists(db, {
+        scope: PERSONAL_SCOPE,
+        folderId: args.folder_id,
+        search: args.search,
+        limit: args.limit,
+        offset: args.offset
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "list_lists");
+    }
+  }
+});
+
+// src/lib/mcp/tools/searchMyContent.ts
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z7 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/search.ts
+var SEARCH_TYPES = ["folders", "lists", "flashcards"];
+var DEFAULT_SEARCH_LIMIT = 10;
+var FOLDER_SEARCH_SELECT = "id,title,description,updated_at";
+var CARD_SEARCH_SELECT = "id,term,translation,hint,updated_at,lists!inner(id,owner_id,system_kind,deleted_at,folders!inner(id,owner_id,system_kind,deleted_at,class_id,institution_id))";
+function normalizeTypes(raw) {
+  if (raw === void 0 || raw === null) return [...SEARCH_TYPES];
+  const values = Array.isArray(raw) ? raw : [raw];
+  const selected = values.filter(
+    (value) => typeof value === "string" && SEARCH_TYPES.includes(value)
+  );
+  if (!selected.length) {
+    throw new McpDomainError(
+      "invalid_input",
+      'O campo "types" aceita apenas "folders", "lists" e "flashcards".'
+    );
+  }
+  return Array.from(new Set(selected));
+}
+function likePattern(term) {
+  return `%${term}%`;
+}
+async function searchFolders(db, scope, pattern, limit) {
+  const base = db.client.from("folders").select(FOLDER_SEARCH_SELECT, { count: "exact" }).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).is("class_id", null);
+  const scoped = scope.kind === "personal" ? base.is("institution_id", null) : base.eq("institution_id", scope.institutionId);
+  const { data, error, count } = await scoped.or(`title.ilike.${pattern},description.ilike.${pattern}`).order("updated_at", { ascending: false }).order("id", { ascending: true }).limit(limit);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel buscar nas pastas.");
+  const items = asRows(data).map((raw) => {
+    const row = asRow(raw) ?? {};
+    return {
+      type: "folder",
+      id: str(row, "id") ?? "",
+      title: str(row, "title") ?? "",
+      context: truncatedStr(row, "description", 160),
+      updated_at: str(row, "updated_at")
+    };
+  });
+  return { items, total: typeof count === "number" ? count : null };
+}
+async function searchLists(db, scope, pattern, limit) {
+  const base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT, { count: "exact" }).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
+  const scoped = scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", scope.institutionId);
+  const { data, error, count } = await scoped.or(`title.ilike.${pattern},description.ilike.${pattern}`).order("updated_at", { ascending: false }).order("id", { ascending: true }).limit(limit);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel buscar nas listas.");
+  const items = asRows(data).map((raw) => {
+    const row = asRow(raw) ?? {};
+    const folder = asRow(row.folders);
+    return {
+      type: "list",
+      id: str(row, "id") ?? "",
+      title: str(row, "title") ?? "",
+      context: truncatedStr(row, "description", 160),
+      folder_id: str(row, "folder_id"),
+      folder_title: str(folder, "title"),
+      updated_at: str(row, "updated_at")
+    };
+  });
+  return { items, total: typeof count === "number" ? count : null };
+}
+async function searchCards(db, scope, pattern, limit, listId) {
+  const base = db.client.from("flashcards").select(CARD_SEARCH_SELECT, { count: "exact" }).eq("user_id", db.userId).is("deleted_at", null);
+  const activeList = listId ? base.eq("list_id", listId) : base.eq("lists.system_kind", "user").is("lists.deleted_at", null).eq("lists.folders.owner_id", db.userId).eq("lists.folders.system_kind", "user").is("lists.folders.deleted_at", null).is("lists.folders.class_id", null);
+  const scoped = listId ? activeList : scope.kind === "personal" ? activeList.is("lists.folders.institution_id", null) : activeList.eq("lists.folders.institution_id", scope.institutionId);
+  const { data, error, count } = await scoped.or(`term.ilike.${pattern},translation.ilike.${pattern},example_text.ilike.${pattern}`).order("updated_at", { ascending: false }).order("id", { ascending: true }).limit(limit);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel buscar nos flashcards.");
+  const items = asRows(data).map((raw) => {
+    const row = asRow(raw) ?? {};
+    const list = asRow(row.lists);
+    const folder = asRow(list?.folders);
+    return {
+      type: "flashcard",
+      id: str(row, "id") ?? "",
+      title: str(row, "term") ?? "",
+      context: truncatedStr(row, "translation", 160),
+      folder_id: str(folder, "id"),
+      folder_title: str(folder, "title"),
+      list_id: str(list, "id"),
+      updated_at: str(row, "updated_at")
+    };
+  });
+  return { items, total: typeof count === "number" ? count : null };
+}
+function mergeGroups(groups, limit) {
+  const merged = [];
+  let index = 0;
+  while (merged.length < limit) {
+    let progressed = false;
+    for (const group of groups) {
+      if (merged.length >= limit) break;
+      const item = group.items[index];
+      if (!item) continue;
+      merged.push(item);
+      progressed = true;
+    }
+    if (!progressed) break;
+    index += 1;
+  }
+  return merged;
+}
+async function searchMyContent(db, input) {
+  await assertScopeAccessible(db, input.scope);
+  const query = sanitizeSearchTerm(input.query);
+  const { limit } = resolvePage(input, { defaultLimit: DEFAULT_SEARCH_LIMIT, maxLimit: MAX_SEARCH_LIMIT });
+  const pattern = likePattern(query);
+  const requested = normalizeTypes(input.types);
+  const scopedListId = input.listId === void 0 || input.listId === null ? void 0 : requireUuid(input.listId, "list_id");
+  if (scopedListId) await findAccessibleList(db, scopedListId, input.scope);
+  const [foldersGroup, listsGroup, cardsGroup] = await Promise.all([
+    !scopedListId && requested.includes("folders") ? searchFolders(db, input.scope, pattern, limit) : Promise.resolve({ items: [], total: null }),
+    !scopedListId && requested.includes("lists") ? searchLists(db, input.scope, pattern, limit) : Promise.resolve({ items: [], total: null }),
+    requested.includes("flashcards") ? searchCards(db, input.scope, pattern, limit, scopedListId) : Promise.resolve({ items: [], total: null })
+  ]);
+  const groups = [foldersGroup, listsGroup, cardsGroup];
+  const items = mergeGroups(groups, limit);
+  const counts = {
+    folders: foldersGroup.total,
+    lists: listsGroup.total,
+    flashcards: cardsGroup.total
+  };
+  const knownTotal = (counts.folders ?? 0) + (counts.lists ?? 0) + (counts.flashcards ?? 0);
+  return {
+    scope: scopeName(input.scope),
+    query,
+    limit,
+    returned: items.length,
+    list_id: scopedListId ?? null,
+    counts,
+    truncated: knownTotal > items.length,
+    items
+  };
+}
+
+// src/lib/mcp/tools/searchMyContent.ts
+var searchMyContent_default = defineTool8({
+  name: "search_my_content",
+  title: "Search my library",
+  description: "Literal, case-insensitive search across the authenticated account's own content: folders, lists and flashcards (term, translation and example). Results are compact and hard-capped by limit: the response reports per-type counts and truncated=true when more matched. This is discovery, not linguistic analysis: it never decides whether a word is genuinely new vocabulary, and it never touches other accounts, classroom content or system collections. When list_id is given, the search is confined to that list's cards.",
+  inputSchema: {
+    query: z7.string().min(1).max(80).describe("Plain-text term to look for (accents are significant). Wildcards are ignored."),
+    limit: z7.number().int().min(1).max(25).describe("Required. Hard budget of returned items, 1-25. Use a small value first and narrow with types."),
+    types: z7.array(z7.enum(SEARCH_TYPES)).optional().describe('Restrict to any of "folders", "lists", "flashcards". Default: all three.'),
+    list_id: z7.string().uuid().optional().describe("Optional list uuid to confine the search to one list's cards.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await searchMyContent(db, {
+        scope: PERSONAL_SCOPE,
+        query: args.query,
+        limit: args.limit,
+        types: args.types,
+        listId: args.list_id
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "search_my_content");
+    }
+  }
+});
+
+// src/lib/mcp/tools/addFlashcards.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z8 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/confirmation.ts
+var CONFIRMATION_TTL_SECONDS = 600;
+var encoder = new TextEncoder();
+function base64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function canonical(claim, expiresAtSeconds) {
+  const targetIds = [...claim.targetIds ?? []].map((id) => id.toLowerCase()).sort().join(",");
+  return [
+    claim.action,
+    claim.userId,
+    claim.objectId,
+    claim.scope ?? "",
+    targetIds,
+    String(claim.expectedCount),
+    claim.stateFingerprint ?? "",
+    String(expiresAtSeconds)
+  ].join("|");
+}
+async function confirmationStateFingerprint(rows) {
+  const normalized = rows.map((row) => ({
+    kind: row.kind,
+    id: row.id,
+    updatedAt: row.updatedAt ?? null,
+    deletedAt: row.deletedAt ?? null
+  })).sort(
+    (left, right) => `${left.kind}|${left.id}|${String(left.updatedAt)}|${String(left.deletedAt)}`.localeCompare(`${right.kind}|${right.id}|${String(right.updatedAt)}|${String(right.deletedAt)}`)
+  );
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(JSON.stringify(normalized)));
+  return base64Url(new Uint8Array(digest));
+}
+async function sign(key, message) {
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await globalThis.crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return base64Url(new Uint8Array(signature)).slice(0, 22);
+}
+function constantTimeEquals(left, right) {
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+}
+async function createConfirmationToken(key, claim, nowMs = Date.now()) {
+  const expiresAtSeconds = Math.floor(nowMs / 1e3) + CONFIRMATION_TTL_SECONDS;
+  const signature = await sign(key, canonical(claim, expiresAtSeconds));
+  return {
+    token: `${signature}.${expiresAtSeconds}`,
+    expires_at: new Date(expiresAtSeconds * 1e3).toISOString(),
+    ttl_seconds: CONFIRMATION_TTL_SECONDS
+  };
+}
+function reject(hint) {
+  throw new McpDomainError("confirmation_required", "Confirma\xE7\xE3o inv\xE1lida para esta opera\xE7\xE3o.", { hint });
+}
+async function verifyConfirmationToken(key, token, claim, nowMs = Date.now()) {
+  if (typeof token !== "string" || token.length < 10 || !token.includes(".")) {
+    reject("Fa\xE7a o preview da opera\xE7\xE3o (dry_run) e envie o confirmation_token devolvido por ele.");
+  }
+  const separator = token.indexOf(".");
+  const signature = token.slice(0, separator);
+  const expiresAtSeconds = Number(token.slice(separator + 1));
+  if (!Number.isInteger(expiresAtSeconds)) {
+    reject("Token malformado: fa\xE7a um novo preview da opera\xE7\xE3o.");
+  }
+  if (expiresAtSeconds <= Math.floor(nowMs / 1e3)) {
+    reject("O confirmation_token expirou; fa\xE7a um novo preview da opera\xE7\xE3o.");
+  }
+  const expected = await sign(key, canonical(claim, expiresAtSeconds));
+  if (!constantTimeEquals(signature, expected)) {
+    reject(
+      "Confirmation_token n\xE3o corresponde a esta opera\xE7\xE3o/estado; fa\xE7a um novo preview e confirme o que ele mostrar."
+    );
+  }
+}
+
+// src/lib/mcp/domain/validation.ts
+function fail(message, hint) {
+  throw new McpDomainError("invalid_input", message, hint ? { hint } : {});
+}
+function clean(raw) {
+  return typeof raw === "string" ? raw.trim().replace(/\s+/g, " ") : "";
+}
+function requireText(raw, field, maxLength) {
+  const value = clean(raw);
+  if (!value) fail(`O campo "${field}" \xE9 obrigat\xF3rio e n\xE3o pode ficar vazio.`);
+  if (value.length > maxLength) fail(`O campo "${field}" excede ${maxLength} caracteres.`);
+  return value;
+}
+function optionalText(raw, field, maxLength) {
+  if (raw === void 0) return void 0;
+  if (raw === null) return null;
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return null;
+  if (value.length > maxLength) fail(`O campo "${field}" excede ${maxLength} caracteres.`);
+  return value;
+}
+function requireEnum(raw, field, allowed) {
+  if (typeof raw === "string" && allowed.includes(raw)) return raw;
+  fail(`O campo "${field}" aceita apenas: ${allowed.join(", ")}.`);
+}
+function optionalEnum(raw, field, allowed) {
+  if (raw === void 0 || raw === null) return void 0;
+  return requireEnum(raw, field, allowed);
+}
+function optionalBoolean(raw, field) {
+  if (raw === void 0 || raw === null) return void 0;
+  if (typeof raw !== "boolean") fail(`O campo "${field}" precisa ser true ou false.`);
+  return raw;
+}
+var LANGUAGE_TAG = /^[a-z]{2}(-[A-Za-z]{2,4})?$/;
+var LANGUAGE_HINTS = {
+  english: "en",
+  ingles: "en",
+  "ingl\xEAs": "en",
+  portuguese: "pt",
+  portugues: "pt",
+  "portugu\xEAs": "pt",
+  spanish: "es",
+  espanhol: "es",
+  french: "fr",
+  frances: "fr",
+  "franc\xEAs": "fr",
+  german: "de",
+  alemao: "de",
+  "alem\xE3o": "de",
+  italian: "it",
+  italiano: "it"
+};
+function optionalLanguageTag(raw, field, emptyValue) {
+  if (raw === void 0) return void 0;
+  if (raw === null) return null;
+  const value = clean(raw);
+  if (!value) return emptyValue === void 0 ? null : emptyValue;
+  const hint = LANGUAGE_HINTS[value.toLowerCase()];
+  if (hint) return hint;
+  if (LANGUAGE_TAG.test(value)) {
+    const [base, region] = value.split("-");
+    return region ? `${base.toLowerCase()}-${region.toUpperCase()}` : base.toLowerCase();
+  }
+  fail(`O campo "${field}" precisa ser um c\xF3digo de idioma como "en", "pt" ou "pt-BR".`);
+}
+function requireUuidList(raw, field, maxItems) {
+  if (!Array.isArray(raw) || raw.length === 0) fail(`O campo "${field}" precisa ser uma lista n\xE3o vazia de UUIDs.`);
+  if (raw.length > maxItems) fail(`O campo "${field}" aceita no m\xE1ximo ${maxItems} itens por chamada.`);
+  const seen = /* @__PURE__ */ new Set();
+  for (const item of raw) {
+    if (typeof item !== "string" || !UUID.test(item.trim())) {
+      fail(`O campo "${field}" cont\xE9m um valor que n\xE3o \xE9 UUID.`);
+    }
+    seen.add(item.trim().toLowerCase());
+  }
+  return Array.from(seen);
+}
+var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// src/lib/mcp/domain/cardWrites.ts
+var MAX_BATCH_CARDS = 200;
+var CARD_TEXT_MAX = 2e3;
+var CARD_CONTEXT_TAG_MAX = 80;
+var MAX_WORD_HINTS_BYTES = 2e4;
+var MAX_REMOVAL_WITHOUT_CONFIRMATION = 25;
+var TRASH_RETENTION_DAYS = 7;
+function normalizeWordHints(raw) {
+  if (raw === void 0 || raw === null) return null;
+  const isContainer = Array.isArray(raw) || typeof raw === "object" && raw !== null;
+  if (!isContainer) {
+    throw new McpDomainError("invalid_input", '"word_hints" precisa ser um objeto ou uma lista JSON.');
+  }
+  let serialized = "";
+  try {
+    serialized = JSON.stringify(raw);
+  } catch {
+    throw new McpDomainError("invalid_input", '"word_hints" n\xE3o \xE9 JSON serializ\xE1vel.');
+  }
+  if (serialized.length > MAX_WORD_HINTS_BYTES) {
+    throw new McpDomainError("invalid_input", `"word_hints" excede ${MAX_WORD_HINTS_BYTES} bytes.`);
+  }
+  return raw;
+}
+function optionalLayerIndex(raw) {
+  if (raw === void 0 || raw === null) return null;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 50) {
+    throw new McpDomainError("invalid_input", '"layer_index" precisa ser um inteiro entre 0 e 50.');
+  }
+  return value;
+}
+function optionalParentId(raw) {
+  if (raw === void 0 || raw === null) return null;
+  if (typeof raw !== "string" || !UUID.test(raw.trim())) {
+    throw new McpDomainError("invalid_input", '"parent_card_id" precisa ser um UUID.');
+  }
+  return raw.trim().toLowerCase();
+}
+function optionalUrl(raw, field) {
+  const value = optionalText(raw, field, CARD_TEXT_MAX);
+  return value ?? null;
+}
+function normalizeNewCard(raw, index) {
+  const record = asRow(raw);
+  if (!record) {
+    throw new McpDomainError("invalid_input", `O card ${index + 1} precisa ser um objeto com term e translation.`);
+  }
+  return {
+    term: requireText(record.term, `cards[${index}].term`, CARD_TEXT_MAX),
+    translation: requireText(record.translation, `cards[${index}].translation`, CARD_TEXT_MAX),
+    hint: optionalText(record.hint, `cards[${index}].hint`, CARD_TEXT_MAX) ?? null,
+    example_text: optionalText(record.example_text, `cards[${index}].example_text`, CARD_TEXT_MAX) ?? null,
+    example_translation: optionalText(record.example_translation, `cards[${index}].example_translation`, CARD_TEXT_MAX) ?? null,
+    context_tag: optionalText(record.context_tag, `cards[${index}].context_tag`, CARD_CONTEXT_TAG_MAX) ?? null,
+    image_url_a: optionalUrl(record.image_url_a, `cards[${index}].image_url_a`),
+    image_url_b: optionalUrl(record.image_url_b, `cards[${index}].image_url_b`),
+    word_hints: normalizeWordHints(record.word_hints),
+    layer_index: optionalLayerIndex(record.layer_index),
+    parent_card_id: optionalParentId(record.parent_card_id)
+  };
+}
+function normalizeCardPatch(raw, index = 0) {
+  const record = asRow(raw);
+  if (!record) {
+    throw new McpDomainError("invalid_input", "Os valores de edi\xE7\xE3o precisam ser um objeto.");
+  }
+  const patch = {};
+  if (record.term !== void 0) patch.term = requireText(record.term, `updates[${index}].term`, CARD_TEXT_MAX);
+  if (record.translation !== void 0) {
+    patch.translation = requireText(record.translation, `updates[${index}].translation`, CARD_TEXT_MAX);
+  }
+  if (record.hint !== void 0) patch.hint = optionalText(record.hint, "hint", CARD_TEXT_MAX);
+  if (record.example_text !== void 0) {
+    patch.example_text = optionalText(record.example_text, "example_text", CARD_TEXT_MAX);
+  }
+  if (record.example_translation !== void 0) {
+    patch.example_translation = optionalText(record.example_translation, "example_translation", CARD_TEXT_MAX);
+  }
+  if (record.context_tag !== void 0) {
+    patch.context_tag = optionalText(record.context_tag, "context_tag", CARD_CONTEXT_TAG_MAX);
+  }
+  if (record.image_url_a !== void 0) patch.image_url_a = optionalUrl(record.image_url_a, "image_url_a");
+  if (record.image_url_b !== void 0) patch.image_url_b = optionalUrl(record.image_url_b, "image_url_b");
+  if (record.word_hints !== void 0) patch.word_hints = normalizeWordHints(record.word_hints);
+  if (record.layer_index !== void 0) patch.layer_index = optionalLayerIndex(record.layer_index);
+  if (Object.keys(patch).length === 0) {
+    throw new McpDomainError("invalid_input", "Nenhum campo edit\xE1vel foi informado.", {
+      hint: "Campos aceitos: term, translation, hint, example_text, example_translation, context_tag, word_hints, image_url_a, image_url_b, layer_index."
+    });
+  }
+  return patch;
+}
+function cardKey(term, translation) {
+  return `${term.trim().toLowerCase().replace(/\s+/g, " ")}|${translation.trim().toLowerCase().replace(/\s+/g, " ")}`;
+}
+async function addCards(db, input) {
+  const list = await findOwnedList(db, input.list_id);
+  const listId = String(list.id);
+  if (!Array.isArray(input.cards) || input.cards.length === 0) {
+    throw new McpDomainError("invalid_input", '"cards" precisa ser uma lista n\xE3o vazia.');
+  }
+  if (input.cards.length > MAX_BATCH_CARDS) {
+    throw new McpDomainError("invalid_input", `"cards" aceita no m\xE1ximo ${MAX_BATCH_CARDS} cards por chamada.`);
+  }
+  const policy = input.on_duplicate === "insert" ? "insert" : "skip";
+  const normalized = input.cards.map((card, index) => normalizeNewCard(card, index));
+  const parentIds = Array.from(new Set(normalized.map((card) => card.parent_card_id).filter(Boolean)));
+  if (parentIds.length > 0) {
+    const { data: data2, error: error2 } = await db.client.from("flashcards").select("id").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", parentIds);
+    if (error2) throw toMcpDomainError(error2, "N\xE3o foi poss\xEDvel validar os cards pai.");
+    const found = new Set(asRows(data2).map((row) => str(asRow(row), "id")));
+    const missingParent = parentIds.filter((id) => !found.has(id));
+    if (missingParent.length > 0) {
+      throw new McpDomainError("not_found", "Um card pai informado n\xE3o existe nesta lista.", {
+        hint: "Camadas exigem parent_card_id de um card ativo da mesma lista; use get_flashcards para descobrir o id."
+      });
+    }
+  }
+  const skipped = [];
+  let toInsert = normalized;
+  if (policy === "skip") {
+    const candidates = Array.from(
+      new Set(normalized.flatMap((card) => [card.term, card.term.toLowerCase()]))
+    );
+    const { data: data2, error: error2 } = await db.client.from("flashcards").select("term,translation").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("term", candidates);
+    if (error2) throw toMcpDomainError(error2, "N\xE3o foi poss\xEDvel verificar cards repetidos.");
+    const existing = new Set(
+      asRows(data2).map((row) => {
+        const record = asRow(row) ?? {};
+        return cardKey(str(record, "term") ?? "", str(record, "translation") ?? "");
+      })
+    );
+    toInsert = normalized.filter((card) => {
+      const key = cardKey(card.term, card.translation);
+      if (existing.has(key)) {
+        skipped.push({ term: card.term, translation: card.translation });
+        return false;
+      }
+      existing.add(key);
+      return true;
+    });
+  }
+  if (toInsert.length === 0) {
+    return {
+      created: 0,
+      skipped_existing: skipped.length,
+      skipped: skipped.slice(0, 10),
+      list: { id: listId, title: str(list, "title") ?? "" },
+      cards: []
+    };
+  }
+  const payload = toInsert.map((card) => ({ list_id: listId, user_id: db.userId, ...card }));
+  const { data, error } = await db.client.from("flashcards").insert(payload).select("id,term,translation");
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel adicionar os flashcards.");
+  invalidateScopeInventory(db.userId, listInstitutionId(list));
+  return {
+    created: asRows(data).length,
+    skipped_existing: skipped.length,
+    skipped: skipped.slice(0, 10),
+    list: { id: listId, title: str(list, "title") ?? "" },
+    cards: asRows(data).map((row) => {
+      const record = asRow(row) ?? {};
+      return { id: str(record, "id"), term: str(record, "term"), translation: str(record, "translation") };
+    })
+  };
+}
+async function updateCards(db, input) {
+  const list = await findOwnedList(db, input.list_id);
+  const listId = String(list.id);
+  const hasApply = input.card_ids !== void 0 || input.set !== void 0;
+  const hasPerCard = input.updates !== void 0;
+  if (hasApply && hasPerCard) {
+    throw new McpDomainError("invalid_input", "Use card_ids+set OU updates, n\xE3o os dois.");
+  }
+  if (!hasApply && !hasPerCard) {
+    throw new McpDomainError("invalid_input", "Informe card_ids+set (mesmos valores) ou updates (valores por card).");
+  }
+  if (hasApply) {
+    const cardIds = requireUuidList(input.card_ids, "card_ids", MAX_BATCH_CARDS);
+    const patch = normalizeCardPatch(input.set ?? {});
+    const { data, error } = await db.client.from("flashcards").update(patch).eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", cardIds).select("id");
+    if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel atualizar os flashcards.");
+    const updatedIds2 = asRows(data).map((row) => str(asRow(row), "id") ?? "");
+    if (updatedIds2.length > 0) invalidateScopeInventory(db.userId, listInstitutionId(list));
+    return {
+      mode: "same_values",
+      updated: updatedIds2.length,
+      not_found: cardIds.filter((cardId) => !updatedIds2.includes(cardId)),
+      applied: patch,
+      list: { id: listId, title: str(list, "title") ?? "" }
+    };
+  }
+  if (!Array.isArray(input.updates) || input.updates.length === 0) {
+    throw new McpDomainError("invalid_input", '"updates" precisa ser uma lista n\xE3o vazia.');
+  }
+  if (input.updates.length > MAX_BATCH_CARDS) {
+    throw new McpDomainError("invalid_input", `"updates" aceita no m\xE1ximo ${MAX_BATCH_CARDS} cards por chamada.`);
+  }
+  const entries = input.updates.map((entry, index) => {
+    const record = asRow(entry);
+    if (!record) throw new McpDomainError("invalid_input", `O item ${index + 1} de updates precisa ser um objeto.`);
+    return {
+      cardId: requireUuid(record.card_id, `updates[${index}].card_id`),
+      patch: normalizeCardPatch(record, index)
+    };
+  });
+  const { data: ownedRows, error: ownedError } = await db.client.from("flashcards").select("*").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", entries.map((entry) => entry.cardId));
+  if (ownedError) throw toMcpDomainError(ownedError, "N\xE3o foi poss\xEDvel validar os flashcards.");
+  const ownedById = new Map(
+    asRows(ownedRows).map((row) => asRow(row)).filter((row) => Boolean(row && str(row, "id"))).map((row) => [str(row, "id"), row])
+  );
+  const updatesToApply = entries.filter((entry) => ownedById.has(entry.cardId)).map((entry) => {
+    const current = { ...ownedById.get(entry.cardId) };
+    delete current.lists;
+    return { ...current, ...entry.patch, id: entry.cardId, list_id: listId, user_id: db.userId };
+  });
+  let updatedIds = [];
+  if (updatesToApply.length > 0) {
+    const { data, error } = await db.client.from("flashcards").upsert(updatesToApply, { onConflict: "id", defaultToNull: false }).select("id");
+    if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel atualizar os flashcards.");
+    updatedIds = asRows(data).map((row) => str(asRow(row), "id") ?? "");
+  }
+  if (updatedIds.length > 0) invalidateScopeInventory(db.userId, listInstitutionId(list));
+  return {
+    mode: "per_card",
+    updated: updatedIds.length,
+    not_found: entries.filter((entry) => !updatedIds.includes(entry.cardId)).map((entry) => entry.cardId),
+    list: { id: listId, title: str(list, "title") ?? "" }
+  };
+}
+async function countLayersOf(db, listId, parentIds) {
+  if (parentIds.length === 0) return [];
+  const { data, error } = await db.client.from("flashcards").select("id").eq("list_id", listId).eq("user_id", db.userId).in("parent_card_id", parentIds).is("deleted_at", null);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as camadas dos cards.");
+  return asRows(data).map((row) => str(asRow(row), "id") ?? "").filter(Boolean);
+}
+async function cardRemovalState(db, listId, cardIds) {
+  const [{ data: principalData, error: principalError }, { data: layerData, error: layerError }] = await Promise.all([
+    db.client.from("flashcards").select("id,updated_at,deleted_at").eq("list_id", listId).eq("user_id", db.userId).in("id", cardIds),
+    db.client.from("flashcards").select("id,updated_at,deleted_at").eq("list_id", listId).eq("user_id", db.userId).in("parent_card_id", cardIds)
+  ]);
+  if (principalError) throw toMcpDomainError(principalError, "N\xE3o foi poss\xEDvel verificar o estado dos cards.");
+  if (layerError) throw toMcpDomainError(layerError, "N\xE3o foi poss\xEDvel verificar o estado das camadas.");
+  return confirmationStateFingerprint([
+    ...asRows(principalData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+    ...asRows(layerData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "layer", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    })
+  ]);
+}
+async function removeCards(db, input, key) {
+  const list = await findOwnedList(db, input.list_id);
+  const listId = String(list.id);
+  const cardIds = requireUuidList(input.card_ids, "card_ids", MAX_BATCH_CARDS);
+  const dryRun = input.dry_run === true;
+  const { data, error } = await db.client.from("flashcards").select("id").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", cardIds);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar os cards informados.");
+  const principalIds = asRows(data).map((row) => str(asRow(row), "id") ?? "").filter(Boolean);
+  const alreadyRemoved = cardIds.filter((cardId) => !principalIds.includes(cardId));
+  const layerIds = await countLayersOf(db, listId, principalIds);
+  const total = principalIds.length + layerIds.length;
+  const material = total >= MAX_REMOVAL_WITHOUT_CONFIRMATION;
+  const removalScope = listInstitutionId(list) ?? "personal";
+  const stateFingerprint = dryRun || material ? await cardRemovalState(db, listId, cardIds) : void 0;
+  if (dryRun) {
+    const claim = {
+      action: "remove_cards",
+      userId: db.userId,
+      objectId: listId,
+      scope: removalScope,
+      targetIds: cardIds,
+      expectedCount: total,
+      stateFingerprint
+    };
+    const confirmation = await createConfirmationToken(key, claim);
+    return {
+      dry_run: true,
+      list: { id: listId, title: str(list, "title") ?? "" },
+      cards_to_remove: principalIds.length,
+      layers_to_remove: layerIds.length,
+      total_to_remove: total,
+      already_removed: alreadyRemoved.length,
+      requires_confirmation: material,
+      recoverable: true,
+      retention_days: TRASH_RETENTION_DAYS,
+      ...material ? {
+        confirmation_token: confirmation.token,
+        expires_at: confirmation.expires_at,
+        ttl_seconds: confirmation.ttl_seconds
+      } : {}
+    };
+  }
+  if (material) {
+    await verifyConfirmationToken(key, input.confirmation_token, {
+      action: "remove_cards",
+      userId: db.userId,
+      objectId: listId,
+      scope: removalScope,
+      targetIds: cardIds,
+      expectedCount: total,
+      stateFingerprint: await cardRemovalState(db, listId, cardIds)
+    });
+  }
+  if (total === 0) {
+    return {
+      removed_cards: 0,
+      removed_layers: 0,
+      total_removed: 0,
+      already_removed: alreadyRemoved.length,
+      note: "Nada a remover: os cards informados j\xE1 estavam fora da lista ativa."
+    };
+  }
+  const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+  const idsToRemove = [.../* @__PURE__ */ new Set([...principalIds, ...layerIds])];
+  const { error: deleteError } = await db.client.from("flashcards").update({ deleted_at: nowIso }).eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", idsToRemove);
+  if (deleteError) throw toMcpDomainError(deleteError, "N\xE3o foi poss\xEDvel remover os flashcards e suas camadas.");
+  invalidateScopeInventory(db.userId, listInstitutionId(list));
+  return {
+    removed_cards: principalIds.length,
+    removed_layers: layerIds.length,
+    total_removed: total,
+    already_removed: alreadyRemoved.length,
+    recoverable: true,
+    retention_days: TRASH_RETENTION_DAYS,
+    list: { id: listId, title: str(list, "title") ?? "" }
+  };
+}
+
+// src/lib/mcp/tools/addFlashcards.ts
+var cardSchema = z8.object({
+  term: z8.string().min(1).max(CARD_TEXT_MAX).describe("Front of the card (the term, word or question)."),
+  translation: z8.string().min(1).max(CARD_TEXT_MAX).describe("Back of the card (the translation or answer)."),
+  hint: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional hint shown in study."),
+  example_text: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional example sentence."),
+  example_translation: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional translation of the example."),
+  context_tag: z8.string().max(CARD_CONTEXT_TAG_MAX).optional().describe("Optional short context label."),
+  word_hints: z8.union([z8.array(z8.unknown()), z8.record(z8.unknown())]).optional().describe("Optional structured word hints (same JSON the app stores)."),
+  image_url_a: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side A."),
+  image_url_b: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side B."),
+  layer_index: z8.number().int().min(0).max(50).optional().describe("Optional layer position when building a layered card."),
+  parent_card_id: z8.string().uuid().optional().describe("Optional parent card id (same list) to create this card as a layer.")
+});
+var addFlashcards_default = defineTool9({
+  name: "add_flashcards",
+  title: "Add flashcards to a list (batch)",
+  description: "Adds a batch of flashcards to an owned list in ONE request (multi-row insert), so 30 cards do not need 30 calls. Default on_duplicate=skip makes retries safe: a card whose term+translation already exists in that list is reported in skipped_existing instead of being inserted again. Use on_duplicate=insert only when the user explicitly wants repeated terms (same word, different meaning). Max " + MAX_BATCH_CARDS + " cards per call.",
+  inputSchema: {
+    list_id: z8.string().uuid().describe("Destination list uuid (from list_lists or get_list)."),
+    cards: z8.array(cardSchema).min(1).max(MAX_BATCH_CARDS).describe("Cards to insert, in the order they should appear."),
+    on_duplicate: z8.enum(["skip", "insert"]).optional().describe("skip (default) avoids duplicating the same term+translation in the list; insert forces the insert.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await addCards(db, {
+        list_id: args.list_id,
+        cards: args.cards,
+        on_duplicate: args.on_duplicate
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "add_flashcards");
+    }
+  }
+});
+
+// src/lib/mcp/tools/confirmDeleteFolder.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z9 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/trash.ts
+var TRASH_TARGETS = ["list", "folder"];
+async function callTrashRpc(db, fn, params, failureMessage) {
+  const { data, error } = await db.client.rpc(fn, params);
+  if (error) throw toMcpDomainError(error, failureMessage);
+  const record = asRow(data);
+  if (record && record.success === false) {
+    throw new McpDomainError("not_found", "O objeto n\xE3o pertence a esta conta ou n\xE3o est\xE1 no estado esperado.", {
+      hint: "Rode o preview correspondente antes de repetir a opera\xE7\xE3o."
+    });
+  }
+}
+async function activeListIds(db, folderId) {
+  const { data, error } = await db.client.from("lists").select("id").eq("folder_id", folderId).eq("system_kind", "user").is("deleted_at", null);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as listas da pasta.");
+  return asRows(data).map((row) => str(asRow(row), "id") ?? "").filter(Boolean);
+}
+async function countCardsInLists(db, listIds) {
+  if (listIds.length === 0) return 0;
+  const { count, error } = await db.client.from("flashcards").select("id", { count: "exact", head: true }).in("list_id", listIds).is("deleted_at", null);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel contar os cards da pasta.");
+  return typeof count === "number" ? count : 0;
+}
+async function listDeletionState(db, listId) {
+  const [{ data: listData, error: listError }, { data: cardData, error: cardError }] = await Promise.all([
+    db.client.from("lists").select("id,updated_at,deleted_at").eq("id", listId).eq("system_kind", "user"),
+    db.client.from("flashcards").select("id,updated_at,deleted_at").eq("list_id", listId).eq("user_id", db.userId)
+  ]);
+  if (listError) throw toMcpDomainError(listError, "N\xE3o foi poss\xEDvel verificar o estado da lista.");
+  if (cardError) throw toMcpDomainError(cardError, "N\xE3o foi poss\xEDvel verificar o estado dos cards da lista.");
+  const rows = [
+    ...asRows(listData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "list", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+    ...asRows(cardData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    })
+  ];
+  return confirmationStateFingerprint(rows);
+}
+async function folderDeletionState(db, folderId) {
+  const { data: folderData, error: folderError } = await db.client.from("folders").select("id,updated_at,deleted_at").eq("id", folderId).eq("system_kind", "user");
+  if (folderError) throw toMcpDomainError(folderError, "N\xE3o foi poss\xEDvel verificar o estado da pasta.");
+  const { data: listData, error: listError } = await db.client.from("lists").select("id,updated_at,deleted_at").eq("folder_id", folderId).eq("system_kind", "user");
+  if (listError) throw toMcpDomainError(listError, "N\xE3o foi poss\xEDvel verificar o estado das listas da pasta.");
+  const listRows = asRows(listData).map((row) => {
+    const record = asRow(row) ?? {};
+    return { kind: "list", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+  });
+  const listIds = listRows.map((row) => row.id).filter(Boolean);
+  let cardRows = [];
+  if (listIds.length > 0) {
+    const { data: cardData, error: cardError } = await db.client.from("flashcards").select("id,updated_at,deleted_at").in("list_id", listIds).eq("user_id", db.userId);
+    if (cardError) throw toMcpDomainError(cardError, "N\xE3o foi poss\xEDvel verificar o estado dos cards da pasta.");
+    cardRows = asRows(cardData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    });
+  }
+  const folderRows = asRows(folderData).map((row) => {
+    const record = asRow(row) ?? {};
+    return { kind: "folder", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+  });
+  return confirmationStateFingerprint([...folderRows, ...listRows, ...cardRows]);
+}
+async function previewListDeletion(db, input, key) {
+  const list = await findOwnedList(db, input.list_id);
+  const listId = String(list.id);
+  const cardCount = await countListCards(db, listId) ?? 0;
+  const stateFingerprint = await listDeletionState(db, listId);
+  const confirmation = await createConfirmationToken(key, {
+    action: "delete_list",
+    userId: db.userId,
+    objectId: listId,
+    expectedCount: cardCount,
+    stateFingerprint
+  });
+  return {
+    dry_run: true,
+    target: {
+      type: "list",
+      ...compactList(list),
+      folder_id: str(list, "folder_id"),
+      folder_title: str(asRow(list.folders), "title")
+    },
+    card_count: cardCount,
+    consequences: [
+      "A lista e seus " + cardCount + " card(s) ativos v\xE3o para a lixeira (soft delete).",
+      "A lixeira do produto remove definitivamente ap\xF3s " + TRASH_RETENTION_DAYS + " dias.",
+      "Enquanto estiver na lixeira, restore_from_trash recupera a lista e seus cards.",
+      "Nenhuma outra conta, turma ou cole\xE7\xE3o de sistema \xE9 afetada."
+    ],
+    recoverable: true,
+    retention_days: TRASH_RETENTION_DAYS,
+    confirmation_token: confirmation.token,
+    expires_at: confirmation.expires_at,
+    ttl_seconds: confirmation.ttl_seconds
+  };
+}
+async function confirmListDeletion(db, input, key) {
+  const listId = requireUuid(input.list_id, "list_id");
+  const existing = await findOwnedList(db, listId, { includeDeleted: true });
+  if (str(existing, "deleted_at")) {
+    return { deleted: false, already_deleted: true, list_id: listId, cards_removed: 0 };
+  }
+  const cardCount = await countListCards(db, listId) ?? 0;
+  const stateFingerprint = await listDeletionState(db, listId);
+  await verifyConfirmationToken(key, input.confirmation_token, {
+    action: "delete_list",
+    userId: db.userId,
+    objectId: listId,
+    expectedCount: cardCount,
+    stateFingerprint
+  });
+  await callTrashRpc(
+    db,
+    "soft_delete_list",
+    { p_list_id: listId, p_user_id: db.userId },
+    "N\xE3o foi poss\xEDvel mover a lista para a lixeira."
+  );
+  invalidateScopeInventory(db.userId, listInstitutionId(existing));
+  return {
+    deleted: true,
+    already_deleted: false,
+    list_id: listId,
+    title: str(existing, "title"),
+    cards_removed: cardCount,
+    recoverable: true,
+    retention_days: TRASH_RETENTION_DAYS
+  };
+}
+async function previewFolderDeletion(db, input, key) {
+  const folder = await findOwnedFolder(db, input.folder_id);
+  const folderId = String(folder.id);
+  const listIds = await activeListIds(db, folderId);
+  const cardCount = await countCardsInLists(db, listIds);
+  const stateFingerprint = await folderDeletionState(db, folderId);
+  const confirmation = await createConfirmationToken(key, {
+    action: "delete_folder",
+    userId: db.userId,
+    objectId: folderId,
+    expectedCount: listIds.length,
+    stateFingerprint
+  });
+  return {
+    dry_run: true,
+    target: { type: "folder", ...compactFolderSummary(folder) },
+    list_count: listIds.length,
+    card_count: cardCount,
+    consequences: [
+      "A pasta, suas " + listIds.length + " lista(s) e seus " + cardCount + " card(s) ativos v\xE3o para a lixeira (soft delete em cascata).",
+      "A lixeira do produto remove definitivamente ap\xF3s " + TRASH_RETENTION_DAYS + " dias.",
+      "Enquanto estiver na lixeira, restore_from_trash recupera a pasta, as listas e os cards.",
+      "Cole\xE7\xF5es de sistema (Refor\xE7o / Pontos de aten\xE7\xE3o) e conte\xFAdo de turma n\xE3o s\xE3o afetados."
+    ],
+    recoverable: true,
+    retention_days: TRASH_RETENTION_DAYS,
+    confirmation_token: confirmation.token,
+    expires_at: confirmation.expires_at,
+    ttl_seconds: confirmation.ttl_seconds
+  };
+}
+async function confirmFolderDeletion(db, input, key) {
+  const folderId = requireUuid(input.folder_id, "folder_id");
+  const existing = await findOwnedFolder(db, folderId, { includeDeleted: true });
+  if (str(existing, "deleted_at")) {
+    return { deleted: false, already_deleted: true, folder_id: folderId, lists_removed: 0, cards_removed: 0 };
+  }
+  const listIds = await activeListIds(db, folderId);
+  const cardCount = await countCardsInLists(db, listIds);
+  const stateFingerprint = await folderDeletionState(db, folderId);
+  await verifyConfirmationToken(key, input.confirmation_token, {
+    action: "delete_folder",
+    userId: db.userId,
+    objectId: folderId,
+    expectedCount: listIds.length,
+    stateFingerprint
+  });
+  await callTrashRpc(
+    db,
+    "soft_delete_folder",
+    { p_folder_id: folderId, p_user_id: db.userId },
+    "N\xE3o foi poss\xEDvel mover a pasta para a lixeira."
+  );
+  invalidateScopeInventory(db.userId, folderInstitutionId(existing));
+  return {
+    deleted: true,
+    already_deleted: false,
+    folder_id: folderId,
+    title: str(existing, "title"),
+    lists_removed: listIds.length,
+    cards_removed: cardCount,
+    recoverable: true,
+    retention_days: TRASH_RETENTION_DAYS
+  };
+}
+async function restoreFromTrash(db, input) {
+  const target = requireEnum(input.target, "target", TRASH_TARGETS);
+  const id = requireUuid(input.id, "id");
+  if (target === "list") {
+    const existing2 = await findOwnedList(db, id, { includeDeleted: true });
+    if (!str(existing2, "deleted_at")) {
+      return { restored: false, already_active: true, target, id };
+    }
+    await callTrashRpc(
+      db,
+      "restore_list",
+      { p_list_id: id, p_user_id: db.userId },
+      "N\xE3o foi poss\xEDvel restaurar a lista."
+    );
+    invalidateScopeInventory(db.userId, listInstitutionId(existing2));
+    return {
+      restored: true,
+      target,
+      id,
+      title: str(existing2, "title"),
+      note: "A pasta pai tamb\xE9m \xE9 restaurada quando estava na lixeira."
+    };
+  }
+  const existing = await findOwnedFolder(db, id, { includeDeleted: true });
+  if (!str(existing, "deleted_at")) {
+    return { restored: false, already_active: true, target, id };
+  }
+  await callTrashRpc(
+    db,
+    "restore_folder",
+    { p_folder_id: id, p_user_id: db.userId },
+    "N\xE3o foi poss\xEDvel restaurar a pasta."
+  );
+  invalidateScopeInventory(db.userId, folderInstitutionId(existing));
+  return { restored: true, target, id, title: str(existing, "title") };
+}
+
+// src/lib/mcp/tools/confirmDeleteFolder.ts
+var confirmDeleteFolder_default = defineTool10({
+  name: "confirm_delete_folder",
+  title: "Confirm deletion of a folder",
+  description: "Step 2 of deleting a folder: requires the confirmation_token from preview_delete_folder for this same folder. The token is bound to the authenticated account and to the list count the preview showed, so a changed folder or a stale/expired token fails safely. Deletion is a soft delete through the product's own trash RPC (folder + its lists + their cards, never hard delete).",
+  inputSchema: {
+    folder_id: z9.string().uuid().describe("Same folder uuid used in the preview."),
+    confirmation_token: z9.string().min(8).describe("Token returned by preview_delete_folder.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const identity = createToolIdentity(ctx);
+      const result = await confirmFolderDeletion(
+        identity.db,
+        { folder_id: args.folder_id, confirmation_token: args.confirmation_token },
+        identity.confirmationKey
+      );
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "confirm_delete_folder");
+    }
+  }
+});
+
+// src/lib/mcp/tools/confirmDeleteList.ts
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z10 } from "npm:zod@^3.23.8";
+var confirmDeleteList_default = defineTool11({
+  name: "confirm_delete_list",
+  title: "Confirm deletion of a list",
+  description: "Step 2 of deleting a list: requires the confirmation_token from preview_delete_list for this same list. The token is bound to the authenticated account and to the card count the preview showed, so a changed list or a stale/expired token fails safely and asks for a new preview. The deletion is a soft delete through the product's own trash RPC; deleting an already deleted list returns already_deleted instead of an error.",
+  inputSchema: {
+    list_id: z10.string().uuid().describe("Same list uuid used in the preview."),
+    confirmation_token: z10.string().min(8).describe("Token returned by preview_delete_list.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const identity = createToolIdentity(ctx);
+      const result = await confirmListDeletion(
+        identity.db,
+        { list_id: args.list_id, confirmation_token: args.confirmation_token },
+        identity.confirmationKey
+      );
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "confirm_delete_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/createFolder.ts
+import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z11 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/folderWrites.ts
+var FOLDER_TITLE_MAX = 120;
+var FOLDER_DESCRIPTION_MAX = 1e3;
+var FOLDER_VISIBILITIES = ["private", "class"];
+function scopeFor(institutionId) {
+  return institutionId === null ? { kind: "personal" } : { kind: "institution", institutionId };
+}
+async function createFolder(db, input) {
+  const title = requireText(input.title, "title", FOLDER_TITLE_MAX);
+  const description = optionalText(input.description, "description", FOLDER_DESCRIPTION_MAX) ?? null;
+  const visibility = optionalEnum(input.visibility, "visibility", FOLDER_VISIBILITIES) ?? "private";
+  const institutionId = input.institution_id === void 0 || input.institution_id === null ? null : requireUuid(input.institution_id, "institution_id");
+  if (institutionId) await assertScopeAccessible(db, scopeFor(institutionId));
+  const { data, error } = await db.client.from("folders").insert({
+    owner_id: db.userId,
+    title,
+    description,
+    visibility,
+    institution_id: institutionId
+  }).select(OWNED_FOLDER_SELECT).single();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel criar a pasta.");
+  const record = asRow(data);
+  if (!record) throw new McpDomainError("unavailable", "A pasta n\xE3o foi devolvida pelo backend.");
+  invalidateScopeInventory(db.userId, institutionId);
+  return { created: true, folder: compactFolderSummary(record) };
+}
+async function updateFolder(db, input) {
+  const current = await findOwnedFolder(db, input.folder_id);
+  const folderId = String(current.id);
+  const currentInstitution = typeof current.institution_id === "string" ? current.institution_id : null;
+  const patch = {};
+  if (input.title !== void 0) patch.title = requireText(input.title, "title", FOLDER_TITLE_MAX);
+  if (input.description !== void 0) {
+    patch.description = optionalText(input.description, "description", FOLDER_DESCRIPTION_MAX);
+  }
+  if (input.visibility !== void 0) {
+    patch.visibility = requireEnum(input.visibility, "visibility", FOLDER_VISIBILITIES);
+  }
+  let moved = false;
+  if (input.institution_id !== void 0) {
+    const targetInstitution = input.institution_id === null ? null : requireUuid(input.institution_id, "institution_id");
+    if (targetInstitution) await assertScopeAccessible(db, scopeFor(targetInstitution));
+    patch.institution_id = targetInstitution;
+    moved = targetInstitution !== currentInstitution;
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new McpDomainError("invalid_input", "Nenhum campo para atualizar foi informado.", {
+      hint: "Envie ao menos title, description, visibility ou institution_id."
+    });
+  }
+  const { data, error } = await db.client.from("folders").update(patch).eq("id", folderId).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).select(OWNED_FOLDER_SELECT).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel atualizar a pasta.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "A pasta n\xE3o p\xF4de ser atualizada nesta conta.", {
+      hint: "Confirme o folder_id com list_folders antes de repetir."
+    });
+  }
+  const updatedInstitution = str(record, "institution_id") ?? null;
+  invalidateScopeInventory(db.userId, currentInstitution);
+  if (updatedInstitution !== currentInstitution) invalidateScopeInventory(db.userId, updatedInstitution);
+  return { updated: true, moved, folder: compactFolderSummary(record) };
+}
+
+// src/lib/mcp/tools/createFolder.ts
+var createFolder_default = defineTool12({
+  name: "create_folder",
+  title: "Create folder",
+  description: "Creates a folder in the authenticated account's library (personal by default, or inside an institution hub the account owns). The owner always comes from the verified token, so this tool cannot create content for anyone else. Creating twice creates two folders: this tool is NOT idempotent, so confirm the folder does not exist yet with list_folders.",
+  inputSchema: {
+    title: z11.string().min(1).max(FOLDER_TITLE_MAX).describe("Folder title as the user said it."),
+    description: z11.string().max(FOLDER_DESCRIPTION_MAX).optional().describe("Optional folder description; empty clears it."),
+    visibility: z11.enum(FOLDER_VISIBILITIES).optional().describe('private (default) or class. "class" is visible to the teacher portal rules, not to other accounts in general.'),
+    institution_id: z11.string().uuid().optional().describe("Institution hub id (from get_my_profile scopes) to create the folder inside. Omit for the personal library.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await createFolder(db, {
+        title: args.title,
+        description: args.description,
+        visibility: args.visibility,
+        institution_id: args.institution_id
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "create_folder");
+    }
+  }
+});
+
+// src/lib/mcp/tools/createList.ts
+import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z12 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/listWrites.ts
+var LIST_TITLE_MAX = 120;
+var LIST_DESCRIPTION_MAX = 1e3;
+var LIST_LABEL_MAX = 40;
+var STUDY_TYPES = ["language", "general"];
+var PRIMARY_SIDES = ["a", "b"];
+var MAX_REORDER_LISTS = 200;
+var MAX_DUPLICATE_CARDS = 2e3;
+var COPY_CHUNK = 200;
+var CARD_COPY_SELECT = "id,term,translation,hint,example_text,example_translation,context_tag,lang,layer_index,parent_card_id,status_group_uid,image_url_a,image_url_b,audio_url,word_hints,accepted_answers_en,accepted_answers_pt,common_mistakes,detailed_explanation,display_text,eval_text,note_text,short_explanation,usage_notes";
+function listSettingsPatch(input) {
+  const patch = {};
+  if (input.study_type !== void 0) {
+    patch.study_type = optionalEnum(input.study_type, "study_type", STUDY_TYPES);
+  }
+  if (input.lang_a !== void 0) {
+    patch.lang_a = optionalLanguageTag(input.lang_a, "lang_a", "en") ?? "en";
+  }
+  if (input.lang_b !== void 0) {
+    patch.lang_b = optionalLanguageTag(input.lang_b, "lang_b", "pt") ?? "pt";
+  }
+  if (input.labels_a !== void 0) {
+    patch.labels_a = optionalText(input.labels_a, "labels_a", LIST_LABEL_MAX);
+  }
+  if (input.labels_b !== void 0) {
+    patch.labels_b = optionalText(input.labels_b, "labels_b", LIST_LABEL_MAX);
+  }
+  if (input.tts_enabled !== void 0) {
+    patch.tts_enabled = optionalBoolean(input.tts_enabled, "tts_enabled");
+  }
+  if (input.primary_side !== void 0) {
+    patch.primary_side = optionalEnum(input.primary_side, "primary_side", PRIMARY_SIDES);
+  }
+  return patch;
+}
+function listSettingsFrom(row) {
+  const studyType = str(row, "study_type");
+  const languageTag = (value, fallback) => value && /^[a-z]{2}(-[A-Za-z]{2,4})?$/i.test(value) ? value : fallback;
+  return {
+    study_type: studyType === "general" ? "general" : "language",
+    lang_a: languageTag(str(row, "lang_a"), "en"),
+    lang_b: languageTag(str(row, "lang_b"), "pt"),
+    labels_a: str(row, "labels_a"),
+    labels_b: str(row, "labels_b"),
+    tts_enabled: typeof row.tts_enabled === "boolean" ? row.tts_enabled : true,
+    primary_side: str(row, "primary_side") === "b" ? "b" : "a"
+  };
+}
+async function nextOrderIndex(db, folderId) {
+  const { count, error } = await db.client.from("lists").select("id", { count: "exact", head: true }).eq("folder_id", folderId).eq("system_kind", "user").is("deleted_at", null);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel calcular a ordem da lista.");
+  return typeof count === "number" ? count : 0;
+}
+async function readListRow(db, listId) {
+  const { data, error } = await db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("id", listId).eq("folders.owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel reler a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("unavailable", "A lista n\xE3o p\xF4de ser relida ap\xF3s a escrita.");
+  }
+  return record;
+}
+async function insertListRow(db, params) {
+  const orderIndex = await nextOrderIndex(db, params.folderId);
+  const { data, error } = await db.client.from("lists").insert({
+    folder_id: params.folderId,
+    owner_id: db.userId,
+    title: params.title,
+    description: params.description,
+    order_index: orderIndex,
+    institution_id: params.institutionId,
+    ...listSettingsPatch(params.settings)
+  }).select("id").single();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel criar a lista.");
+  const created = asRow(data);
+  const createdId = created ? str(created, "id") : void 0;
+  if (!createdId) throw new McpDomainError("unavailable", "A lista criada n\xE3o foi devolvida pelo backend.");
+  return readListRow(db, createdId);
+}
+async function createList(db, input) {
+  const folder = await findOwnedFolder(db, input.folder_id);
+  const record = await insertListRow(db, {
+    folderId: String(folder.id),
+    title: requireText(input.title, "title", LIST_TITLE_MAX),
+    description: optionalText(input.description, "description", LIST_DESCRIPTION_MAX) ?? null,
+    institutionId: folderInstitutionId(folder),
+    settings: input
+  });
+  invalidateScopeInventory(db.userId, listInstitutionId(record));
+  return { created: true, list: compactList(record), folder: compactFolderRef(record) };
+}
+async function updateList(db, input) {
+  const current = await findOwnedList(db, input.list_id);
+  const listId = String(current.id);
+  const patch = listSettingsPatch(input);
+  if (input.title !== void 0) patch.title = requireText(input.title, "title", LIST_TITLE_MAX);
+  if (input.description !== void 0) {
+    patch.description = optionalText(input.description, "description", LIST_DESCRIPTION_MAX);
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new McpDomainError("invalid_input", "Nenhum campo para atualizar foi informado.", {
+      hint: "Envie title, description ou algum campo de estudo (study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side)."
+    });
+  }
+  const { data, error } = await db.client.from("lists").update(patch).eq("id", listId).eq("system_kind", "user").is("deleted_at", null).select(ACCESSIBLE_LIST_SELECT).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel atualizar a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "A lista n\xE3o p\xF4de ser atualizada nesta conta.", {
+      hint: "Confirme o list_id com list_lists antes de repetir."
+    });
+  }
+  invalidateScopeInventory(db.userId, listInstitutionId(record));
+  return { updated: true, list: compactList(record), folder: compactFolderRef(record) };
+}
+async function moveList(db, input) {
+  const current = await findOwnedList(db, input.list_id);
+  const listId = String(current.id);
+  const destination = await findOwnedFolder(db, input.folder_id);
+  const destinationId = String(destination.id);
+  const sourceFolderId = str(current, "folder_id") ?? null;
+  const sourceFolderTitle = str(asRow(current.folders), "title");
+  if (sourceFolderId === destinationId) {
+    return {
+      moved: false,
+      already_in_folder: true,
+      list: compactList(current),
+      folder: compactFolderRef(current)
+    };
+  }
+  const { data, error } = await db.client.from("lists").update({
+    folder_id: destinationId,
+    institution_id: folderInstitutionId(destination),
+    order_index: await nextOrderIndex(db, destinationId)
+  }).eq("id", listId).eq("system_kind", "user").is("deleted_at", null).select(ACCESSIBLE_LIST_SELECT).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel mover a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "A lista n\xE3o p\xF4de ser movida nesta conta.", {
+      hint: "Confirme list_id e folder_id antes de repetir."
+    });
+  }
+  invalidateScopeInventory(db.userId, listInstitutionId(current));
+  invalidateScopeInventory(db.userId, folderInstitutionId(destination));
+  return {
+    moved: true,
+    from: { folder_id: sourceFolderId, folder_title: sourceFolderTitle },
+    to: { folder_id: destinationId, folder_title: str(destination, "title") },
+    list: compactList(record)
+  };
+}
+async function reorderLists(db, input) {
+  const folder = await findOwnedFolder(db, input.folder_id);
+  const folderId = String(folder.id);
+  const listIds = requireUuidList(input.list_ids, "list_ids", MAX_REORDER_LISTS);
+  const { data, error } = await db.client.from("lists").select("id").eq("folder_id", folderId).eq("system_kind", "user").is("deleted_at", null).in("id", listIds);
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar as listas da pasta.");
+  const found = new Set(asRows(data).map((row) => String(asRow(row)?.id)));
+  const missing = listIds.filter((listId) => !found.has(listId));
+  if (missing.length > 0) {
+    throw new McpDomainError("not_found", "Uma ou mais listas n\xE3o pertencem a esta pasta.", {
+      hint: `Confirme com list_lists(folder_id) antes de reordenar. Ausentes: ${missing.slice(0, 5).join(", ")}.`
+    });
+  }
+  const results = await Promise.all(
+    listIds.map(
+      (listId, index) => db.client.from("lists").update({ order_index: index }).eq("id", listId).eq("system_kind", "user").is("deleted_at", null).select("id")
+    )
+  );
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw toMcpDomainError(failed.error, "N\xE3o foi poss\xEDvel reordenar todas as listas.");
+  invalidateScopeInventory(db.userId, folderInstitutionId(folder));
+  return {
+    reordered: listIds.length,
+    folder_id: folderId,
+    order: listIds.map((listId, index) => ({ id: listId, order_index: index }))
+  };
+}
+async function softDeleteListCascade(db, listId) {
+  const { error } = await db.client.rpc("soft_delete_list", { p_list_id: listId, p_user_id: db.userId });
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel compensar a duplica\xE7\xE3o parcial.");
+}
+async function duplicateList(db, input) {
+  const source = await findOwnedList(db, input.list_id);
+  const sourceId = String(source.id);
+  const sourceFolderId = str(source, "folder_id");
+  const destinationFolderId = input.folder_id === void 0 || input.folder_id === null ? sourceFolderId : requireUuid(input.folder_id, "folder_id");
+  const destination = destinationFolderId === sourceFolderId ? null : await findOwnedFolder(db, destinationFolderId);
+  const targetFolderId = String(destinationFolderId);
+  const targetInstitution = destination ? folderInstitutionId(destination) : str(source, "institution_id") ?? null;
+  const title = input.title === void 0 ? `${str(source, "title") ?? "Lista"} (c\xF3pia)` : requireText(input.title, "title", LIST_TITLE_MAX);
+  const { count, error: countError } = await db.client.from("flashcards").select("id", { count: "exact", head: true }).eq("list_id", sourceId).eq("user_id", db.userId).is("deleted_at", null);
+  if (countError) throw toMcpDomainError(countError, "N\xE3o foi poss\xEDvel contar os cards da lista.");
+  const totalCards = typeof count === "number" ? count : 0;
+  if (totalCards > MAX_DUPLICATE_CARDS) {
+    throw new McpDomainError("invalid_input", `A lista tem ${totalCards} cards ativos; a duplica\xE7\xE3o aceita at\xE9 ${MAX_DUPLICATE_CARDS}.`, {
+      hint: "Duplique a lista em partes (mova os cards excedentes para listas auxiliares) ou aumente o limite na FASE 6."
+    });
+  }
+  const sourceCards = [];
+  for (let from = 0; from < totalCards; from += COPY_CHUNK) {
+    const { data, error } = await db.client.from("flashcards").select(CARD_COPY_SELECT).eq("list_id", sourceId).eq("user_id", db.userId).is("deleted_at", null).order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, from + COPY_CHUNK - 1);
+    if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler os cards da lista.");
+    for (const row of asRows(data)) {
+      const record = asRow(row);
+      if (record) sourceCards.push(record);
+    }
+  }
+  const created = await insertListRow(db, {
+    folderId: targetFolderId,
+    title,
+    description: str(source, "description") ?? null,
+    institutionId: targetInstitution,
+    settings: listSettingsFrom(source)
+  });
+  const createdId = String(created.id);
+  const idMap = /* @__PURE__ */ new Map();
+  for (const card of sourceCards) {
+    const oldId = str(card, "id");
+    if (oldId) idMap.set(oldId, globalThis.crypto.randomUUID());
+  }
+  const groupMap = /* @__PURE__ */ new Map();
+  const rows = sourceCards.map((card) => {
+    const oldId = str(card, "id") ?? globalThis.crypto.randomUUID();
+    const newId = idMap.get(oldId) ?? globalThis.crypto.randomUUID();
+    const parentId = str(card, "parent_card_id") ?? null;
+    const sourceGroup = str(card, "status_group_uid") ?? parentId ?? oldId;
+    let groupId = groupMap.get(sourceGroup);
+    if (!groupId) {
+      groupId = (parentId ? idMap.get(parentId) : void 0) ?? newId;
+      groupMap.set(sourceGroup, groupId);
+    }
+    return {
+      id: newId,
+      list_id: createdId,
+      user_id: db.userId,
+      term: str(card, "term") ?? "",
+      translation: str(card, "translation") ?? "",
+      hint: card.hint ?? null,
+      example_text: card.example_text ?? null,
+      example_translation: card.example_translation ?? null,
+      context_tag: card.context_tag ?? null,
+      lang: card.lang ?? null,
+      layer_index: card.layer_index ?? null,
+      parent_card_id: parentId ? idMap.get(parentId) ?? null : null,
+      status_group_uid: groupId,
+      image_url_a: card.image_url_a ?? null,
+      image_url_b: card.image_url_b ?? null,
+      audio_url: card.audio_url ?? null,
+      word_hints: card.word_hints ?? null,
+      accepted_answers_en: card.accepted_answers_en ?? null,
+      accepted_answers_pt: card.accepted_answers_pt ?? null,
+      common_mistakes: card.common_mistakes ?? null,
+      detailed_explanation: card.detailed_explanation ?? null,
+      display_text: card.display_text ?? null,
+      eval_text: card.eval_text ?? null,
+      note_text: card.note_text ?? null,
+      short_explanation: card.short_explanation ?? null,
+      usage_notes: card.usage_notes ?? null
+    };
+  });
+  let copied = 0;
+  try {
+    for (let index = 0; index < rows.length; index += COPY_CHUNK) {
+      const chunk = rows.slice(index, index + COPY_CHUNK);
+      const { data, error } = await db.client.from("flashcards").insert(chunk).select("id");
+      if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel copiar os cards da lista.");
+      copied += asRows(data).length;
+    }
+  } catch (error) {
+    await softDeleteListCascade(db, createdId);
+    throw error;
+  }
+  const layers = rows.filter((row) => row.parent_card_id).length;
+  invalidateScopeInventory(db.userId, targetInstitution);
+  return {
+    created: true,
+    source_list_id: sourceId,
+    list: compactList(created),
+    copied_cards: copied,
+    copied_layers: layers
+  };
+}
+
+// src/lib/mcp/tools/createList.ts
+var createList_default = defineTool13({
+  name: "create_list",
+  title: "Create list inside a folder",
+  description: "Creates a study list inside an owned folder (the folder defines the workspace: personal or institution). Study settings default to the product's language mode (en/pt, TTS on, side A primary). Not idempotent: resolve the folder first with list_folders and check the list does not already exist.",
+  inputSchema: {
+    folder_id: z12.string().uuid().describe("Destination folder uuid (from list_folders)."),
+    title: z12.string().min(1).max(LIST_TITLE_MAX).describe("List title as the user said it."),
+    description: z12.string().max(LIST_DESCRIPTION_MAX).optional().describe("Optional description."),
+    study_type: z12.enum(STUDY_TYPES).optional().describe("language (default) or general. The database CHECK rejects anything else."),
+    lang_a: z12.string().max(10).optional().describe('Language of side A, e.g. "en". Default en.'),
+    lang_b: z12.string().max(10).optional().describe('Language of side B, e.g. "pt". Default pt.'),
+    labels_a: z12.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side A."),
+    labels_b: z12.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side B."),
+    tts_enabled: z12.boolean().optional().describe("Whether study may speak the cards."),
+    primary_side: z12.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" (default) or "b".')
+  },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await createList(db, {
+        folder_id: args.folder_id,
+        title: args.title,
+        description: args.description,
+        study_type: args.study_type,
+        lang_a: args.lang_a,
+        lang_b: args.lang_b,
+        labels_a: args.labels_a,
+        labels_b: args.labels_b,
+        tts_enabled: args.tts_enabled,
+        primary_side: args.primary_side
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "create_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/duplicateList.ts
+import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z13 } from "npm:zod@^3.23.8";
+var duplicateList_default = defineTool14({
+  name: "duplicate_list",
+  title: "Duplicate a list with its cards",
+  description: "Copies an owned list (title, description and study settings) plus its active deck into the same folder or another owned folder. Layer structure is rebuilt with new card ids and fresh status-group identity, so Favorite/Red List state is never inherited; deleted cards are not copied. Cards are copied in batches (one insert per 200 cards, limit " + MAX_DUPLICATE_CARDS + "). If a batch fails, the partially copied list goes to the trash instead of staying as a half-copy. Not idempotent: each call creates a new list.",
+  inputSchema: {
+    list_id: z13.string().uuid().describe("Source list uuid to copy."),
+    title: z13.string().min(1).max(LIST_TITLE_MAX).optional().describe('Title for the copy. Default: "<original> (c\xF3pia)".'),
+    folder_id: z13.string().uuid().optional().describe("Destination folder uuid. Default: the source list's own folder.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await duplicateList(db, {
+        list_id: args.list_id,
+        title: args.title,
+        folder_id: args.folder_id
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "duplicate_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/moveList.ts
+import { defineTool as defineTool15 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z14 } from "npm:zod@^3.23.8";
+var moveList_default = defineTool15({
+  name: "move_list",
+  title: "Move list to another folder",
+  description: "Moves an owned list to another owned folder - including a folder of another institution hub, when the user asked for that. The list mirrors the destination folder's workspace, so list and folder never disagree about the scope. Idempotent: moving to the folder it already is in changes nothing.",
+  inputSchema: {
+    list_id: z14.string().uuid().describe("List uuid to move."),
+    folder_id: z14.string().uuid().describe("Destination folder uuid (owned by the same account).")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await moveList(db, { list_id: args.list_id, folder_id: args.folder_id });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "move_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/previewDeleteFolder.ts
+import { defineTool as defineTool16 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z15 } from "npm:zod@^3.23.8";
+var previewDeleteFolder_default = defineTool16({
+  name: "preview_delete_folder",
+  title: "Preview deleting a folder",
+  description: "Step 1 of deleting a folder: returns how many owned lists and cards would go to the trash, the cascading consequences (soft delete, 7-day retention, restore possible) and a short-lived confirmation_token. Show this to the user before confirming. Read-only: it changes nothing.",
+  inputSchema: {
+    folder_id: z15.string().uuid().describe("Folder uuid to be deleted.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const identity = createToolIdentity(ctx);
+      const result = await previewFolderDeletion(identity.db, { folder_id: args.folder_id }, identity.confirmationKey);
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "preview_delete_folder");
+    }
+  }
+});
+
+// src/lib/mcp/tools/previewDeleteList.ts
+import { defineTool as defineTool17 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z16 } from "npm:zod@^3.23.8";
+var previewDeleteList_default = defineTool17({
+  name: "preview_delete_list",
+  title: "Preview deleting a list",
+  description: "Step 1 of deleting a list: returns the target, how many cards would go to the trash, the real consequences (soft delete, 7-day retention, restore possible) and a short-lived confirmation_token. Show this to the user before confirming. Read-only: it changes nothing.",
+  inputSchema: {
+    list_id: z16.string().uuid().describe("List uuid to be deleted.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const identity = createToolIdentity(ctx);
+      const result = await previewListDeletion(identity.db, { list_id: args.list_id }, identity.confirmationKey);
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "preview_delete_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/removeFlashcards.ts
+import { defineTool as defineTool18 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z17 } from "npm:zod@^3.23.8";
+var removeFlashcards_default = defineTool18({
+  name: "remove_flashcards",
+  title: "Remove flashcards (soft delete)",
+  description: "Removes cards from an owned list. This is a SOFT delete: the card and its child layers receive deleted_at exactly like the app's own removal, stay recoverable in the trash and are purged by the product after 7 days - this tool never hard deletes. Removals of " + MAX_REMOVAL_WITHOUT_CONFIRMATION + " or more rows are material: they need the two-step flow, so call with dry_run=true first, show the preview to the user and then repeat with the returned confirmation_token. Repeating a removal is safe (already removed cards are reported, not an error).",
+  inputSchema: {
+    list_id: z17.string().uuid().describe("List that owns the cards."),
+    card_ids: z17.array(z17.string().uuid()).min(1).max(MAX_BATCH_CARDS).describe("Cards to remove; their layers (cards with parent_card_id pointing at them) go too."),
+    dry_run: z17.boolean().optional().describe("true returns what would be removed plus the confirmation_token when confirmation is required."),
+    confirmation_token: z17.string().min(8).optional().describe("Token from the dry_run preview of this same removal.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const identity = createToolIdentity(ctx);
+      const result = await removeCards(
+        identity.db,
+        {
+          list_id: args.list_id,
+          card_ids: args.card_ids,
+          dry_run: args.dry_run,
+          confirmation_token: args.confirmation_token
+        },
+        identity.confirmationKey
+      );
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "remove_flashcards");
+    }
+  }
+});
+
+// src/lib/mcp/tools/reorderLists.ts
+import { defineTool as defineTool19 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z18 } from "npm:zod@^3.23.8";
+var reorderLists_default = defineTool19({
+  name: "reorder_lists",
+  title: "Reorder lists inside a folder",
+  description: "Sets the display order of lists inside one owned folder: the array order you send becomes the folder order (first item is 0). Send every list you want positioned; lists not sent keep their current order_index. Idempotent: sending the same order twice changes nothing.",
+  inputSchema: {
+    folder_id: z18.string().uuid().describe("Folder whose lists are being ordered."),
+    list_ids: z18.array(z18.string().uuid()).min(1).max(MAX_REORDER_LISTS).describe("List uuids in the exact desired order (first = position 0).")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await reorderLists(db, { folder_id: args.folder_id, list_ids: args.list_ids });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "reorder_lists");
+    }
+  }
+});
+
+// src/lib/mcp/tools/restoreFromTrash.ts
+import { defineTool as defineTool20 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z19 } from "npm:zod@^3.23.8";
+var restoreFromTrash_default = defineTool20({
+  name: "restore_from_trash",
+  title: "Restore a list or folder from the trash",
+  description: "Undoes a soft delete using the product's own restore RPC: restores the list (and its cards, plus the parent folder when needed) or the folder (with its lists and cards). Only objects of the authenticated account can be restored. If the object is already active, returns already_active instead of failing.",
+  inputSchema: {
+    target: z19.enum(TRASH_TARGETS).describe('"list" or "folder".'),
+    id: z19.string().uuid().describe("Uuid of the trashed list or folder.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await restoreFromTrash(db, { target: args.target, id: args.id });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "restore_from_trash");
+    }
+  }
+});
+
+// src/lib/mcp/tools/updateFlashcards.ts
+import { defineTool as defineTool21 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z20 } from "npm:zod@^3.23.8";
+var patchSchema = z20.object({
+  term: z20.string().min(1).max(CARD_TEXT_MAX).optional().describe("New front text."),
+  translation: z20.string().min(1).max(CARD_TEXT_MAX).optional().describe("New back text."),
+  hint: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New hint; null clears it."),
+  example_text: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example sentence; null clears it."),
+  example_translation: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example translation; null clears it."),
+  context_tag: z20.string().max(CARD_CONTEXT_TAG_MAX).nullable().optional().describe("New context label; null clears it."),
+  word_hints: z20.union([z20.array(z20.unknown()), z20.record(z20.unknown()), z20.null()]).optional().describe("New structured word hints; null clears them."),
+  image_url_a: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side A; null clears it."),
+  image_url_b: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side B; null clears it."),
+  layer_index: z20.number().int().min(0).max(50).nullable().optional().describe("New layer position.")
+});
+var updateFlashcards_default = defineTool21({
+  name: "update_flashcards",
+  title: "Edit flashcards in batch",
+  description: "Edits existing cards of an owned list. Two shapes: card_ids + set applies the SAME values to many cards in one UPDATE (e.g. give every card a context tag), while updates applies DIFFERENT values per card (one update per card, run concurrently). Cards that are not found (other list, other account, already deleted) are reported in not_found instead of failing the whole batch. term/translation/hint/example/context/word_hints/images/layer_index are editable; structural identity (list, owner, parent) is not. Max " + MAX_BATCH_CARDS + " cards per call.",
+  inputSchema: {
+    list_id: z20.string().uuid().describe("List that owns the cards."),
+    card_ids: z20.array(z20.string().uuid()).min(1).max(MAX_BATCH_CARDS).optional().describe("Cards that receive the same values (use together with set)."),
+    set: patchSchema.optional().describe("Values applied to every card in card_ids."),
+    updates: z20.array(patchSchema.extend({ card_id: z20.string().uuid() })).min(1).max(MAX_BATCH_CARDS).optional().describe("Per-card values: each item needs card_id plus the fields to change.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await updateCards(db, {
+        list_id: args.list_id,
+        card_ids: args.card_ids,
+        set: args.set,
+        updates: args.updates
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "update_flashcards");
+    }
+  }
+});
+
+// src/lib/mcp/tools/updateFolder.ts
+import { defineTool as defineTool22 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z21 } from "npm:zod@^3.23.8";
+var updateFolder_default = defineTool22({
+  name: "update_folder",
+  title: "Update or move folder",
+  description: "Updates an owned folder: title, description, visibility and/or the institution hub it belongs to. Send institution_id with a hub id to move the folder into that institution, or null to return it to the personal library. Only the fields you send change; repeating the same call is safe (idempotent).",
+  inputSchema: {
+    folder_id: z21.string().uuid().describe("Folder uuid discovered with list_folders."),
+    title: z21.string().min(1).max(FOLDER_TITLE_MAX).optional().describe("New folder title."),
+    description: z21.string().max(FOLDER_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
+    visibility: z21.enum(FOLDER_VISIBILITIES).optional().describe("private or class."),
+    institution_id: z21.string().uuid().nullable().optional().describe("Institution hub id to move the folder into, or null to move it back to the personal library. Omit to leave it where it is.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await updateFolder(db, {
+        folder_id: args.folder_id,
+        title: args.title,
+        description: args.description,
+        visibility: args.visibility,
+        institution_id: args.institution_id
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "update_folder");
+    }
+  }
+});
+
+// src/lib/mcp/tools/updateList.ts
+import { defineTool as defineTool23 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z22 } from "npm:zod@^3.23.8";
+var updateList_default = defineTool23({
+  name: "update_list",
+  title: "Update list metadata and study settings",
+  description: "Renames an owned list and/or changes its study settings (study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side). Only the fields you send change; repeating the same call is safe (idempotent). Card content is not touched by this tool.",
+  inputSchema: {
+    list_id: z22.string().uuid().describe("List uuid discovered with list_lists or get_list."),
+    title: z22.string().min(1).max(LIST_TITLE_MAX).optional().describe("New list title."),
+    description: z22.string().max(LIST_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
+    study_type: z22.enum(STUDY_TYPES).optional().describe("language or general."),
+    lang_a: z22.string().max(10).optional().describe('Language of side A, e.g. "en".'),
+    lang_b: z22.string().max(10).optional().describe('Language of side B, e.g. "pt".'),
+    labels_a: z22.string().max(LIST_LABEL_MAX).optional().describe("Label for side A."),
+    labels_b: z22.string().max(LIST_LABEL_MAX).optional().describe("Label for side B."),
+    tts_enabled: z22.boolean().optional().describe("Whether study may speak the cards."),
+    primary_side: z22.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" or "b".')
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await updateList(db, {
+        list_id: args.list_id,
+        title: args.title,
+        description: args.description,
+        study_type: args.study_type,
+        lang_a: args.lang_a,
+        lang_b: args.lang_b,
+        labels_a: args.labels_a,
+        labels_b: args.labels_b,
+        tts_enabled: args.tts_enabled,
+        primary_side: args.primary_side
+      });
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "update_list");
+    }
+  }
+});
+
+// src/lib/mcp/tools/createStudyMaterial.ts
+import { defineTool as defineTool24 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { z as z23 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/studyMaterialWrites.ts
+function normalizedName(value) {
+  return value.trim().toLocaleLowerCase();
+}
+function selector(selector2, field) {
+  const id = selector2?.id === void 0 || selector2.id === null ? void 0 : requireUuid(selector2.id, `${field}.id`);
+  const name = selector2?.name === void 0 || selector2.name === null ? void 0 : requireText(selector2.name, `${field}.name`, 120);
+  if (id && name || !id && !name) {
+    throw new McpDomainError("invalid_input", `Informe exatamente um id ou name em "${field}".`, {
+      hint: `Use list_folders/list_lists para descobrir o ${field} atual antes de criar material.`
+    });
+  }
+  return id ? { id } : { name };
+}
+function resolveScope2(rawScope, rawInstitutionId) {
+  if (rawScope !== "personal" && rawScope !== "institution") {
+    throw new McpDomainError("invalid_input", '"scope" precisa ser "personal" ou "institution".');
+  }
+  if (rawScope === "personal") {
+    if (rawInstitutionId !== void 0 && rawInstitutionId !== null) {
+      throw new McpDomainError("invalid_input", 'N\xE3o envie institution_id quando scope = "personal".');
+    }
+    return { kind: "personal" };
+  }
+  if (rawInstitutionId === void 0 || rawInstitutionId === null) {
+    throw new McpDomainError("invalid_input", 'scope = "institution" exige institution_id.', {
+      hint: "Use get_my_profile para descobrir o id do hub institucional."
+    });
+  }
+  return { kind: "institution", institutionId: requireUuid(rawInstitutionId, "institution_id") };
+}
+function exactName(row, expected) {
+  return normalizedName(str(row, "title") ?? "") === normalizedName(expected);
+}
+function ambiguous(entity, candidates) {
+  throw new McpDomainError("ambiguous", `O nome da ${entity} \xE9 amb\xEDguo nesta biblioteca.`, {
+    hint: "Escolha um candidato pelo id. Candidatos: " + candidates.map((candidate) => `${candidate.id} \u2014 ${candidate.path}`).join("; ")
+  });
+}
+async function resolveFolder(db, scope, requested) {
+  const base = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).is("class_id", null);
+  const scoped = scope.kind === "personal" ? base.is("institution_id", null) : base.eq("institution_id", scope.institutionId);
+  const query = requested.id ? scoped.eq("id", requested.id) : scoped.ilike("title", requested.name);
+  const { data, error } = await query.order("title", { ascending: true }).order("id", { ascending: true });
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel resolver a pasta do material.");
+  const rows = asRows(data).map(asRow).filter((row) => Boolean(row));
+  if (requested.id) return rows[0] ?? null;
+  const matches = rows.filter((row) => exactName(row, requested.name));
+  if (matches.length > 1) ambiguous("pasta", matches.map((row) => ({ id: str(row, "id") ?? "", path: str(row, "title") ?? "" })));
+  return matches[0] ?? null;
+}
+async function resolveList(db, scope, folder, requested) {
+  if (requested.id) {
+    const found = await findAccessibleList(db, requested.id, scope);
+    if (str(found, "folder_id") !== str(folder, "id")) {
+      throw new McpDomainError("conflict", "A lista informada n\xE3o pertence \xE0 pasta selecionada.", {
+        hint: "Use list_lists com a pasta correta ou informe o id de outra lista."
+      });
+    }
+    return found;
+  }
+  const { data, error } = await db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("folder_id", str(folder, "id")).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null).ilike("title", requested.name).order("title", { ascending: true }).order("id", { ascending: true });
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel resolver a lista do material.");
+  const rows = asRows(data).map(asRow).filter((row) => Boolean(row));
+  const matches = rows.filter((row) => exactName(row, requested.name));
+  if (matches.length > 1) {
+    const folderTitle = str(folder, "title") ?? "Pasta";
+    ambiguous("lista", matches.map((row) => ({ id: str(row, "id") ?? "", path: `${folderTitle} / ${str(row, "title") ?? ""}` })));
+  }
+  return matches[0] ?? null;
+}
+async function compensate(db, listId, folderId) {
+  if (listId) {
+    const { error } = await db.client.rpc("soft_delete_list", { p_list_id: listId, p_user_id: db.userId });
+    if (error) throw toMcpDomainError(error, "A opera\xE7\xE3o falhou e a compensa\xE7\xE3o da lista tamb\xE9m falhou.");
+  }
+  if (folderId) {
+    const { error } = await db.client.rpc("soft_delete_folder", { p_folder_id: folderId, p_user_id: db.userId });
+    if (error) throw toMcpDomainError(error, "A opera\xE7\xE3o falhou e a compensa\xE7\xE3o da pasta tamb\xE9m falhou.");
+  }
+}
+async function createStudyMaterial(db, input) {
+  const scope = resolveScope2(input.scope, input.institution_id);
+  await assertScopeAccessible(db, scope);
+  const folderSelector = selector(input.folder, "folder");
+  const listSelector = selector(input.list, "list");
+  if (!Array.isArray(input.cards) || input.cards.length === 0) {
+    throw new McpDomainError("invalid_input", '"cards" precisa ser uma lista n\xE3o vazia.', {
+      hint: "Para analisar sem criar, use analyze_text_against_library; esta tool s\xF3 cria material quando chamada com cards."
+    });
+  }
+  const dryRun = input.dry_run === true || input.preview === true;
+  const requestedFolder = await resolveFolder(db, scope, folderSelector);
+  const folderId = requestedFolder ? str(requestedFolder, "id") : null;
+  if (!requestedFolder && folderSelector.id) {
+    throw new McpDomainError("not_found", "A pasta informada n\xE3o existe neste escopo.", {
+      hint: "Use list_folders para descobrir o id atual ou informe folder.name para criar uma nova pasta."
+    });
+  }
+  const plannedFolder = requestedFolder ?? {
+    id: null,
+    title: folderSelector.name,
+    institution_id: scope.kind === "institution" ? scope.institutionId : null
+  };
+  const requestedList = folderId ? await resolveList(db, scope, requestedFolder, listSelector) : null;
+  if (!requestedList && listSelector.id) {
+    throw new McpDomainError("not_found", "A lista informada n\xE3o existe na pasta/escopo selecionado.", {
+      hint: "Use list_lists para descobrir o id atual ou informe list.name para criar uma nova lista."
+    });
+  }
+  if (dryRun) {
+    return {
+      dry_run: true,
+      scope: scopeName(scope),
+      folder: { id: folderId, title: str(plannedFolder, "title") ?? "", path: str(plannedFolder, "title") ?? "" },
+      list: { id: requestedList ? str(requestedList, "id") : null, title: requestedList ? str(requestedList, "title") ?? "" : listSelector.name, path: `${str(plannedFolder, "title") ?? ""} / ${requestedList ? str(requestedList, "title") ?? "" : listSelector.name ?? ""}` },
+      will_create: { folder: !requestedFolder, list: !requestedList, cards: input.cards.length },
+      summary: { folder_created: false, list_created: false, cards_created: 0, cards_skipped: 0 }
+    };
+  }
+  let createdFolderId = null;
+  let createdListId = null;
+  try {
+    let folder = requestedFolder;
+    if (!folder) {
+      const created = await createFolder(db, {
+        title: folderSelector.name,
+        institution_id: scope.kind === "institution" ? scope.institutionId : void 0
+      });
+      const createdFolder = asRow(created.folder);
+      createdFolderId = str(createdFolder, "id") ?? null;
+      if (!createdFolderId) throw new McpDomainError("unavailable", "A pasta criada n\xE3o devolveu um id.");
+      folder = await findOwnedFolder(db, createdFolderId);
+    }
+    let list = requestedList;
+    if (!list) {
+      const created = await createList(db, { folder_id: str(folder, "id"), title: listSelector.name });
+      const createdList = asRow(created.list);
+      createdListId = str(createdList, "id") ?? null;
+      if (!createdListId) throw new McpDomainError("unavailable", "A lista criada n\xE3o devolveu um id.");
+      list = await findAccessibleList(db, createdListId, scope);
+    }
+    const cards = await addCards(db, { list_id: str(list, "id"), cards: input.cards, on_duplicate: "skip" });
+    const createdCards = Array.isArray(cards.cards) ? cards.cards : [];
+    return {
+      dry_run: false,
+      scope: scopeName(scope),
+      folder: { id: str(folder, "id"), title: str(folder, "title") ?? "", path: str(folder, "title") ?? "" },
+      list: { id: str(list, "id"), title: str(list, "title") ?? "", path: `${str(folder, "title") ?? ""} / ${str(list, "title") ?? ""}` },
+      created_folder_id: createdFolderId,
+      created_list_id: createdListId,
+      card_ids: createdCards.map((card) => str(asRow(card), "id")).filter((id) => Boolean(id)),
+      summary: {
+        folder_created: Boolean(createdFolderId),
+        list_created: Boolean(createdListId),
+        cards_created: Number(cards.created ?? 0),
+        cards_skipped: Number(cards.skipped_existing ?? 0)
+      }
+    };
+  } catch (error) {
+    if (createdFolderId || createdListId) await compensate(db, createdListId, createdFolderId);
+    throw error;
+  }
+}
+
+// src/lib/mcp/tools/createStudyMaterial.ts
+var selectorSchema = z23.object({
+  id: z23.string().uuid().optional().describe("Current object uuid discovered from a list tool."),
+  name: z23.string().min(1).max(120).optional().describe("Exact object name; ambiguity returns current candidates.")
+}).strict().refine((value) => Boolean(value.id) !== Boolean(value.name), "Informe exatamente um id ou name.");
+var cardSchema2 = z23.object({
+  term: z23.string().min(1).max(CARD_TEXT_MAX).describe("Card term/front."),
+  translation: z23.string().min(1).max(CARD_TEXT_MAX).describe("Card translation/back."),
+  hint: z23.string().max(CARD_TEXT_MAX).optional(),
+  example_text: z23.string().max(CARD_TEXT_MAX).optional(),
+  example_translation: z23.string().max(CARD_TEXT_MAX).optional(),
+  context_tag: z23.string().max(CARD_CONTEXT_TAG_MAX).optional(),
+  word_hints: z23.union([z23.array(z23.unknown()), z23.record(z23.unknown())]).optional(),
+  image_url_a: z23.string().max(CARD_TEXT_MAX).optional(),
+  image_url_b: z23.string().max(CARD_TEXT_MAX).optional(),
+  layer_index: z23.number().int().min(0).max(50).optional(),
+  parent_card_id: z23.string().uuid().optional()
+});
+var createStudyMaterial_default = defineTool24({
+  name: "create_study_material",
+  title: "Create study material by name or id",
+  description: "Creates or reuses a folder and list inside the authenticated account's personal or institution scope, then inserts all supplied cards in one batch. Resolve names at call time: an ambiguous name fails with candidate ids and paths. dry_run or preview only plans the operation and performs no writes. This tool creates material only when explicitly called with cards; for analysis without creation use analyze_text_against_library, which is read-only. The owner is always derived from the verified token, never from model input; repeated cards are skipped safely.",
+  inputSchema: {
+    scope: z23.enum(["personal", "institution"]).describe("Library scope to use."),
+    institution_id: z23.string().uuid().optional().describe("Required for institution scope; discover with get_my_profile."),
+    folder: selectorSchema.describe("Folder selected by its current id or exact name."),
+    list: selectorSchema.describe("List selected by its current id or exact name within the folder."),
+    cards: z23.array(cardSchema2).min(1).max(MAX_BATCH_CARDS).describe("Cards inserted in one multi-row batch."),
+    dry_run: z23.boolean().optional().describe("Preview the resolved targets and planned counts without writing."),
+    preview: z23.boolean().optional().describe("Alias for dry_run; no folder, list or card is created.")
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const result = await createStudyMaterial(db, args);
+      return toolSuccess(result);
+    } catch (error) {
+      return toolErrorResult(error, "create_study_material");
+    }
+  }
+});
+
+// src/lib/mcp/domain/audit.ts
+function asObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function responsePayload(result) {
+  const first = result.content?.[0];
+  if (!first || first.type !== "text") return null;
+  try {
+    return asObject(JSON.parse(first.text));
+  } catch {
+    return null;
+  }
+}
+function scopeOf(args, payload) {
+  const input = asObject(args);
+  const rawScope = asObject(input?.scope);
+  if (rawScope?.kind === "personal" || rawScope?.kind === "institution") return String(rawScope.kind);
+  if (input?.scope === "personal" || input?.scope === "institution") return String(input.scope);
+  if (typeof input?.institution_id === "string") return "institution";
+  if (payload?.scope === "personal" || payload?.scope === "institution") return String(payload.scope);
+  for (const key of ["folder", "list", "target"]) {
+    const nested = asObject(payload?.[key]);
+    if (nested?.scope === "personal" || nested?.scope === "institution") return String(nested.scope);
+  }
+  return null;
+}
+function targetTypeOf(args) {
+  const input = asObject(args);
+  if (Array.isArray(input?.updates) || Array.isArray(input?.card_ids) || Array.isArray(input?.cards)) return "cards";
+  if (typeof input?.folder_id === "string") return "folder";
+  if (typeof input?.list_id === "string") return "list";
+  if (input?.target === "folder" || input?.target === "list") return String(input.target);
+  return "operation";
+}
+function targetOf(args, payload, failed) {
+  if (failed) {
+    const error = asObject(payload?.error);
+    return { type: targetTypeOf(args), reason: typeof error?.code === "string" ? error.code : "operation_failed" };
+  }
+  const target = {};
+  const input = asObject(args);
+  for (const key of ["folder_id", "list_id", "id", "created_folder_id", "created_list_id"]) {
+    if (typeof payload?.[key] === "string") target[key] = payload[key];
+  }
+  for (const key of ["folder", "list", "target"]) {
+    const nested = asObject(payload?.[key]);
+    if (typeof nested?.id === "string") {
+      target[key] = nested.id;
+      target[key + "_id"] = nested.id;
+    }
+  }
+  for (const key of ["card_ids", "list_ids", "updates", "cards"]) {
+    if (Array.isArray(input?.[key])) target[key + "_count"] = input[key].length;
+  }
+  return target;
+}
+function countOf(args, payload) {
+  const input = asObject(args);
+  for (const key of ["cards", "card_ids", "list_ids", "updates"]) {
+    if (Array.isArray(input?.[key])) return input[key].length;
+  }
+  const summary = asObject(payload?.summary);
+  for (const value of [
+    summary?.cards_created,
+    payload?.total_removed,
+    payload?.cards_removed,
+    payload?.copied_cards,
+    payload?.created,
+    payload?.updated,
+    payload?.reordered
+  ]) {
+    if (typeof value === "number") return value;
+  }
+  return 0;
+}
+function emitAudit(tool, ctx, args, payload, result, durationMs) {
+  try {
+    console.log(JSON.stringify({
+      event: "mcp.audit",
+      uid: ctx.getUserId() ?? null,
+      tool,
+      scope: scopeOf(args, payload),
+      target: targetOf(args, payload, result === "error"),
+      count: countOf(args, payload),
+      result,
+      duration_ms: durationMs
+    }));
+  } catch {
+  }
+}
+function withAudit(tool) {
+  const original = tool.handler;
+  const handler = async (args, ctx) => {
+    const startedAt = Date.now();
+    try {
+      const result = await original(args, ctx);
+      emitAudit(tool.name, ctx, args, responsePayload(result), result.isError ? "error" : "success", Date.now() - startedAt);
+      return result;
+    } catch (error) {
+      emitAudit(tool.name, ctx, args, null, "error", Date.now() - startedAt);
+      throw error;
+    }
+  };
+  return { ...tool, handler };
+}
+
 // src/lib/mcp/index.ts
-var projectRef = "ymahldldyxvwjeruaxpr";
+var auditedToolNames = /* @__PURE__ */ new Set([
+  "create_folder",
+  "update_folder",
+  "create_list",
+  "update_list",
+  "move_list",
+  "reorder_lists",
+  "duplicate_list",
+  "add_flashcards",
+  "update_flashcards",
+  "remove_flashcards",
+  "preview_delete_list",
+  "confirm_delete_list",
+  "preview_delete_folder",
+  "confirm_delete_folder",
+  "restore_from_trash",
+  "create_study_material"
+]);
+function publishedTool(tool) {
+  const annotations = {
+    readOnlyHint: tool.annotations?.readOnlyHint ?? false,
+    idempotentHint: tool.annotations?.idempotentHint ?? false,
+    destructiveHint: tool.annotations?.destructiveHint ?? false,
+    openWorldHint: tool.annotations?.openWorldHint ?? true
+  };
+  const normalized = { ...tool, annotations };
+  return auditedToolNames.has(tool.name) ? withAudit(normalized) : normalized;
+}
+var projectRef = define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID ?? "ymahldldyxvwjeruaxpr";
+var instructions = [
+  "Agent integration for APE Piteco (personal study library).",
+  "Every tool runs as the authenticated user: identity comes from the verified OAuth token, so no tool accepts a user id and none can reach another account.",
+  "Operational sequence: discover -> resolve each name or id at runtime -> act -> re-confirm by reading the affected object. get_my_profile returns the scopes (personal library plus the institution hubs the account owns), list_folders/list_lists/search_my_content return current ids, and get_list/get_flashcards return content.",
+  "Ids never come from memory or an earlier conversation: resolve them again from a current read, and treat ambiguous names as an actionable choice among candidates.",
+  "Reads are compact and paginated (limit/offset, total_count, has_more): never assume a tool returned the whole library; continue with the next page when has_more is true.",
+  "Write in batches: add_flashcards inserts many cards in one call and update_flashcards accepts many cards per call, instead of one call per card.",
+  "Deletion is always two-step and recoverable: preview_delete_list/preview_delete_folder (and remove_flashcards with dry_run=true when many cards are involved) return the real consequences plus a short-lived confirmation_token; only confirm_delete_* applies it. Never read a vague request such as organize this as authorization to delete.",
+  "Every removal is a soft delete that stays 7 days in the product trash and can be undone with restore_from_trash; automatic collections (Reforco / Pontos de atencao) and classroom content are out of reach and fail safely.",
+  "create_study_material resolves folder/list by current name or id, supports dry_run/preview, and inserts cards in one batch; it is not the analysis tool and must never be used to satisfy an analysis-only request."
+].join(" ");
+var registeredTools = [
+  echo_default,
+  getMyProfile_default,
+  listFolders_default,
+  listLists_default,
+  getList_default,
+  getFlashcards_default,
+  searchMyContent_default,
+  analyzeText_default,
+  createFolder_default,
+  updateFolder_default,
+  createList_default,
+  updateList_default,
+  moveList_default,
+  reorderLists_default,
+  duplicateList_default,
+  addFlashcards_default,
+  updateFlashcards_default,
+  removeFlashcards_default,
+  previewDeleteList_default,
+  confirmDeleteList_default,
+  previewDeleteFolder_default,
+  confirmDeleteFolder_default,
+  restoreFromTrash_default,
+  createStudyMaterial_default
+].map(publishedTool);
 var mcp_default = defineMcp({
   name: "ape-piteco-mcp",
   title: "APE Piteco",
-  version: "0.1.0",
-  instructions: "Agent integration for APE Piteco. Use `echo` to verify connectivity. More tools will be added as the integration expands.",
+  version: "0.3.0",
+  instructions,
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [echo_default]
+  tools: registeredTools
 });
 
 // lovable-mcp-supabase-entry.ts
-import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.0/stacks/supabase";
+import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.1/stacks/supabase";
 Deno.serve(createSupabaseHandler(mcp_default, { functionName: "mcp" }));
