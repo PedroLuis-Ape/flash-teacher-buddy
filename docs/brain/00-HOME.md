@@ -31,6 +31,7 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[23-GIT-E-WORKTREES]] — checkout principal, pasta oficial de worktrees e regra de limpeza segura.
 - [[24-SECURITY-AUDIT-2026-09-12]] — auditoria de segurança: causa-raiz das RPCs, correções e pendências.
 - [[25-PUBLIC-ACTIVATION-PROGRAM]] — Home de ativação, destaque real, carrossel e pendências do programa público.
+- [[25-CCL-REGISTRY]] — registry do protocolo CCL do projeto (Clara Compact Language) e regras de handoff entre agentes.
 - [[README]] — declaração do vault canônico, proveniência e fonte de verdade.
 - [[learning/00-LEARNING-HUB]] — aprendizagem por tentativa, evidência e reteste.
 
