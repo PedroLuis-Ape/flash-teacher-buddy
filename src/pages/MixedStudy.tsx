@@ -176,8 +176,13 @@ export default function MixedStudy() {
   const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
   const restoredSessionDirectionRef = useRef<Direction | null>(null);
   const restoredSessionSubsetRef = useRef<"all" | "favorites" | null>(null);
-  const baseDirection: Direction = restoredSessionDirectionRef.current
-    ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction);
+  // Direção EFETIVA — mesma política do Study: no Modo gamificado a direção é
+  // sempre automática (`any`), sem sobrescrever a preferência base.
+  const baseDirection: Direction = resolveEffectiveStudyDirection(
+    restoredSessionDirectionRef.current
+      ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction),
+    selectedFlowModeRef?.current ?? effectivePreset.studyFlowMode,
+  );
   const requestedFavoritesOnly = restoredSessionSubsetRef.current
     ? restoredSessionSubsetRef.current === "favorites"
     : explicitFavorites === "true"
@@ -1376,6 +1381,7 @@ export default function MixedStudy() {
               currentCard={currentCard}
               allCards={cards}
               direction={resolvedDirection}
+              playTarget={effectivePreset.playTarget}
               writeSettings={writeSessionSettings}
               langA={effectiveListSettings.langA}
               langB={effectiveListSettings.langB}
