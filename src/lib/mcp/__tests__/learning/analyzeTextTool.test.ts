@@ -21,7 +21,7 @@ vi.mock("@supabase/supabase-js", async (importOriginal) => {
 import analyzeTextTool from "../../tools/analyzeText";
 import { invalidateVocabularyInventory } from "../../learning/inventory";
 import { MAX_FILTER_IDS, MAX_TEXT_CHARS } from "../../learning/analyze";
-import { FOLDER_A, LIST_A, USER_A, buildTables } from "../fixtures";
+import { FOLDER_A, INSTITUTION_A, INSTITUTION_B, LIST_A, USER_A, buildTables, makeCardRow, makeFolderRow, makeListRow } from "../fixtures";
 
 const TOKEN = "unit-test-bearer-secret";
 
@@ -166,5 +166,38 @@ describe("tool analyze_text_against_library", () => {
     expect(
       (restrictedPayload.new_vocabulary as Array<{ text: string }>).map((item) => item.text.toLowerCase()),
     ).toContain("warehouse");
+  });
+
+  it("isolates the analysis cache between two institution ids of the same user", async () => {
+    const secondInstitution = makeFolderRow({
+      id: "11111111-1111-4111-8111-666666666666",
+      title: "Segundo hub",
+      institution_id: INSTITUTION_B,
+    });
+    const secondList = makeListRow({
+      id: "aaaaaaaa-0001-4000-8000-000000000006",
+      title: "Segundo deck",
+    }, secondInstitution);
+    hoisted.tables.institutions.push({ id: INSTITUTION_B, owner_id: USER_A, name: "Colégio Beta do mesmo usuário" });
+    hoisted.tables.folders.push(secondInstitution);
+    hoisted.tables.lists.push(secondList);
+    hoisted.tables.flashcards.push(makeCardRow({
+      id: "aaaaaaaa-0002-4000-8000-000000000006",
+      term: "beta-only",
+      translation: "somente beta",
+    }, secondList));
+
+    const first = readPayload(await invoke(
+      { text: "alpha-only", language: "en", scope: { kind: "institution", institution_id: INSTITUTION_A } },
+      authenticatedContext(),
+    ));
+    const second = readPayload(await invoke(
+      { text: "beta-only", language: "en", scope: { kind: "institution", institution_id: INSTITUTION_B } },
+      authenticatedContext(),
+    ));
+
+    expect((first.new_vocabulary as Array<{ text: string }>).map((item) => item.text)).toContain("alpha-only");
+    expect((second.already_known as Array<{ text: string }>).map((item) => item.text)).toContain("beta-only");
+    expect((second.summary as { library: { from_cache: boolean } }).library.from_cache).toBe(false);
   });
 });

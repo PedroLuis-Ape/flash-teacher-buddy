@@ -2,6 +2,7 @@ import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { McpDomainError, toolErrorResult, toolSuccess } from "../domain/errors";
+import { inventoryCacheKey } from "../domain/inventoryInvalidation";
 import { PERSONAL_SCOPE, requireUuid, scopeName, type LibraryScope } from "../domain/scope";
 import { MAX_FILTER_IDS, MAX_TEXT_CHARS, MAX_TEXT_TOKENS, analyzeTextAgainstLibrary } from "../learning/analyze";
 import { createSupabaseVocabularySource } from "../learning/supabaseSource";
@@ -81,7 +82,7 @@ export default defineTool({
         source: createSupabaseVocabularySource(db, scope),
         filters: { folderIds: args.folder_ids, listIds: args.list_ids },
         ignoreBasicFunctionWords: args.ignore_basic_function_words,
-        cacheKey: db.userId + "|" + scopeName(scope),
+        cacheKey: inventoryCacheKey(db.userId, scope.kind === "institution" ? scope.institutionId : null),
         cacheMode: "use",
         scopeName: scopeName(scope),
       });

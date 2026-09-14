@@ -40,7 +40,7 @@ export default defineTool({
       .optional()
       .describe('skip (default) avoids duplicating the same term+translation in the list; insert forces the insert.'),
   },
-  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
     try {
       const db = createUserScopedDb(ctx);

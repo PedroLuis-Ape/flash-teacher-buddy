@@ -138,8 +138,8 @@ para a FASE 3 reutilizando esta camada. Ver
 - [FATO CONFIRMADO] Batch real: add_flashcards faz UM insert multi-linha por
   chamada (até 200 cards) com dedupe opcional por par (term+translation)
   normalizado dentro da lista; update_flashcards tem dois modos — mesmos
-  valores para N cards (1 UPDATE) e valores por card (N updates concorrentes,
-  com not_found por card em vez de falhar o lote inteiro).
+  valores para N cards (1 UPDATE) e valores por card (1 UPSERT multi-linha,
+  com pré-validação de posse e not_found por card).
 - [FATO CONFIRMADO] duplicate_list copia a lista + deck ativo com ids novos,
   remapeando parent_card_id e gerando identidade de grupo nova
   (status_group_uid), então Favorito/Lista vermelha não são herdados; se um
@@ -153,11 +153,19 @@ para a FASE 3 reutilizando esta camada. Ver
   p_user_id = auth.uid(). O MCP nunca faz hard delete: a purga de 7 dias é do
   produto e restrita a service_role.
 - [DECISAO VIGENTE] O confirmation token é STATELESS: HMAC-SHA256 de
-  (ação|uid|objeto|contagem previsualizada|exp) com chave = bearer verificado
-  da requisição, TTL de 600 s, sem tabela e sem migration. Consequências: não
-  é forjável sem o bearer, é específico da conta e deixa de casar quando o
-  objeto mudou desde o preview (força novo preview). Refresh de sessão entre
-  preview e confirmação invalida o token — falha segura.
+  (ação|uid|objeto|escopo|conjunto ordenado de ids|contagem previsualizada|
+  impressão do estado atual|exp) com chave = bearer verificado da requisição,
+  TTL de 600 s, sem tabela e sem migration. A impressão é um SHA-256 dos ids,
+  updated_at e deleted_at das linhas afetadas, recalculado no momento da
+  confirmação; portanto uma mutação posterior, inclusive restore, invalida o
+  mesmo token. Consequências: não é forjável sem o bearer, é específico da
+  conta e exige novo preview quando o objeto mudou. Refresh de sessão entre
+  preview e confirmação também invalida o token — falha segura.
+- [LIMITE RESIDUAL] Sem nonce/registro de consumo, um token ainda pode ser
+  reapresentado enquanto o estado permanecer byte-a-byte idêntico; operações
+  já removidas respondem idempotentemente e não repetem a mutação. Bloquear
+  esse replay residual exigiria estado persistente (migration/tabela) e decisão
+  humana explícita.
 - [FATO CONFIRMADO] Reexecutar remoção é idempotente: objeto já removido
   responde already_deleted/already_active, nunca erro destrutivo.
 - [VERIFIED-TEST] 12 arquivos / 89 testes do MCP, incluindo GATE_WRITE e
@@ -169,14 +177,31 @@ para a FASE 3 reutilizando esta camada. Ver
 
 ## Contrato compartilhado com o motor de vocabulário (2026-09-13)
 
-- [DECISAO VIGENTE] A chave do inventário é userId + "|" + scopeName(scope)
-  (personal|institution) — a MESMA usada por analyze_text_against_library. Toda
-  escrita do MCP chama invalidateScopeInventory(userId, institutionId) no fim
-  da operação; quem criar novas rotas de escrita precisa manter esse contrato.
+- [DECISAO VIGENTE] A chave do inventário é userId + "|" + scopeName(scope) +
+  "|" + institutionId (ou `personal` no escopo pessoal) — a MESMA usada por
+  analyze_text_against_library. Toda escrita do MCP chama
+  invalidateScopeInventory(userId, institutionId) no fim da operação; quem
+  criar novas rotas de escrita precisa manter esse contrato.
 - [FATO CONFIRMADO] O escopo de uma lista vem do embed da pasta
   (folders.institution_id); mover lista invalida origem e destino.
 - [FATO CONFIRMADO] analyze_text_against_library entrou no index.ts no grupo
   read-only (após search_my_content); o motor de vocabulário é do outro worker
   e não foi editado por este lote.
+
+## FASE 5/6/7 — UX de agente, create_study_material e audit log (2026-09-13)
+
+- [DECISAO VIGENTE] Toda tool publicada recebe as quatro annotations booleanas
+  (`readOnlyHint`, `idempotentHint`, `destructiveHint`, `openWorldHint`) e usa
+  o envelope `{ok:true,...}` ou `{ok:false,error:{code,message,hint}}`.
+- [FATO CONFIRMADO] `create_study_material` resolve pasta/lista por id ou nome
+  dentro do escopo pessoal/institucional, falha com candidatos `id — caminho`
+  quando o nome é ambíguo, suporta `dry_run`/`preview` sem escrita e usa uma
+  inserção batch para os cards. Criações parciais são compensadas pela
+  lixeira via RPC do produto.
+- [FATO CONFIRMADO] Escritas e destrutivos emitem `mcp.audit` como JSON local
+  com uid, tool, escopo, alvo por id, contagem, resultado e duração; nenhum
+  texto de card ou token é serializado. Evolução futura: substituir o emissor
+  local por um sink/tabela de auditoria mediante migration e decisão explícita.
+- Ver [[sessions/2026-09-13-mcp-phase5-7]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]].
 - [LIMITE] A invalidação é por processo (Map em memória do isolate); o TTL de
   60 s é o limite de obsolescência nos demais isolates. Ver [[08-RISKS]].

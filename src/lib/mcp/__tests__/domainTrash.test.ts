@@ -110,6 +110,18 @@ describe("preview/confirm list deletion", () => {
     expect(rpcCalls(harness.calls, "soft_delete_list")).toHaveLength(1);
   });
 
+  it("rejects replay of the same token after the deleted list is restored", async () => {
+    const harness = createHarness();
+    const preview = await previewListDeletion(harness.db, { list_id: LIST_A }, KEY);
+    await confirmListDeletion(harness.db, { list_id: LIST_A, confirmation_token: preview.confirmation_token }, KEY);
+    await restoreFromTrash(harness.db, { target: "list", id: LIST_A });
+
+    await expect(
+      confirmListDeletion(harness.db, { list_id: LIST_A, confirmation_token: preview.confirmation_token }, KEY),
+    ).rejects.toMatchObject({ code: "confirmation_required" });
+    expect(rpcCalls(harness.calls, "soft_delete_list")).toHaveLength(1);
+  });
+
   it("never reaches another account (no existence leak) nor a system collection", async () => {
     const harness = createHarness();
     await expect(previewListDeletion(harness.db, { list_id: LIST_B }, KEY)).rejects.toMatchObject({

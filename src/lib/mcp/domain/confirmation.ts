@@ -5,12 +5,13 @@ import { McpDomainError } from "./errors";
  * Stateless two-step confirmation for material destructive operations.
  *
  * No storage and no migration: the token is an HMAC-SHA256 of the normalized
- * claim (action + authenticated user + object + previewed row count + expiry),
+ * claim (action + authenticated user + object/scope + exact target ids +
+ * previewed row count + current state fingerprint + expiry),
  * keyed with the verified bearer of the current request. Consequences:
  * - the model cannot mint a token without the caller's bearer;
  * - a token from account A is useless for account B;
- * - if the object changed since the preview, the recomputed count differs and
- *   the token stops matching (the agent must preview again);
+ * - if the object or requested target set changes since the preview, the
+ *   recomputed claim stops matching (the agent must preview again);
  * - a bearer refresh between preview and confirm invalidates the token, which
  *   fails safely by asking for a new preview.
  */
@@ -22,8 +23,21 @@ export interface ConfirmationClaim {
   action: ConfirmationAction;
   userId: string;
   objectId: string;
+  /** Logical scope of the target, e.g. the list owning removable cards. */
+  scope?: string;
+  /** Stable, exact target identifiers; sorted before signing. */
+  targetIds?: readonly string[];
   /** Rows the preview showed; recomputed server-side before verification. */
   expectedCount: number;
+  /** Digest of current affected rows, computed server-side and never model-supplied. */
+  stateFingerprint?: string;
+}
+
+export interface ConfirmationStateRow {
+  kind: string;
+  id: string;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
 }
 
 export interface ConfirmationToken {
@@ -41,7 +55,34 @@ function base64Url(bytes: Uint8Array): string {
 }
 
 function canonical(claim: ConfirmationClaim, expiresAtSeconds: number): string {
-  return [claim.action, claim.userId, claim.objectId, String(claim.expectedCount), String(expiresAtSeconds)].join("|");
+  const targetIds = [...(claim.targetIds ?? [])].map((id) => id.toLowerCase()).sort().join(",");
+  return [
+    claim.action,
+    claim.userId,
+    claim.objectId,
+    claim.scope ?? "",
+    targetIds,
+    String(claim.expectedCount),
+    claim.stateFingerprint ?? "",
+    String(expiresAtSeconds),
+  ].join("|");
+}
+
+/** Produces a stable, non-reversible snapshot identifier for confirmation claims. */
+export async function confirmationStateFingerprint(rows: readonly ConfirmationStateRow[]): Promise<string> {
+  const normalized = rows
+    .map((row) => ({
+      kind: row.kind,
+      id: row.id,
+      updatedAt: row.updatedAt ?? null,
+      deletedAt: row.deletedAt ?? null,
+    }))
+    .sort((left, right) =>
+      `${left.kind}|${left.id}|${String(left.updatedAt)}|${String(left.deletedAt)}`
+        .localeCompare(`${right.kind}|${right.id}|${String(right.updatedAt)}|${String(right.deletedAt)}`),
+    );
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(JSON.stringify(normalized)));
+  return base64Url(new Uint8Array(digest));
 }
 
 async function sign(key: ConfirmationKey, message: string): Promise<string> {

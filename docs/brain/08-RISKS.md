@@ -157,8 +157,9 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · 
   + invalidação no isolate que escreveu. FOLLOW-UP: versionar invalidação por
   fingerprint/updated_at consultado no banco.
 - [DECISAO VIGENTE] O confirmation token destrutivo é HMAC do bearer da
-  requisição: refresh de sessão entre preview e confirmação invalida o token e
-  exige novo preview (falha segura, sem operação parcial).
+  requisição e agora inclui uid, lista/escopo e o conjunto exato de IDs,
+  além da contagem. Refresh de sessão entre preview e confirmação invalida o
+  token e exige novo preview (falha segura, sem operação parcial).
 - [NAO VERIFICADO] O isolamento entre contas na FASE 3/4 foi provado por
   filtros de posse do domínio sobre fake PostgREST; a RLS real segue não
   exercitada nesta rodada. Rodar smoke autenticado antes de publicar.
@@ -166,3 +167,15 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · 
   compensa falha de lote enviando a cópia parcial para a lixeira.
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]]
+
+## R-2026-09-13-05 — audit log local ainda não é trilha durável
+
+- [FATO CONFIRMADO] FASE 7 emite `mcp.audit` via `console.log(JSON.stringify)`
+  no processo do MCP para escritas e destrutivos, sem migration e sem dados
+  de card/token.
+- [LIMITE] Logs locais dependem do coletor/runtime e não oferecem consulta,
+  retenção ou integridade de uma tabela.
+- [FOLLOW-UP] Evoluir para sink/tabela de auditoria com schema, retenção,
+  RLS e aprovação explícita antes de qualquer migration de produção.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]]

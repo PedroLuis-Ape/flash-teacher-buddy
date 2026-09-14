@@ -17,7 +17,7 @@ export interface FakeFilter {
 
 export interface FakeQueryCall {
   table: string;
-  operation: "select" | "insert" | "update";
+  operation: "select" | "insert" | "update" | "upsert";
   columns?: string;
   countRequested: boolean;
   head: boolean;
@@ -39,6 +39,8 @@ export type RecordedCall = FakeQueryCall | FakeRpcCall;
 export interface FakeClientOptions {
   /** Table -> provider error, used to simulate RLS/permission denial. */
   deny?: Record<string, { code: string; message: string }>;
+  /** Provider error returned before any row mutation for one UPDATE statement. */
+  failUpdate?: { code: string; message: string };
   /** Overrides/replacements for the product RPCs (e.g. a NOT_FOUND answer). */
   rpc?: Record<string, (params: Record<string, unknown>, tables: Record<string, Row[]>) => { data: unknown; error: unknown }>;
 }
@@ -249,6 +251,7 @@ export function createFakeClient(
     };
     calls.push(call);
     let insertRows: Row[] = [];
+    let upsertRows: Row[] = [];
     let patch: Row | null = null;
 
     const run = () => {
@@ -271,8 +274,40 @@ export function createFakeClient(
         return { data: created, error: null, count: created.length };
       }
 
+      if (call.operation === "upsert") {
+        const returned: Row[] = [];
+        for (const row of upsertRows) {
+          const existing = (tables[table] ?? []).find((candidate) => candidate.id === row.id);
+          if (existing) {
+            Object.assign(existing, row);
+            syncEmbeds(table, existing, tables);
+            returned.push({ ...existing });
+          } else {
+            const created = {
+              ...(TABLE_DEFAULTS[table] ?? {}),
+              id: nextGeneratedId(),
+              created_at: NOW_ISO,
+              updated_at: NOW_ISO,
+              deleted_at: null,
+              ...row,
+            };
+            tables[table] = [...(tables[table] ?? []), created];
+            syncEmbeds(table, created, tables);
+            returned.push({ ...created });
+          }
+        }
+        return { data: returned, error: null, count: returned.length };
+      }
+
       const matched = (tables[table] ?? []).filter((row) => rowMatches(row, call.filters));
       if (call.operation === "update") {
+        if (options.failUpdate) {
+          return {
+            data: null,
+            error: { code: options.failUpdate.code, message: options.failUpdate.message, details: null, hint: null },
+            count: null,
+          };
+        }
         for (const row of matched) {
           Object.assign(row, patch ?? {});
           syncEmbeds(table, row, tables);
@@ -321,6 +356,11 @@ export function createFakeClient(
       update(values: Row) {
         call.operation = "update";
         patch = values;
+        return builder;
+      },
+      upsert(payload: Row | Row[], _options?: Record<string, unknown>) {
+        call.operation = "upsert";
+        upsertRows = Array.isArray(payload) ? payload : [payload];
         return builder;
       },
       eq(column: string, value: unknown) {

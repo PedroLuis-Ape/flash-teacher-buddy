@@ -11,6 +11,7 @@ export type McpErrorCode =
   | "unauthenticated"
   | "forbidden"
   | "not_found"
+  | "ambiguous"
   | "invalid_input"
   | "conflict"
   | "confirmation_required"
@@ -64,6 +65,7 @@ const CODE_MESSAGES: Record<McpErrorCode, string> = {
   unauthenticated: "Esta operação exige uma conta APE Piteco autenticada.",
   forbidden: "A conta autenticada não tem permissão para acessar este conteúdo.",
   not_found: "O objeto solicitado não existe na biblioteca desta conta.",
+  ambiguous: "O nome informado corresponde a mais de um objeto na biblioteca.",
   invalid_input: "A entrada enviada é inválida para esta operação.",
   conflict: "A operação conflita com o estado atual da biblioteca.",
   confirmation_required:

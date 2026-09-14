@@ -51,6 +51,7 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 ## Sessões
 
 - [[sessions/interruption-checkpoint-001]]
+- [[sessions/checkpoint-2026-09-13-mcp-pause]] — parada com checkpoint completo do MCP (2026-09-13).
 
 ## Regra de retomada
 

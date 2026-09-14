@@ -3,10 +3,10 @@
   "brain_root": "docs/brain",
   "generated_by": "scripts/brain-index.mjs",
   "byte_basis": "utf8-bytes-lf-normalized",
-  "note_count": 97,
+  "note_count": 100,
   "historical_note_count": 38,
-  "total_bytes": 343192,
-  "brain_version": "4d882f81506ab614a0f04da03ed9ecf54f5a140999df040d9599497df247231d",
+  "total_bytes": 373256,
+  "brain_version": "acceed01625d64c6c4f7a5cec00d7bc28988e7c0c658e2087a82dfa6b69d927f",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -119,6 +119,13 @@
       "canonical_document": "03-ARCHITECTURE.md",
       "canonical_confidence": "declared"
     },
+    "arquitetura": {
+      "notes": 1,
+      "bytes": 3522,
+      "historical_notes": 0,
+      "canonical_document": null,
+      "canonical_confidence": null
+    },
     "browser-extension": {
       "notes": 2,
       "bytes": 6424,
@@ -135,7 +142,7 @@
     },
     "current-state": {
       "notes": 1,
-      "bytes": 39516,
+      "bytes": 42778,
       "historical_notes": 0,
       "canonical_document": "01-CURRENT-STATE.md",
       "canonical_confidence": "declared"
@@ -177,14 +184,14 @@
     },
     "knowledge-management": {
       "notes": 6,
-      "bytes": 27144,
+      "bytes": 27247,
       "historical_notes": 0,
       "canonical_document": "10-CONTEXT-FEEDING-RULE.md",
       "canonical_confidence": "declared"
     },
     "mcp": {
-      "notes": 3,
-      "bytes": 26410,
+      "notes": 4,
+      "bytes": 31937,
       "historical_notes": 0,
       "canonical_document": "areas/mcp-agent-api.md",
       "canonical_confidence": "declared"
@@ -212,7 +219,7 @@
     },
     "release": {
       "notes": 1,
-      "bytes": 9939,
+      "bytes": 11768,
       "historical_notes": 0,
       "canonical_document": "08-RISKS.md",
       "canonical_confidence": "declared"
@@ -239,8 +246,8 @@
       "canonical_confidence": "inferred"
     },
     "session-log": {
-      "notes": 7,
-      "bytes": 49731,
+      "notes": 8,
+      "bytes": 65552,
       "historical_notes": 0,
       "canonical_document": null,
       "canonical_confidence": null
@@ -293,8 +300,8 @@
       "status": null,
       "last_reviewed": null,
       "historical": false,
-      "bytes": 3080,
-      "sha256": "33b6a6b098246e123d90ba917b8da6cd3df5d34c01b69678a5b893bd2f71af46"
+      "bytes": 3183,
+      "sha256": "8ecba688cbb93003353b49740c5d891f5dd8a18ac8df48bad5b050903801ea65"
     },
     {
       "path": "01-CURRENT-STATE.md",
@@ -307,8 +314,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 39516,
-      "sha256": "ca99cbdd7b82da316b64386d4882d1589eac5ff9fe3cb691c50c2edde21bb781"
+      "bytes": 42778,
+      "sha256": "6523c39581781c6f531a5590c060c5296abeac5d5f67104b474ded6c62a9f59d"
     },
     {
       "path": "02-MASTER-PLAN.md",
@@ -405,8 +412,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 9939,
-      "sha256": "6bc1dc65612b449295e70b0622007e859ca0a2b0cefa6530bbef3f99e7015af7"
+      "bytes": 11768,
+      "sha256": "f6fe9384a7ac92ee40cbf5719049bb3ae134c45b6fc2a80b3e9b8a4db2ea9eda"
     },
     {
       "path": "09-ASTRA-HANDOFF.md",
@@ -549,6 +556,20 @@
       "sha256": "426152bfa4286b5b47a2e36b30f4b225bc2a100374edc715e03de37ea435f16d"
     },
     {
+      "path": "26-MCP-E-SEGUNDO-CEREBRO.md",
+      "domain": "arquitetura",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "MCP e Segundo Cerebro — fronteira permanente",
+      "description": "Segundo Cerebro = contexto duravel.",
+      "type": "rule",
+      "status": "active",
+      "last_reviewed": "2026-09-13",
+      "historical": false,
+      "bytes": 3522,
+      "sha256": "b19f1ecd4f7a647336fa7325c0e7fa3278d252f53b28f3a55a63a7150d6cb171"
+    },
+    {
       "path": "27-CONTEXT-PACKET-E-TELEMETRIA.md",
       "domain": "knowledge-management",
       "canonical": false,
@@ -615,8 +636,8 @@
       "status": "active",
       "last_reviewed": "2026-09-13",
       "historical": false,
-      "bytes": 8481,
-      "sha256": "7b6aef6131557501b0e8cd31b9e88ab6070252132e48f30e3f8a45d0535d2fbe"
+      "bytes": 10476,
+      "sha256": "f3a763ee3171daa791f84390cd32e9e2a480e58c580a1cf16dcdd44fb7e7d285"
     },
     {
       "path": "areas/mcp-vocabulary-analysis.md",
@@ -1553,8 +1574,22 @@
       "status": null,
       "last_reviewed": null,
       "historical": false,
-      "bytes": 3715,
-      "sha256": "2562a2f802f78f1cd8f7ca9c353f6036319a8d35ee72391d344d56c446b97174"
+      "bytes": 4963,
+      "sha256": "0aa8b5cd9f465f6433e296386318dadacdf4d798bf2628614bf5679744f7fabe"
+    },
+    {
+      "path": "sessions/2026-09-13-mcp-phase5-7.md",
+      "domain": "mcp",
+      "canonical": false,
+      "canonical_document": "areas/mcp-agent-api.md",
+      "title": "MCP — FASE 5, 6 e 7 + correções adversariais — 2026-09-13",
+      "description": "Corrigir A1–A4 e concluir a UX de agente, createstudymaterial e audit log",
+      "type": "session",
+      "status": "done",
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 3532,
+      "sha256": "4a517b7acbb3b009f55dda3c055f4b1ee17726a724e931888837046414075cfd"
     },
     {
       "path": "sessions/2026-09-13-mcp-vocabulary.md",
@@ -1625,6 +1660,20 @@
       "historical": false,
       "bytes": 4086,
       "sha256": "f3cd8b2ead6bed1fe496edfc101f9a79ee15392ba5d271189fb76207f85dbbbc"
+    },
+    {
+      "path": "sessions/checkpoint-2026-09-13-mcp-pause.md",
+      "domain": "session-log",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "Checkpoint — pausa do MCP (2026-09-13)",
+      "description": "Transformar o MCP do Piteco na camada operacional do app para agentes: descobrir, entender,",
+      "type": "checkpoint",
+      "status": "paused",
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 14573,
+      "sha256": "a2fe89376b629571276ddcee8c8c8f186f9c3f5b887d806cfbef576b2139f991"
     },
     {
       "path": "sessions/interruption-checkpoint-001.md",

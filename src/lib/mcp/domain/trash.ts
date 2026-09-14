@@ -1,7 +1,7 @@
 import { compactFolderSummary, compactList, findOwnedFolder, findOwnedList, folderInstitutionId } from "./access";
 import { TRASH_RETENTION_DAYS } from "./cardWrites";
 import type { ConfirmationKey, UserScopedDb } from "./client";
-import { createConfirmationToken, verifyConfirmationToken } from "./confirmation";
+import { confirmationStateFingerprint, createConfirmationToken, verifyConfirmationToken, type ConfirmationStateRow } from "./confirmation";
 import { McpDomainError, toMcpDomainError } from "./errors";
 import { countListCards } from "./flashcards";
 import { invalidateScopeInventory, listInstitutionId } from "./inventoryInvalidation";
@@ -55,6 +55,64 @@ async function countCardsInLists(db: UserScopedDb, listIds: string[]): Promise<n
   return typeof count === "number" ? count : 0;
 }
 
+async function listDeletionState(db: UserScopedDb, listId: string): Promise<string> {
+  const [{ data: listData, error: listError }, { data: cardData, error: cardError }] = await Promise.all([
+    db.client.from("lists").select("id,updated_at,deleted_at").eq("id", listId).eq("system_kind", "user"),
+    db.client.from("flashcards").select("id,updated_at,deleted_at").eq("list_id", listId).eq("user_id", db.userId),
+  ]);
+  if (listError) throw toMcpDomainError(listError, "Não foi possível verificar o estado da lista.");
+  if (cardError) throw toMcpDomainError(cardError, "Não foi possível verificar o estado dos cards da lista.");
+  const rows: ConfirmationStateRow[] = [
+    ...asRows(listData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "list", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+    ...asRows(cardData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+  ];
+  return confirmationStateFingerprint(rows);
+}
+
+async function folderDeletionState(db: UserScopedDb, folderId: string): Promise<string> {
+  const { data: folderData, error: folderError } = await db.client
+    .from("folders")
+    .select("id,updated_at,deleted_at")
+    .eq("id", folderId)
+    .eq("system_kind", "user");
+  if (folderError) throw toMcpDomainError(folderError, "Não foi possível verificar o estado da pasta.");
+  const { data: listData, error: listError } = await db.client
+    .from("lists")
+    .select("id,updated_at,deleted_at")
+    .eq("folder_id", folderId)
+    .eq("system_kind", "user");
+  if (listError) throw toMcpDomainError(listError, "Não foi possível verificar o estado das listas da pasta.");
+  const listRows = asRows(listData).map((row) => {
+    const record = asRow(row) ?? {};
+    return { kind: "list", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+  });
+  const listIds = listRows.map((row) => row.id).filter(Boolean);
+  let cardRows: ConfirmationStateRow[] = [];
+  if (listIds.length > 0) {
+    const { data: cardData, error: cardError } = await db.client
+      .from("flashcards")
+      .select("id,updated_at,deleted_at")
+      .in("list_id", listIds)
+      .eq("user_id", db.userId);
+    if (cardError) throw toMcpDomainError(cardError, "Não foi possível verificar o estado dos cards da pasta.");
+    cardRows = asRows(cardData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    });
+  }
+  const folderRows = asRows(folderData).map((row) => {
+    const record = asRow(row) ?? {};
+    return { kind: "folder", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+  });
+  return confirmationStateFingerprint([...folderRows, ...listRows, ...cardRows]);
+}
+
 export interface DeletePreviewInput {
   list_id?: unknown;
   folder_id?: unknown;
@@ -74,11 +132,13 @@ export async function previewListDeletion(
   const list = await findOwnedList(db, input.list_id);
   const listId = String(list.id);
   const cardCount = (await countListCards(db, listId)) ?? 0;
+  const stateFingerprint = await listDeletionState(db, listId);
   const confirmation = await createConfirmationToken(key, {
     action: "delete_list",
     userId: db.userId,
     objectId: listId,
     expectedCount: cardCount,
+    stateFingerprint,
   });
 
   return {
@@ -116,11 +176,13 @@ export async function confirmListDeletion(
   }
 
   const cardCount = (await countListCards(db, listId)) ?? 0;
+  const stateFingerprint = await listDeletionState(db, listId);
   await verifyConfirmationToken(key, input.confirmation_token, {
     action: "delete_list",
     userId: db.userId,
     objectId: listId,
     expectedCount: cardCount,
+    stateFingerprint,
   });
   await callTrashRpc(
     db,
@@ -149,11 +211,13 @@ export async function previewFolderDeletion(
   const folderId = String(folder.id);
   const listIds = await activeListIds(db, folderId);
   const cardCount = await countCardsInLists(db, listIds);
+  const stateFingerprint = await folderDeletionState(db, folderId);
   const confirmation = await createConfirmationToken(key, {
     action: "delete_folder",
     userId: db.userId,
     objectId: folderId,
     expectedCount: listIds.length,
+    stateFingerprint,
   });
 
   return {
@@ -188,11 +252,13 @@ export async function confirmFolderDeletion(
 
   const listIds = await activeListIds(db, folderId);
   const cardCount = await countCardsInLists(db, listIds);
+  const stateFingerprint = await folderDeletionState(db, folderId);
   await verifyConfirmationToken(key, input.confirmation_token, {
     action: "delete_folder",
     userId: db.userId,
     objectId: folderId,
     expectedCount: listIds.length,
+    stateFingerprint,
   });
   await callTrashRpc(
     db,

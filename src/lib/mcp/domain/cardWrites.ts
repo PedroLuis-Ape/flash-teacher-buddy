@@ -1,6 +1,6 @@
 import { findOwnedList } from "./access";
 import type { ConfirmationKey, UserScopedDb } from "./client";
-import { createConfirmationToken, verifyConfirmationToken } from "./confirmation";
+import { confirmationStateFingerprint, createConfirmationToken, verifyConfirmationToken } from "./confirmation";
 import { McpDomainError, toMcpDomainError } from "./errors";
 import { invalidateScopeInventory, listInstitutionId } from "./inventoryInvalidation";
 import { asRow, asRows, str } from "./query";
@@ -212,6 +212,7 @@ export async function addCards(db: UserScopedDb, input: AddCardsInput): Promise<
         skipped.push({ term: card.term, translation: card.translation });
         return false;
       }
+      existing.add(key);
       return true;
     });
   }
@@ -252,7 +253,7 @@ export interface UpdateCardsInput {
 
 /**
  * Two batch shapes: the same values for many cards (one UPDATE) or per-card
- * values (one UPDATE per card, executed concurrently).
+ * values (one bulk UPSERT request, with ownership pre-validated by a read).
  */
 export async function updateCards(db: UserScopedDb, input: UpdateCardsInput): Promise<Record<string, unknown>> {
   const list = await findOwnedList(db, input.list_id);
@@ -306,22 +307,36 @@ export async function updateCards(db: UserScopedDb, input: UpdateCardsInput): Pr
     };
   });
 
-  const results = await Promise.all(
-    entries.map((entry) =>
-      db.client
-        .from("flashcards")
-        .update(entry.patch)
-        .eq("id", entry.cardId)
-        .eq("list_id", listId)
-        .eq("user_id", db.userId)
-        .is("deleted_at", null)
-        .select("id"),
-    ),
+  const { data: ownedRows, error: ownedError } = await db.client
+    .from("flashcards")
+    .select("*")
+    .eq("list_id", listId)
+    .eq("user_id", db.userId)
+    .is("deleted_at", null)
+    .in("id", entries.map((entry) => entry.cardId));
+  if (ownedError) throw toMcpDomainError(ownedError, "Não foi possível validar os flashcards.");
+  const ownedById = new Map(
+    asRows(ownedRows)
+      .map((row) => asRow(row))
+      .filter((row): row is Record<string, unknown> => Boolean(row && str(row, "id")))
+      .map((row) => [str(row, "id") as string, row]),
   );
-  const failed = results.find((result) => result.error);
-  if (failed?.error) throw toMcpDomainError(failed.error, "Não foi possível atualizar os flashcards.");
-
-  const updatedIds = results.flatMap((result) => asRows(result.data).map((row) => str(asRow(row), "id") ?? ""));
+  const updatesToApply = entries
+    .filter((entry) => ownedById.has(entry.cardId))
+    .map((entry) => {
+      const current = { ...(ownedById.get(entry.cardId) as Record<string, unknown>) };
+      delete current.lists;
+      return { ...current, ...entry.patch, id: entry.cardId, list_id: listId, user_id: db.userId };
+    });
+  let updatedIds: string[] = [];
+  if (updatesToApply.length > 0) {
+    const { data, error } = await db.client
+      .from("flashcards")
+      .upsert(updatesToApply, { onConflict: "id", defaultToNull: false })
+      .select("id");
+    if (error) throw toMcpDomainError(error, "Não foi possível atualizar os flashcards.");
+    updatedIds = asRows(data).map((row) => str(asRow(row), "id") ?? "");
+  }
   if (updatedIds.length > 0) invalidateScopeInventory(db.userId, listInstitutionId(list));
   return {
     mode: "per_card",
@@ -344,10 +359,40 @@ async function countLayersOf(db: UserScopedDb, listId: string, parentIds: string
     .from("flashcards")
     .select("id")
     .eq("list_id", listId)
+    .eq("user_id", db.userId)
     .in("parent_card_id", parentIds)
     .is("deleted_at", null);
   if (error) throw toMcpDomainError(error, "Não foi possível listar as camadas dos cards.");
   return asRows(data).map((row) => str(asRow(row), "id") ?? "").filter(Boolean);
+}
+
+async function cardRemovalState(db: UserScopedDb, listId: string, cardIds: string[]): Promise<string> {
+  const [{ data: principalData, error: principalError }, { data: layerData, error: layerError }] = await Promise.all([
+    db.client
+      .from("flashcards")
+      .select("id,updated_at,deleted_at")
+      .eq("list_id", listId)
+      .eq("user_id", db.userId)
+      .in("id", cardIds),
+    db.client
+      .from("flashcards")
+      .select("id,updated_at,deleted_at")
+      .eq("list_id", listId)
+      .eq("user_id", db.userId)
+      .in("parent_card_id", cardIds),
+  ]);
+  if (principalError) throw toMcpDomainError(principalError, "Não foi possível verificar o estado dos cards.");
+  if (layerError) throw toMcpDomainError(layerError, "Não foi possível verificar o estado das camadas.");
+  return confirmationStateFingerprint([
+    ...asRows(principalData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "card", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+    ...asRows(layerData).map((row) => {
+      const record = asRow(row) ?? {};
+      return { kind: "layer", id: str(record, "id") ?? "", updatedAt: record.updated_at, deletedAt: record.deleted_at };
+    }),
+  ]);
 }
 
 /**
@@ -379,9 +424,19 @@ export async function removeCards(
   const layerIds = await countLayersOf(db, listId, principalIds);
   const total = principalIds.length + layerIds.length;
   const material = total >= MAX_REMOVAL_WITHOUT_CONFIRMATION;
+  const removalScope = listInstitutionId(list) ?? "personal";
+  const stateFingerprint = dryRun || material ? await cardRemovalState(db, listId, cardIds) : undefined;
 
   if (dryRun) {
-    const claim = { action: "remove_cards" as const, userId: db.userId, objectId: listId, expectedCount: total };
+    const claim = {
+      action: "remove_cards" as const,
+      userId: db.userId,
+      objectId: listId,
+      scope: removalScope,
+      targetIds: cardIds,
+      expectedCount: total,
+      stateFingerprint,
+    };
     const confirmation = await createConfirmationToken(key, claim);
     return {
       dry_run: true,
@@ -408,7 +463,10 @@ export async function removeCards(
       action: "remove_cards",
       userId: db.userId,
       objectId: listId,
+      scope: removalScope,
+      targetIds: cardIds,
       expectedCount: total,
+      stateFingerprint: await cardRemovalState(db, listId, cardIds),
     });
   }
 
@@ -423,22 +481,15 @@ export async function removeCards(
   }
 
   const nowIso = new Date().toISOString();
-  const { error: cardError } = await db.client
+  const idsToRemove = [...new Set([...principalIds, ...layerIds])];
+  const { error: deleteError } = await db.client
     .from("flashcards")
     .update({ deleted_at: nowIso })
     .eq("list_id", listId)
     .eq("user_id", db.userId)
     .is("deleted_at", null)
-    .in("id", principalIds);
-  if (cardError) throw toMcpDomainError(cardError, "Não foi possível remover os flashcards.");
-
-  const { error: layerError } = await db.client
-    .from("flashcards")
-    .update({ deleted_at: nowIso })
-    .eq("list_id", listId)
-    .is("deleted_at", null)
-    .in("parent_card_id", principalIds);
-  if (layerError) throw toMcpDomainError(layerError, "Não foi possível remover as camadas dos flashcards.");
+    .in("id", idsToRemove);
+  if (deleteError) throw toMcpDomainError(deleteError, "Não foi possível remover os flashcards e suas camadas.");
   invalidateScopeInventory(db.userId, listInstitutionId(list));
 
   return {

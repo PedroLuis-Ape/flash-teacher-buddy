@@ -30,6 +30,7 @@ const WRITE_TOOLS = [
   "preview_delete_folder",
   "confirm_delete_folder",
   "restore_from_trash",
+  "create_study_material",
 ];
 
 const AUTHENTICATED_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
@@ -66,7 +67,7 @@ describe("MCP tool surface", () => {
       const tool = toolNamed(name);
       expect(tool.annotations?.readOnlyHint, name).toBe(true);
       expect(tool.annotations?.idempotentHint, name).toBe(true);
-      expect(tool.annotations?.destructiveHint, name).toBeUndefined();
+      expect(tool.annotations?.destructiveHint, name).toBe(false);
     }
     for (const name of DESTRUCTIVE_TOOLS) {
       const tool = toolNamed(name);
@@ -79,7 +80,7 @@ describe("MCP tool surface", () => {
     )) {
       const tool = toolNamed(name);
       expect(tool.annotations?.readOnlyHint, name).toBe(false);
-      expect(tool.annotations?.destructiveHint, name).not.toBe(true);
+      expect(tool.annotations?.destructiveHint, name).toBe(false);
       expect(typeof tool.annotations?.idempotentHint, name).toBe("boolean");
       expect(tool.annotations?.openWorldHint, name).toBe(true);
     }

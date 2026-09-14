@@ -643,3 +643,37 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · 
 - Ver [[areas/mcp-agent-api]] e [[sessions/2026-09-13-mcp-phase3-4]].
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — correções adversariais + FASE 5/6/7 — 2026-09-13
+
+- [FATO CONFIRMADO] A1–A4 foram corrigidos: confirmação de remoção vincula
+  uid/lista/escopo/IDs exatos; cache distingue institutionId; duplicatas
+  intra-lote são filtradas; card e camadas usam um único UPDATE atômico.
+- [FATO CONFIRMADO] A nova `create_study_material` resolve por nome/id em
+  escopo pessoal ou institucional, suporta `dry_run`/`preview`, cria apenas
+  quando explicitamente chamada com cards, faz uma inserção batch e compensa
+  criações parciais via lixeira.
+- [FATO CONFIRMADO] A superfície publicada normaliza quatro annotations
+  booleanas e as instruções ensinam descobrir → resolver → agir → reconferir,
+  sem IDs vindos da memória e com leituras paginadas.
+- [FATO CONFIRMADO] Escritas/destrutivos emitem evento `mcp.audit` JSON local
+  sem texto de card/token; evolução para tabela requer migration e decisão.
+- [VERIFIED-GATE] Suíte MCP: 19 arquivos / 126 testes PASS; typecheck app: 0
+  erros; brain-index check PASS; brain-check e demais evidências estão em
+  [[sessions/2026-09-13-mcp-phase5-7]].
+- [NAO VERIFICADO] Runtime MCP publicado e RLS real permanecem fora desta
+  unidade; o bundle gerado do Windows não deve ser incluído.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — fechamento do ciclo adversarial (rodada final) — 2026-09-13
+
+- [FATO CONFIRMADO] Rodada final de correcao (D1-D4): o confirmation token passou a incluir fingerprint SHA-256 de `id/updated_at/deleted_at` do alvo (restore invalida o token); o audit deixou de registrar IDs de alvos nao autorizados; `update_flashcards` faz 1 upsert em lote (antes 50 UPDATEs); o teste de dry-run rejeita qualquer escrita.
+- [VERIFIED-GATE] Suite MCP final: 19 arquivos / 129 testes PASS; typecheck app/node 0; ESLint 0; brain-check PASS (63 notas); brain-index check PASS (100 notas).
+- [VERIFIED-REVIEW] Ciclo adversarial encerrado em 3 rodadas: FAIL (2 HIGH + 2 MEDIUM) -> FAIL (1 HIGH + 2 MEDIUM + 1 LOW) -> PASS focado em D1-D4, sem defeito material novo.
+- [FATO CONFIRMADO] Entregas finais: `.lovable/mcp/manifest.json` regenerado (v0.3.0, 24 tools), `docs/mcp/PITECO-MCP-TOOLS.json` (catalogo oficial) e `docs/mcp/PITECO-MCP-IMPLEMENTATION-REPORT.md`.
+- [FOLLOW-UP] Falta um teste dedicado `remove_cards -> restore -> mesmo token falha` (o replay coberto hoje e de lista).
+- [PENDENTE/HUMANO] Deploy na Lovable (bundle Linux), `verify_jwt`, merge para `main` e smoke autenticado (FASE 8/9).
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07-TESTS]] · [[08-RISKS]]
+

@@ -8,7 +8,10 @@ export function scopeForInstitution(institutionId: string | null | undefined): L
 }
 
 export function inventoryCacheKey(userId: string, institutionId: string | null | undefined): string {
-  return userId + "|" + scopeName(scopeForInstitution(institutionId));
+  const scope = scopeForInstitution(institutionId);
+  return scope.kind === "institution"
+    ? [userId, scopeName(scope), scope.institutionId].join("|")
+    : [userId, scopeName(scope), "personal"].join("|");
 }
 
 /**

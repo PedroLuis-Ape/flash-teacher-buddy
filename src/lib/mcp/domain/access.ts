@@ -11,7 +11,7 @@ import { requireUuid, type LibraryScope } from "./scope";
  * scope, exactly like the product's own library queries.
  */
 export const ACCESSIBLE_LIST_SELECT =
-  "id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at," +
+  "id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at," +
   "folders!inner(id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
 
 export interface CompactList {
