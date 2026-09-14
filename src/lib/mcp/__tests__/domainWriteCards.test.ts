@@ -259,4 +259,25 @@ describe("remove_flashcards", () => {
     expect(harness.fake.tables.flashcards.find((row) => row.parent_card_id === CARD_A_1)?.deleted_at).toBeNull();
     expect(callsFor(harness.calls, "flashcards").filter((call) => call.operation === "update")).toHaveLength(1);
   });
+
+  it("rejects a confirmation token when the affected cards changed state after the preview", async () => {
+    const { tables } = tablesWithBulkCards(30);
+    const harness = createHarness(tables);
+    const ids = bulkCardIds(30);
+
+    const preview = await removeCards(harness.db, { list_id: LIST_A, card_ids: ids, dry_run: true }, KEY);
+    expect(preview.requires_confirmation).toBe(true);
+
+    await updateCards(harness.db, {
+      list_id: LIST_A,
+      updates: [{ card_id: ids[0], term: "changed after preview" }],
+    });
+
+    await expect(
+      removeCards(harness.db, { list_id: LIST_A, card_ids: ids, confirmation_token: preview.confirmation_token }, KEY),
+    ).rejects.toMatchObject({ code: "confirmation_required" });
+    expect(
+      harness.fake.tables.flashcards.filter((row) => ids.includes(String(row.id)) && row.deleted_at == null),
+    ).toHaveLength(30);
+  });
 });

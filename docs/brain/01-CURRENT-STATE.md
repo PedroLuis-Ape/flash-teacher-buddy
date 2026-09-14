@@ -677,3 +677,7 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07-TESTS]] · [[08-RISKS]]
 
+
+- [FATO CONFIRMADO] Lição registrada em [[learning/lessons/2026-09-13-fake-sem-updated-at]]: o harness de teste usava timestamp constante em `updated_at`, escondendo proteções baseadas em estado (fingerprint). Corrigido com relógio monotônico; teste novo de replay no caminho de cards (lote material de 30) passou.
+- [VERIFIED-GATE] Gate final: vitest src/lib/mcp 19 arquivos / **130 testes PASS**; typecheck app e node **0**; brain-check PASS (63 notas / 739 wikilinks); brain-index check PASS; `npm run build` **exit 0 com SEO 100/100** (20/20 nas cinco dimensões).
+

@@ -118,6 +118,14 @@ function compareValues(a: unknown, b: unknown): number {
 
 const NOW_ISO = "2026-09-13T12:00:00.000Z";
 
+// Postgres stamps updated_at on every write. The harness used to reuse the
+// constant NOW_ISO, which hid state changes from consumers such as the
+// confirmation-token state fingerprint. A monotonic clock keeps the double
+// faithful to the real column behaviour.
+let writeClock = 0;
+const nextWriteTimestamp = () =>
+  new Date(Date.parse(NOW_ISO) + ++writeClock * 1000).toISOString();
+
 /** Column defaults the database would apply on insert. */
 const TABLE_DEFAULTS: Record<string, Row> = {
   folders: { system_kind: "user", visibility: "private", class_id: null, institution_id: null, deleted_at: null },
@@ -265,7 +273,7 @@ export function createFakeClient(
           ...(TABLE_DEFAULTS[table] ?? {}),
           id: nextGeneratedId(),
           created_at: NOW_ISO,
-          updated_at: NOW_ISO,
+          updated_at: nextWriteTimestamp(),
           deleted_at: null,
           ...row,
         }));
@@ -280,6 +288,7 @@ export function createFakeClient(
           const existing = (tables[table] ?? []).find((candidate) => candidate.id === row.id);
           if (existing) {
             Object.assign(existing, row);
+            existing.updated_at = nextWriteTimestamp();
             syncEmbeds(table, existing, tables);
             returned.push({ ...existing });
           } else {
@@ -287,7 +296,7 @@ export function createFakeClient(
               ...(TABLE_DEFAULTS[table] ?? {}),
               id: nextGeneratedId(),
               created_at: NOW_ISO,
-              updated_at: NOW_ISO,
+              updated_at: nextWriteTimestamp(),
               deleted_at: null,
               ...row,
             };
@@ -310,6 +319,7 @@ export function createFakeClient(
         }
         for (const row of matched) {
           Object.assign(row, patch ?? {});
+          row.updated_at = nextWriteTimestamp();
           syncEmbeds(table, row, tables);
         }
         return { data: matched, error: null, count: matched.length };

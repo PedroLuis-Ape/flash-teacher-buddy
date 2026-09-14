@@ -3,10 +3,10 @@
   "brain_root": "docs/brain",
   "generated_by": "scripts/brain-index.mjs",
   "byte_basis": "utf8-bytes-lf-normalized",
-  "note_count": 100,
+  "note_count": 101,
   "historical_note_count": 38,
-  "total_bytes": 373256,
-  "brain_version": "acceed01625d64c6c4f7a5cec00d7bc28988e7c0c658e2087a82dfa6b69d927f",
+  "total_bytes": 377974,
+  "brain_version": "29f1454835e938f56c59e1fd13c31979ff1245fdf170deb80736e98615088e86",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -142,7 +142,7 @@
     },
     "current-state": {
       "notes": 1,
-      "bytes": 42778,
+      "bytes": 44655,
       "historical_notes": 0,
       "canonical_document": "01-CURRENT-STATE.md",
       "canonical_confidence": "declared"
@@ -191,7 +191,7 @@
     },
     "mcp": {
       "notes": 4,
-      "bytes": 31937,
+      "bytes": 32475,
       "historical_notes": 0,
       "canonical_document": "areas/mcp-agent-api.md",
       "canonical_confidence": "declared"
@@ -273,6 +273,13 @@
       "canonical_document": null,
       "canonical_confidence": null
     },
+    "testing": {
+      "notes": 1,
+      "bytes": 2303,
+      "historical_notes": 0,
+      "canonical_document": null,
+      "canonical_confidence": null
+    },
     "ui-motion": {
       "notes": 2,
       "bytes": 12971,
@@ -314,8 +321,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 42778,
-      "sha256": "6523c39581781c6f531a5590c060c5296abeac5d5f67104b474ded6c62a9f59d"
+      "bytes": 44655,
+      "sha256": "e6390b6d5b74f678ec4509fabf3fcafee9fe9f8f30a4ec63902e428a689c87ce"
     },
     {
       "path": "02-MASTER-PLAN.md",
@@ -636,8 +643,8 @@
       "status": "active",
       "last_reviewed": "2026-09-13",
       "historical": false,
-      "bytes": 10476,
-      "sha256": "f3a763ee3171daa791f84390cd32e9e2a480e58c580a1cf16dcdd44fb7e7d285"
+      "bytes": 11014,
+      "sha256": "843cb6f6937edb48504715e46352d7eba2b5eef2bc98e0985686a5025fbe547f"
     },
     {
       "path": "areas/mcp-vocabulary-analysis.md",
@@ -1324,6 +1331,20 @@
       "historical": false,
       "bytes": 2813,
       "sha256": "f148b67f107e22db3d3439b4a600e801e40f03d32ec9d4b067eb87eae4e4f50a"
+    },
+    {
+      "path": "learning/lessons/2026-09-13-fake-sem-updated-at.md",
+      "domain": "testing",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "Test doubles precisam carimbar `updated_at` a cada escrita",
+      "description": "Provar, no caminho de cards, que o confirmationtoken morre quando o estado do alvo muda",
+      "type": "lesson",
+      "status": "validated",
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 2303,
+      "sha256": "22754bd11e0173e815244d43c27f349127b285be413fde2453467d5d0f914799"
     },
     {
       "path": "learning/lessons/2026-09-13-gate-auth-em-superficie-publica.md",
