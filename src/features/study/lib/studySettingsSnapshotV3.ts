@@ -4,15 +4,23 @@
  *
  * Regra: nenhum campo pode existir apenas no preset ou apenas na sessão. O
  * preset da lista/modo e o `settings_snapshot` da sessão usam este mesmo
- * formato, e a migração de snapshots v1 é explícita.
+ * formato, e a migração de snapshots v1/v2 é explícita.
+ *
+ * V3 (2026-09-14) — AUTORIDADE ÚNICA DE LADOS:
+ * `direction` é a ÚNICA autoridade sobre qual lado é pergunta e qual é resposta.
+ * Áudio/exibição não escolhe mais idioma físico A/B: o campo semântico é
+ * `playTarget` (`both | prompt | answer`), sempre resolvido em cima do
+ * prompt/answer que o resolver canônico produziu para o card. Os campos v2
+ * `playMode`/`playSide` foram REMOVIDOS do contrato e migram automaticamente
+ * (ver `legacyPlayToTarget`).
  */
 import {
   DEFAULT_STUDY_PRESET,
   STUDY_PRESET_DIRECTIONS,
   STUDY_PRESET_FLOW_MODES,
   STUDY_PRESET_ORDERS,
-  STUDY_PRESET_PLAY_MODES,
-  STUDY_PRESET_PLAY_SIDES,
+  STUDY_PRESET_PLAY_TARGETS,
+  legacyPlayToTarget,
   STUDY_PRESET_SCOPES,
   STUDY_PRESET_WRITE_ACTIVITY_MODES,
   STUDY_PRESET_WRITE_CORRECTION_MODES,
@@ -20,8 +28,7 @@ import {
   type StudyDirectionPreset,
   type StudyFlowModePreset,
   type StudyOrderPreset,
-  type StudyPlayModePreset,
-  type StudyPlaySidePreset,
+  type StudyPlayTargetPreset,
   type StudyPreset,
   type StudyPresetOverride,
   type StudyScopePreset,
@@ -34,34 +41,33 @@ import {
   rewriteSideToDirection,
 } from "@/features/study/lib/writeActivityMode";
 
-export const STUDY_SETTINGS_SNAPSHOT_VERSION = 2 as const;
+export const STUDY_SETTINGS_SNAPSHOT_VERSION = 3 as const;
 
-export interface StudySettingsSnapshotV2 {
-  version: 2;
+export interface StudySettingsSnapshotV3 {
+  version: 3;
   direction: StudyDirectionPreset;
   order: StudyOrderPreset;
   scope: StudyScopePreset;
   redFocus: boolean;
   fastMode: boolean;
-  playMode: StudyPlayModePreset;
-  playSide: StudyPlaySidePreset;
+  /** Semântico: o que o Play fala/mostra — nunca um lado físico A/B. */
+  playTarget: StudyPlayTargetPreset;
   studyFlowMode: StudyFlowModePreset;
   writeActivityMode: StudyWriteActivityModePreset;
   writeRewriteSide: StudyWriteRewriteSidePreset;
   writeCorrectionMode: StudyWriteCorrectionModePreset;
 }
 
-export type StudySettingsPatchV2 = Partial<Omit<StudySettingsSnapshotV2, "version">>;
+export type StudySettingsPatchV3 = Partial<Omit<StudySettingsSnapshotV3, "version">>;
 
-export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV2 = Object.freeze({
+export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV3 = Object.freeze({
   version: STUDY_SETTINGS_SNAPSHOT_VERSION,
   direction: DEFAULT_STUDY_PRESET.direction,
   order: DEFAULT_STUDY_PRESET.order,
   scope: DEFAULT_STUDY_PRESET.scope,
   redFocus: false,
   fastMode: DEFAULT_STUDY_PRESET.fastMode,
-  playMode: DEFAULT_STUDY_PRESET.playMode,
-  playSide: DEFAULT_STUDY_PRESET.playSide,
+  playTarget: DEFAULT_STUDY_PRESET.playTarget,
   studyFlowMode: DEFAULT_STUDY_PRESET.studyFlowMode,
   writeActivityMode: DEFAULT_STUDY_PRESET.writeActivityMode,
   writeRewriteSide: DEFAULT_STUDY_PRESET.writeRewriteSide,
@@ -77,27 +83,34 @@ function bool(value: unknown, fallback: boolean): boolean {
 }
 
 /**
- * Normaliza e migra qualquer snapshot conhecido (v1 ou v2) para o contrato v2.
- * v1 não possuía `playMode`/`playSide`; os campos são preenchidos a partir do
- * fallback informado (normalmente o preset atual da lista/modo).
+ * Normaliza e migra qualquer snapshot conhecido (v1, v2 ou v3) para o contrato
+ * v3. v1 não possuía configuração de Play; v2 possuía `playMode`/`playSide`
+ * (lado físico), convertidos para `playTarget` semântico com a direção do
+ * próprio snapshot.
  */
-export function normalizeStudySettingsSnapshotV2(
+export function normalizeStudySettingsSnapshotV3(
   value: unknown,
-  fallback: StudySettingsSnapshotV2 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+  fallback: StudySettingsSnapshotV3 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
   options: { syncRewriteDirection?: boolean } = {},
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   // v1 chamava o escopo de `subset`.
   const scopeValue = raw.scope ?? raw.subset;
-  const snapshot: StudySettingsSnapshotV2 = {
+  const direction = pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction);
+  // Migração v2 → v3: lado físico + direção viram alvo semântico.
+  const playTarget = (STUDY_PRESET_PLAY_TARGETS as readonly string[]).includes(raw.playTarget as string)
+    ? (raw.playTarget as StudyPlayTargetPreset)
+    : (raw.playMode !== undefined || raw.playSide !== undefined)
+      ? legacyPlayToTarget(raw.playMode, raw.playSide, direction)
+      : fallback.playTarget;
+  const snapshot: StudySettingsSnapshotV3 = {
     version: STUDY_SETTINGS_SNAPSHOT_VERSION,
-    direction: pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction),
+    direction,
     order: pick(STUDY_PRESET_ORDERS, raw.order, fallback.order),
     scope: pick(STUDY_PRESET_SCOPES, scopeValue, fallback.scope),
     redFocus: bool(raw.redFocus, fallback.redFocus),
     fastMode: bool(raw.fastMode, fallback.fastMode),
-    playMode: pick(STUDY_PRESET_PLAY_MODES, raw.playMode, fallback.playMode),
-    playSide: pick(STUDY_PRESET_PLAY_SIDES, raw.playSide, fallback.playSide),
+    playTarget,
     studyFlowMode: pick(STUDY_PRESET_FLOW_MODES, raw.studyFlowMode, fallback.studyFlowMode),
     writeActivityMode: pick(
       STUDY_PRESET_WRITE_ACTIVITY_MODES,
@@ -125,11 +138,11 @@ export function normalizeStudySettingsSnapshotV2(
   return snapshot;
 }
 
-export function isStudySettingsSnapshotV2(value: unknown): value is StudySettingsSnapshotV2 {
+export function isStudySettingsSnapshotV3(value: unknown): value is StudySettingsSnapshotV3 {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   if (row.version !== STUDY_SETTINGS_SNAPSHOT_VERSION) return false;
-  const normalized = normalizeStudySettingsSnapshotV2(row);
+  const normalized = normalizeStudySettingsSnapshotV3(row);
   return JSON.stringify(normalized) === JSON.stringify({
     ...normalized,
     ...row,
@@ -141,9 +154,9 @@ export function isStudySettingsSnapshotV2(value: unknown): value is StudySetting
 export function studySettingsFromPreset(
   preset: StudyPreset,
   extra: { redFocus?: boolean } = {},
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   return applyStudySettingsConstraints(
-    normalizeStudySettingsSnapshotV2({
+    normalizeStudySettingsSnapshotV3({
       ...preset,
       redFocus: extra.redFocus ?? false,
     }),
@@ -162,12 +175,62 @@ export function studySettingsFromPreset(
  */
 export const RED_FOCUS_CONSTRAINED_SETTINGS = ["order", "studyFlowMode"] as const;
 
+/**
+ * Campos que o Modo gamificado (`mastery_rounds`) controla enquanto ativo.
+ *
+ * Regra de produto: no gamificado a DIREÇÃO EFETIVA é sempre automática (`any`)
+ * em TODOS os modos de jogo, porque as rodadas alternam os lados por card. É
+ * restrição efetiva temporária, do mesmo tipo do Foco Vermelho: a preferência
+ * base do usuário nunca é destruída nem persistida como `any`.
+ */
+export const MASTERY_ROUNDS_CONSTRAINED_SETTINGS = ["direction", "writeRewriteSide"] as const;
+
+export function isDirectionLockedByFlowMode(studyFlowMode: StudyFlowModePreset): boolean {
+  return studyFlowMode === "mastery_rounds";
+}
+
+/** Direção EFETIVA — única função que a UI e o motor devem consultar. */
+export function resolveEffectiveStudyDirection(
+  baseDirection: StudyDirectionPreset,
+  studyFlowMode: StudyFlowModePreset,
+): StudyDirectionPreset {
+  return isDirectionLockedByFlowMode(studyFlowMode) ? "any" : baseDirection;
+}
+
 export function applyStudySettingsConstraints(
-  snapshot: StudySettingsSnapshotV2,
-): StudySettingsSnapshotV2 {
-  if (!snapshot.redFocus) return snapshot;
-  if (snapshot.order === "sequential" && snapshot.studyFlowMode === "continuous") return snapshot;
-  return { ...snapshot, order: "sequential", studyFlowMode: "continuous" };
+  snapshot: StudySettingsSnapshotV3,
+): StudySettingsSnapshotV3 {
+  let next = snapshot;
+
+  if (next.redFocus && !(next.order === "sequential" && next.studyFlowMode === "continuous")) {
+    next = { ...next, order: "sequential", studyFlowMode: "continuous" };
+  }
+
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)
+    && !(next.direction === "any" && next.writeRewriteSide === "alternating")) {
+    next = { ...next, direction: "any", writeRewriteSide: "alternating" };
+  }
+
+  return next;
+}
+
+/**
+ * Ao SAIR do Modo gamificado, a direção volta para a preferência base: entrar no
+ * gamificado com base `a-b` produz `any` efetivo, e sair devolve `a-b`.
+ */
+export function releaseMasteryRoundsConstraints(
+  next: StudySettingsSnapshotV3,
+  basePreset: Pick<StudyPreset, "direction" | "writeRewriteSide">,
+): StudySettingsSnapshotV3 {
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)) return next;
+  if (next.direction === basePreset.direction) return next;
+  return {
+    ...next,
+    direction: basePreset.direction,
+    writeRewriteSide: next.writeActivityMode === "rewrite"
+      ? directionToRewriteSide(basePreset.direction) as typeof next.writeRewriteSide
+      : basePreset.writeRewriteSide,
+  };
 }
 
 /**
@@ -176,9 +239,9 @@ export function applyStudySettingsConstraints(
  * a restrição nunca foi gravada como preferência, então basta reaplicá-la.
  */
 export function releaseRedFocusConstraints(
-  next: StudySettingsSnapshotV2,
+  next: StudySettingsSnapshotV3,
   basePreset: Pick<StudyPreset, "order" | "studyFlowMode">,
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   if (next.redFocus) return next;
   if (next.order === basePreset.order && next.studyFlowMode === basePreset.studyFlowMode) return next;
   return { ...next, order: basePreset.order, studyFlowMode: basePreset.studyFlowMode };
@@ -193,13 +256,13 @@ export function releaseRedFocusConstraints(
  * do usuário é exatamente o que fazia o preset normal ser sobrescrito.
  */
 export function studySettingsSemanticOverride(
-  next: StudySettingsSnapshotV2,
-  requested: StudySettingsPatchV2,
+  next: StudySettingsSnapshotV3,
+  requested: StudySettingsPatchV3,
 ): StudyPresetOverride {
   const full = studySettingsToPresetOverride(next);
   const interested = new Set<keyof StudyPresetOverride>();
 
-  (Object.keys(requested) as (keyof StudySettingsPatchV2)[]).forEach((key) => {
+  (Object.keys(requested) as (keyof StudySettingsPatchV3)[]).forEach((key) => {
     if (key === "redFocus") return;
     interested.add(key as keyof StudyPresetOverride);
     // Direção e lado da reescrita são a MESMA decisão (sincronização atômica).
@@ -212,6 +275,9 @@ export function studySettingsSemanticOverride(
   if (next.redFocus) {
     RED_FOCUS_CONSTRAINED_SETTINGS.forEach((key) => interested.delete(key));
   }
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)) {
+    MASTERY_ROUNDS_CONSTRAINED_SETTINGS.forEach((key) => interested.delete(key));
+  }
 
   const override: Record<string, unknown> = {};
   interested.forEach((key) => {
@@ -222,15 +288,14 @@ export function studySettingsSemanticOverride(
 
 /** Overrides efêmeros aplicados quando uma sessão salva vence o preset atual. */
 export function studySettingsToPresetOverride(
-  snapshot: StudySettingsSnapshotV2,
+  snapshot: StudySettingsSnapshotV3,
 ): StudyPresetOverride {
   return {
     direction: snapshot.direction,
     order: snapshot.order,
     scope: snapshot.scope,
     fastMode: snapshot.fastMode,
-    playMode: snapshot.playMode,
-    playSide: snapshot.playSide,
+    playTarget: snapshot.playTarget,
     studyFlowMode: snapshot.studyFlowMode,
     writeActivityMode: snapshot.writeActivityMode,
     writeRewriteSide: snapshot.writeRewriteSide,
@@ -247,17 +312,17 @@ export const QUEUE_AFFECTING_SETTINGS = [
   "scope",
   "redFocus",
   "studyFlowMode",
-] as const satisfies readonly (keyof StudySettingsPatchV2)[];
+] as const satisfies readonly (keyof StudySettingsPatchV3)[];
 
-export function patchAffectsQueue(patch: StudySettingsPatchV2): boolean {
+export function patchAffectsQueue(patch: StudySettingsPatchV3): boolean {
   return QUEUE_AFFECTING_SETTINGS.some((key) => patch[key] !== undefined);
 }
 
 export function applyStudySettingsPatch(
-  current: StudySettingsSnapshotV2,
-  patch: StudySettingsPatchV2,
-): StudySettingsSnapshotV2 {
-  const requested: StudySettingsPatchV2 = { ...patch };
+  current: StudySettingsSnapshotV3,
+  patch: StudySettingsPatchV3,
+): StudySettingsSnapshotV3 {
+  const requested: StudySettingsPatchV3 = { ...patch };
   const nextActivityMode = requested.writeActivityMode ?? current.writeActivityMode;
   const enteringRewrite = requested.writeActivityMode === "rewrite"
     && current.writeActivityMode !== "rewrite";
@@ -271,24 +336,25 @@ export function applyStudySettingsPatch(
     requested.writeRewriteSide = directionToRewriteSide(current.direction) as typeof current.writeRewriteSide;
   }
 
-  const merged = normalizeStudySettingsSnapshotV2(
+  const merged = normalizeStudySettingsSnapshotV3(
     { ...current, ...requested },
     current,
     { syncRewriteDirection: false },
   );
-  // Foco Vermelho usa fila única e sequencial, no formato extenso.
+  // Foco Vermelho usa fila única e sequencial, no formato extenso; o Modo
+  // gamificado força direção automática.
   return applyStudySettingsConstraints(merged);
 }
 
 export function diffStudySettings(
-  before: StudySettingsSnapshotV2,
-  after: StudySettingsSnapshotV2,
-): StudySettingsPatchV2 {
+  before: StudySettingsSnapshotV3,
+  after: StudySettingsSnapshotV3,
+): StudySettingsPatchV3 {
   const patch: Record<string, unknown> = {};
-  (Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT) as (keyof StudySettingsSnapshotV2)[])
+  (Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT) as (keyof StudySettingsSnapshotV3)[])
     .filter((key) => key !== "version")
     .forEach((key) => {
       if (before[key] !== after[key]) patch[key] = after[key];
     });
-  return patch as StudySettingsPatchV2;
+  return patch as StudySettingsPatchV3;
 }

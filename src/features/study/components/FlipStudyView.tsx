@@ -5,9 +5,7 @@ import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
 import { getMixedFlipSlotMode, isMixedStudySession } from "@/features/study/lib/runtimeStudySchedule";
-import { readFlipAutoPlayState } from "@/features/study/lib/flipAutoPlayState";
 import {
-  FLIP_ENTRY_AUDIO_DELAY_MS,
   readFlipEntryAudioPreference,
   writeFlipEntryAudioPreference,
 } from "@/features/study/lib/flipEntryAudioPreference";
@@ -43,24 +41,10 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scheduledCardRef.current === cardKey) return;
+    // O disparo do áudio de entrada é responsabilidade da view do Flip (contrato
+    // de TTS), não de um clique simulado em botão do DOM.
     scheduledCardRef.current = cardKey;
-
-    if (!autoSpeakOnCardChange || props.ttsEnabled === false || mixedSlotMode) return;
-
-    const timer = window.setTimeout(() => {
-      if (readFlipAutoPlayState().enabled) return;
-      if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) return;
-
-      const audioButton = Array.from(
-        rootRef.current?.querySelectorAll<HTMLButtonElement>('button[title="Ouvir áudio"]') ?? [],
-      ).find((button) => !button.disabled);
-
-      audioButton?.click();
-    }, FLIP_ENTRY_AUDIO_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [autoSpeakOnCardChange, cardKey, mixedSlotMode, props.ttsEnabled]);
+  }, [cardKey]);
 
   const toggleAutoSpeak = () => {
     const next = !autoSpeakOnCardChange;
@@ -109,19 +93,19 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
     <StudyCardDeck
       cardKey={cardKey}
       density={props.fastMode ? "regular" : "tall"}
-      swipeNavigation={
-        props.fastMode
-          ? {
-              onNext: props.onNext,
-              onPrevious: props.onPrevious,
-              canGoNext: props.canGoNext,
-              canGoPrevious: props.canGoPrevious,
-            }
-          : undefined
-      }
+      // Dono único de swipe em TODOS os formatos do Flip.
+      swipeNavigation={{
+        onNext: props.onNext,
+        onPrevious: props.onPrevious,
+        canGoNext: props.canGoNext,
+        canGoPrevious: props.canGoPrevious,
+      }}
     >
       <Suspense fallback={<StudyModeFallback />}>
-        <LazyFlipStudyView {...props} />
+        <LazyFlipStudyView
+          {...props}
+          autoSpeakOnCardChange={autoSpeakOnCardChange && !mixedSlotMode}
+        />
       </Suspense>
     </StudyCardDeck>
   );
@@ -154,7 +138,7 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
           onClick={toggleAutoSpeak}
           disabled={!audioAvailable}
           aria-pressed={autoSpeakOnCardChange && audioAvailable}
-          title={audioAvailable ? "Reproduzir o lado visível um segundo após trocar de card" : "Áudio desativado nesta lista"}
+          title={audioAvailable ? "Reproduzir o lado visível ao trocar de card" : "Áudio desativado nesta lista"}
         >
           {autoSpeakOnCardChange && audioAvailable
             ? <Volume2 className="h-3.5 w-3.5" />

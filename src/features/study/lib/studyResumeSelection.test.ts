@@ -4,7 +4,7 @@ import {
   selectLatestStudyResume,
 } from "./studyResumeSelection";
 import type { ResumableStudySession } from "./resumableStudySession";
-import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV2";
+import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV3";
 
 function session(input: {
   sessionId: string;

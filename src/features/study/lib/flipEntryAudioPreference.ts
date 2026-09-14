@@ -1,4 +1,8 @@
-export const FLIP_ENTRY_AUDIO_DELAY_MS = 1000;
+/**
+ * @deprecated Não há mais espera artificial antes do áudio de entrada do Flip.
+ * Mantido em 0 apenas para compatibilidade de importações antigas.
+ */
+export const FLIP_ENTRY_AUDIO_DELAY_MS = 0;
 
 const STORAGE_KEY = "ape:study:flip-entry-audio:v1";
 

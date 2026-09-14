@@ -15,7 +15,8 @@ import {
   writeFlipAutoPlayState,
   type FlipAutoPlaySide,
 } from "@/features/study/lib/flipAutoPlayState";
-import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
+import { setPlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
+import type { StudyPlayTargetPreset } from "@/features/study/preferences/studyPreset";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { ImageCard } from "./ImageCard";
@@ -133,6 +134,10 @@ interface FlipStudyViewProps {
   canGoPrevious?: boolean;
   canGoNext?: boolean;
   direction: string;
+  /** Alvo semântico do Play: both | prompt | answer (nunca lado físico). */
+  playTarget?: StudyPlayTargetPreset;
+  /** Fala o lado visível ao trocar de card (sem clique no DOM, sem delay). */
+  autoSpeakOnCardChange?: boolean;
   fastMode?: boolean;
   ttsEnabled?: boolean;
   labelA?: string;
@@ -171,6 +176,8 @@ export const FlipStudyView = ({
   canGoPrevious = true,
   canGoNext = true,
   direction,
+  playTarget = "both",
+  autoSpeakOnCardChange = false,
   fastMode = false,
   ttsEnabled = true,
   labelA,
@@ -188,7 +195,6 @@ export const FlipStudyView = ({
   difficultyPending = false,
 }: FlipStudyViewProps) => {
   const restoredAutoPlay = useRef(readFlipAutoPlayState());
-  const playPreset = usePlayPresetRuntime();
   const [isFlipped, setIsFlipped] = useState(false);
   const [manualAnswer, setManualAnswer] = useState<ManualFlipAnswer>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(restoredAutoPlay.current.enabled);
@@ -213,6 +219,13 @@ export const FlipStudyView = ({
   const firstSideLang = toBCP47(firstSide.lang);
   const secondSideLang = toBCP47(secondSide.lang);
 
+  // O Play é SEMÂNTICO: `prompt`/`answer` seguem o que o resolver canônico
+  // decidiu para este card. Nada aqui escolhe lado físico A/B por conta própria.
+  const playModeEffective: "both" | "single" = playTarget === "both" ? "both" : "single";
+  const playFixedSide: FlipAutoPlaySide = playTarget === "answer"
+    ? (isAFirst ? "b" : "a")
+    : (isAFirst ? "a" : "b");
+
   const fixedSideToRenderedSide = useCallback((side: FlipAutoPlaySide): RenderedSide => {
     if (side === "a") return isAFirst ? "first" : "second";
     return isAFirst ? "second" : "first";
@@ -227,21 +240,21 @@ export const FlipStudyView = ({
   const pauseAutoPlay = useCallback(() => {
     if (!isAutoPlaying) return;
     setIsAutoPlaying(false);
-    writeFlipAutoPlayState(false, playPreset.playSide);
+    writeFlipAutoPlayState(false, playFixedSide);
     clearAutoPlayTimeout();
     stop();
-  }, [clearAutoPlayTimeout, isAutoPlaying, playPreset.playSide, stop]);
+  }, [clearAutoPlayTimeout, isAutoPlaying, playFixedSide, stop]);
 
   const speakSide = useCallback((side: FlipAutoPlaySide) => {
     const rate = getSpeechRate();
     const fixedText = side === "a" ? sideA.text : sideB.text;
     const fixedLang = side === "a" ? sideA.lang : sideB.lang;
-    if (!fastMode || (isAutoPlaying && playPreset.playMode === "single")) {
+    if (!fastMode || (isAutoPlaying && playModeEffective === "single")) {
       setIsFlipped(fixedSideToRenderedSide(side) === "second");
     }
     if (ttsEnabled) speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
     else stop();
-  }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playPreset.playMode, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
+  }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playModeEffective, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
 
   const handlePlayTop = () => {
     pauseAutoPlay();
@@ -315,10 +328,10 @@ export const FlipStudyView = ({
   const handleToggleAutoPlay = () => {
     const next = !isAutoPlaying;
     setIsAutoPlaying(next);
-    writeFlipAutoPlayState(next, playPreset.playSide);
+    writeFlipAutoPlayState(next, playFixedSide);
     if (next) {
-      setAutoPlayCurrentSide(playPreset.playSide);
-      setIsFlipped(fixedSideToRenderedSide(playPreset.playSide) === "second");
+      setAutoPlayCurrentSide(playFixedSide);
+      setIsFlipped(fixedSideToRenderedSide(playFixedSide) === "second");
     } else {
       clearAutoPlayTimeout();
       stop();
@@ -355,13 +368,11 @@ export const FlipStudyView = ({
     const dy = t.clientY - start.y;
     const elapsed = Date.now() - start.t;
     if (Math.abs(dx) < 60 || Math.abs(dy) > 80 || elapsed > 800) return;
+    // DONO ÚNICO DE SWIPE: a navegação por gesto pertence ao StudyCardDeck.
+    // Aqui apenas evitamos que o gesto vire o card e pausamos o áudio, para
+    // que um único swipe nunca produza duas navegações.
     swipeConsumedRef.current = true;
     pauseAutoPlay();
-    if (dx < 0) {
-      if (onNext && canGoNext) onNext();
-    } else if (onPrevious && canGoPrevious) {
-      onPrevious();
-    }
   };
 
   useEffect(() => {
@@ -369,14 +380,25 @@ export const FlipStudyView = ({
   }, [sideA.label, sideB.label]);
 
   useEffect(() => {
-    setAutoPlayCurrentSide(playPreset.playSide);
-    setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(playPreset.playSide) === "second");
+    setAutoPlayCurrentSide(playFixedSide);
+    setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(playFixedSide) === "second");
     setManualAnswer(null);
-  }, [front, back, flashcardId, isAutoPlaying, playPreset.playMode, playPreset.playSide, fixedSideToRenderedSide]);
+  }, [front, back, flashcardId, isAutoPlaying, playModeEffective, playFixedSide, fixedSideToRenderedSide]);
 
   useEffect(() => {
-    writeFlipAutoPlayState(isAutoPlaying, playPreset.playSide);
-  }, [isAutoPlaying, playPreset.playSide]);
+    writeFlipAutoPlayState(isAutoPlaying, playFixedSide);
+  }, [isAutoPlaying, playFixedSide]);
+
+  // Áudio ao trocar de card: chamada direta ao contrato de TTS, sem procurar
+  // botão no DOM e sem espera artificial. O autoplay contínuo tem prioridade.
+  const autoSpokenCardRef = useRef<string | null>(null);
+  useEffect(() => {
+    const cardKey = flashcardId || `${front}:${back}`;
+    if (autoSpokenCardRef.current === cardKey) return;
+    autoSpokenCardRef.current = cardKey;
+    if (!autoSpeakOnCardChange || !ttsEnabled || isAutoPlaying) return;
+    speakSide(isAFirst ? "a" : "b");
+  }, [autoSpeakOnCardChange, back, flashcardId, front, isAFirst, isAutoPlaying, speakSide, ttsEnabled]);
 
   useEffect(() => {
     if (!isAutoPlaying) {
@@ -389,8 +411,8 @@ export const FlipStudyView = ({
 
     autoPlayTimeoutRef.current = setTimeout(() => {
       const step = getNextFlipAutoPlayStep({
-        mode: playPreset.playMode,
-        configuredSide: playPreset.playSide,
+        mode: playModeEffective,
+        configuredSide: playFixedSide,
         currentSide: autoPlayCurrentSide,
       });
 
@@ -399,18 +421,18 @@ export const FlipStudyView = ({
         return;
       }
 
-      writeFlipAutoPlayState(true, playPreset.playSide);
+      writeFlipAutoPlayState(true, playFixedSide);
       if (onNext && canGoNext) {
         onNext();
         return;
       }
       setIsAutoPlaying(false);
-      writeFlipAutoPlayState(false, playPreset.playSide);
+      writeFlipAutoPlayState(false, playFixedSide);
       stop();
     }, AUTO_PLAY_DELAY_MS);
 
     return clearAutoPlayTimeout;
-  }, [autoPlayCurrentSide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, playPreset.playMode, playPreset.playSide, speakSide, stop]);
+  }, [autoPlayCurrentSide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, playModeEffective, playFixedSide, speakSide, stop]);
 
   useEffect(() => () => clearAutoPlayTimeout(), [clearAutoPlayTimeout]);
 
@@ -539,11 +561,11 @@ export const FlipStudyView = ({
   );
 
   if (fastMode) {
-    const singleSidePlay = isAutoPlaying && playPreset.playMode === "single";
-    const selectedSide = playPreset.playSide === "a" ? sideA : sideB;
-    const selectedImage = playPreset.playSide === "a" ? imageUrlA : imageUrlB;
-    const selectedHints = playPreset.playSide === "a" ? wordHintsA : wordHintsB;
-    const selectedMergedHints = playPreset.playSide === "a" ? mergedHintsA : mergedHintsB;
+    const singleSidePlay = isAutoPlaying && playModeEffective === "single";
+    const selectedSide = playFixedSide === "a" ? sideA : sideB;
+    const selectedImage = playFixedSide === "a" ? imageUrlA : imageUrlB;
+    const selectedHints = playFixedSide === "a" ? wordHintsA : wordHintsB;
+    const selectedMergedHints = playFixedSide === "a" ? mergedHintsA : mergedHintsB;
     const selectedLang = toBCP47(selectedSide.lang);
 
     return (
@@ -559,7 +581,7 @@ export const FlipStudyView = ({
               mergedHints={selectedMergedHints}
               speakLang={selectedLang}
               ttsEnabled={ttsEnabled}
-              onPlay={() => speakSide(playPreset.playSide)}
+              onPlay={() => speakSide(playFixedSide)}
               compact
             />
           ) : (

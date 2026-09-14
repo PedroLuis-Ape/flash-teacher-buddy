@@ -8,15 +8,17 @@ import {
   releaseRedFocusConstraints,
   studySettingsFromPreset,
   studySettingsSemanticOverride,
-  type StudySettingsSnapshotV2,
-} from "./studySettingsSnapshotV2";
+  type StudySettingsSnapshotV3,
+} from "./studySettingsSnapshotV3";
 
-function snapshot(overrides: Partial<StudySettingsSnapshotV2> = {}): StudySettingsSnapshotV2 {
+function snapshot(overrides: Partial<StudySettingsSnapshotV3> = {}): StudySettingsSnapshotV3 {
   return { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, ...overrides };
 }
 
 /** Preferência base do usuário: gamificado + aleatório. */
-const BASE = snapshot({ order: "random", studyFlowMode: "mastery_rounds" });
+// No Modo gamificado a direção efetiva é sempre automática, então os casos que
+// escolhem lado fixo (direção/reescrita) rodam no formato extenso.
+const BASE = snapshot({ order: "random", studyFlowMode: "continuous" });
 
 describe("Foco Vermelho — restrição temporária, não preferência", () => {
   it("enquanto ativo, o estado EFETIVO é fila sequencial no modo extenso", () => {
@@ -72,22 +74,21 @@ describe("Persistência por patch semântico", () => {
   });
 
   it("mudar áudio/exibição não persiste direção e vice-versa", () => {
-    const audio = applyStudySettingsPatch(BASE, { fastMode: true, playMode: "single" });
-    expect(studySettingsSemanticOverride(audio, { fastMode: true, playMode: "single" })).toEqual({
+    const audio = applyStudySettingsPatch(BASE, { fastMode: true, playTarget: "prompt" });
+    expect(studySettingsSemanticOverride(audio, { fastMode: true, playTarget: "prompt" })).toEqual({
       fastMode: true,
-      playMode: "single",
+      playTarget: "prompt",
     });
 
     const direction = applyStudySettingsPatch(BASE, { direction: "b-a" });
     const override = studySettingsSemanticOverride(direction, { direction: "b-a" });
     expect(override.direction).toBe("b-a");
     expect(override.fastMode).toBeUndefined();
-    expect(override.playMode).toBeUndefined();
-    expect(override.playSide).toBeUndefined();
+    expect(override.playTarget).toBeUndefined();
   });
 
   it("direção e lado da reescrita são uma decisão só e persistem juntos", () => {
-    const rewrite = applyStudySettingsPatch(snapshot({ writeActivityMode: "rewrite", direction: "a-b" }), {
+    const rewrite = applyStudySettingsPatch(snapshot({ writeActivityMode: "rewrite", direction: "a-b", studyFlowMode: "continuous" }), {
       writeRewriteSide: "b",
     });
     const override = studySettingsSemanticOverride(rewrite, { writeRewriteSide: "b" });
@@ -97,7 +98,7 @@ describe("Persistência por patch semântico", () => {
 
   it("áudio e correção não reconstroem a fila; ordem, escopo, formato e Foco Vermelho sim", () => {
     expect(patchAffectsQueue({ fastMode: true })).toBe(false);
-    expect(patchAffectsQueue({ playSide: "b" })).toBe(false);
+    expect(patchAffectsQueue({ playTarget: "answer" })).toBe(false);
     expect(patchAffectsQueue({ writeCorrectionMode: "hard" })).toBe(false);
     expect(patchAffectsQueue({ direction: "b-a" })).toBe(false);
     expect(patchAffectsQueue({ order: "random" })).toBe(true);

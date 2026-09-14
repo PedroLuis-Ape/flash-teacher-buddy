@@ -17,8 +17,7 @@ describe("studyPreferenceRepository", () => {
       card_order: "sequential",
       scope: "all",
       fast_mode: true,
-      play_mode: "single",
-      play_side: "b",
+      play_target: "answer",
       study_flow_mode: "continuous",
     }, "mixed")).toEqual({
       mode: "mixed",
@@ -26,8 +25,7 @@ describe("studyPreferenceRepository", () => {
       order: "sequential",
       scope: "all",
       fastMode: true,
-      playMode: "single",
-      playSide: "b",
+      playTarget: "answer",
       studyFlowMode: "continuous",
       writeActivityMode: "translate",
       writeRewriteSide: "alternating",
@@ -48,8 +46,7 @@ describe("studyPreferenceRepository", () => {
       study_flow_mode: "mastery_rounds",
     }, "write")).toEqual({
       scope: "favorites",
-      playMode: "single",
-      playSide: "a",
+      playTarget: "prompt",
       studyFlowMode: "mastery_rounds",
     });
   });
@@ -64,13 +61,11 @@ describe("studyPreferenceRepository", () => {
       mode: "flip",
       card_order: "random",
       fast_mode: false,
-      play_mode: "both",
-      play_side: "a",
+      play_target: "both",
       study_flow_mode: "continuous",
     });
     expect(toListPreferenceRow("user-1", "list-1", {
-      playMode: "single",
-      playSide: "b",
+      playTarget: "answer",
       studyFlowMode: "continuous",
     }, "write")).toMatchObject({
       user_id: "user-1",
@@ -78,8 +73,7 @@ describe("studyPreferenceRepository", () => {
       game_mode: "write",
       mode: null,
       direction: null,
-      play_mode: "single",
-      play_side: "b",
+      play_target: "answer",
       study_flow_mode: "continuous",
     });
   });

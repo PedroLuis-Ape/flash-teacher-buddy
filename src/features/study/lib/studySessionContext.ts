@@ -1,10 +1,10 @@
+import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import type {
   StudyDirectionPreset,
   StudyFlowModePreset,
   StudyModePreset,
   StudyOrderPreset,
-  StudyPlayModePreset,
-  StudyPlaySidePreset,
+  StudyPlayTargetPreset,
   StudyPresetOverride,
   StudyScopePreset,
   StudyWriteActivityModePreset,
@@ -24,9 +24,14 @@ export interface StudySessionSettingsSnapshot {
   writeActivityMode?: StudyWriteActivityModePreset;
   writeRewriteSide?: StudyWriteRewriteSidePreset;
   writeCorrectionMode?: StudyWriteCorrectionModePreset;
-  /** Optional fields added to the v1 envelope for exact session recovery. */
-  playMode?: StudyPlayModePreset;
-  playSide?: StudyPlaySidePreset;
+  /**
+   * FORMATO DE FIO LEGADO (v1) do Play. Mantido byte-compatível porque
+   * `session_scope_key` é o hash deste envelope: mudar os campos invalidaria as
+   * sessões salvas. O contrato interno é `playTarget`; a conversão acontece nas
+   * bordas (`playTargetToLegacyWire` / `legacyPlayToTarget`).
+   */
+  playMode?: "both" | "single";
+  playSide?: "a" | "b";
 }
 
 export interface StudySessionContextInput {
@@ -40,8 +45,23 @@ export interface StudySessionContextInput {
   writeActivityMode?: StudyWriteActivityModePreset;
   writeRewriteSide?: StudyWriteRewriteSidePreset;
   writeCorrectionMode?: StudyWriteCorrectionModePreset;
-  playMode?: StudyPlayModePreset;
-  playSide?: StudyPlaySidePreset;
+  /** Alvo semântico do Play; convertido para o formato de fio v1. */
+  playTarget?: StudyPlayTargetPreset;
+}
+
+/**
+ * Converte o alvo semântico no par legado (modo + lado físico) usado pelo
+ * envelope v1 e, por consequência, pela `session_scope_key`.
+ */
+export function playTargetToLegacyWire(
+  playTarget: StudyPlayTargetPreset | undefined,
+  direction: StudyDirectionPreset | undefined,
+): { playMode: "both" | "single"; playSide: "a" | "b" } {
+  const promptPhysicalSide: "a" | "b" = direction === "b-a" ? "b" : "a";
+  const answerPhysicalSide: "a" | "b" = promptPhysicalSide === "a" ? "b" : "a";
+  if (playTarget === "prompt") return { playMode: "single", playSide: promptPhysicalSide };
+  if (playTarget === "answer") return { playMode: "single", playSide: answerPhysicalSide };
+  return { playMode: "both", playSide: promptPhysicalSide };
 }
 
 export function buildStudySessionSettingsSnapshot(
@@ -59,8 +79,7 @@ export function buildStudySessionSettingsSnapshot(
     ...(input.writeActivityMode ? { writeActivityMode: input.writeActivityMode } : {}),
     ...(input.writeRewriteSide ? { writeRewriteSide: input.writeRewriteSide } : {}),
     ...(input.writeCorrectionMode ? { writeCorrectionMode: input.writeCorrectionMode } : {}),
-    ...(input.playMode ? { playMode: input.playMode } : {}),
-    ...(input.playSide ? { playSide: input.playSide } : {}),
+    ...playTargetToLegacyWire(input.playTarget, input.direction),
   };
 }
 
@@ -182,7 +201,6 @@ export function studySessionSettingsToPresetOverride(
     ...(value.writeActivityMode ? { writeActivityMode: value.writeActivityMode } : {}),
     ...(value.writeRewriteSide ? { writeRewriteSide: value.writeRewriteSide } : {}),
     ...(value.writeCorrectionMode ? { writeCorrectionMode: value.writeCorrectionMode } : {}),
-    ...(value.playMode ? { playMode: value.playMode } : {}),
-    ...(value.playSide ? { playSide: value.playSide } : {}),
+    playTarget: legacyPlayToTarget(value.playMode, value.playSide, value.direction),
   };
 }

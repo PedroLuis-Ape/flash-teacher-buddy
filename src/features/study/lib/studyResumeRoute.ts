@@ -7,7 +7,7 @@
  * reiniciada, aba descartada pelo sistema ou deep link.
  */
 import { isSafeStudyResumePath } from "./studyResume";
-import type { StudySettingsSnapshotV2 } from "./studySettingsSnapshotV2";
+import type { StudySettingsSnapshotV3 } from "./studySettingsSnapshotV3";
 
 export const RESUME_SESSION_PARAM = "resume_session";
 
@@ -80,7 +80,7 @@ export function stripResumeSessionParamFromUrl(win: Window = window): void {
 export function buildStudyPathFromRemoteSession(input: {
   listId: string;
   mode: string;
-  settings?: Partial<StudySettingsSnapshotV2> | null;
+  settings?: Partial<StudySettingsSnapshotV3> | null;
 }): string | null {
   if (!input.listId || !input.mode) return null;
   const segment = resolveStudyResumeSegment(input.mode);

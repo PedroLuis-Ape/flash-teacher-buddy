@@ -1,19 +1,20 @@
 import { useSyncExternalStore } from "react";
-import type {
-  StudyPlayModePreset,
-  StudyPlaySidePreset,
-} from "@/features/study/preferences/studyPreset";
 
+/**
+ * Derivação READ-ONLY dos RÓTULOS dos lados (A/B) da lista em estudo.
+ *
+ * Esta store NÃO é fonte de verdade de comportamento. Ela existe apenas para
+ * que a janela de configurações possa escrever "Responder em Português" usando
+ * o rótulo real da lista. Toda decisão de lado (pergunta/resposta) e de Play
+ * vive no contrato canônico (`StudySettingsSnapshotV3`), lido por props a
+ * partir de Study/MixedStudy — ver [[04-DECISIONS]].
+ */
 type PlayPresetRuntimeSnapshot = {
-  playMode: StudyPlayModePreset;
-  playSide: StudyPlaySidePreset;
   labelA: string;
   labelB: string;
 };
 
 let snapshot: PlayPresetRuntimeSnapshot = {
-  playMode: "both",
-  playSide: "a",
   labelA: "Lado A",
   labelB: "Lado B",
 };
@@ -28,14 +29,7 @@ export function setPlayPresetRuntime(
   partial: Partial<PlayPresetRuntimeSnapshot>,
 ): void {
   const next = { ...snapshot, ...partial };
-  if (
-    next.playMode === snapshot.playMode
-    && next.playSide === snapshot.playSide
-    && next.labelA === snapshot.labelA
-    && next.labelB === snapshot.labelB
-  ) {
-    return;
-  }
+  if (next.labelA === snapshot.labelA && next.labelB === snapshot.labelB) return;
   snapshot = next;
   emit();
 }

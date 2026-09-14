@@ -73,10 +73,12 @@ import {
   parseRequestedResumeSessionId,
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
-import type {
-  StudySettingsPatchV2,
-  StudySettingsSnapshotV2,
-} from "@/features/study/lib/studySettingsSnapshotV2";
+import {
+  resolveEffectiveStudyDirection,
+  type StudySettingsPatchV3,
+  type StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
+import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
@@ -279,12 +281,11 @@ const Study = () => {
   }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
   const sessionContext = useMemo(() => ({
     direction: effectivePreset.direction,
-    playMode: effectivePreset.playMode,
-    playSide: effectivePreset.playSide,
+    playTarget: effectivePreset.playTarget,
     writeActivityMode: effectivePreset.writeActivityMode,
     writeRewriteSide: effectivePreset.writeRewriteSide,
     writeCorrectionMode: effectivePreset.writeCorrectionMode,
-  }), [effectivePreset.direction, effectivePreset.playMode, effectivePreset.playSide, effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide]);
+  }), [effectivePreset.direction, effectivePreset.playTarget, effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
@@ -453,8 +454,7 @@ const Study = () => {
       scope: subset,
       fastMode: settings.fastMode,
       studyFlowMode: settings.studyFlowMode,
-      ...(settings.playMode ? { playMode: settings.playMode } : {}),
-      ...(settings.playSide ? { playSide: settings.playSide } : {}),
+      playTarget: legacyPlayToTarget(settings.playMode, settings.playSide, settings.direction),
       ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
       ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
       ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
@@ -627,8 +627,13 @@ const Study = () => {
   // ── Sync flipDirection only after the preset source has settled ──
   useEffect(() => {
     if (preferencesHydrating) return;
-    setFlipDirection(restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction);
-  }, [preferencesHydrating, urlDirection, prefs.direction]);
+    // Direção EFETIVA: no Modo gamificado é sempre automática (`any`) em todos
+    // os modos, sem destruir a preferência base do usuário.
+    setFlipDirection(resolveEffectiveStudyDirection(
+      restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction,
+      effectivePreset.studyFlowMode,
+    ));
+  }, [preferencesHydrating, urlDirection, prefs.direction, effectivePreset.studyFlowMode]);
 
   // Apply one immutable starting preset for each account/list/mode context.
   // Later changes come only through the controlled settings handlers.
@@ -1321,8 +1326,8 @@ const Study = () => {
   // sessão restaurada) é o único valor exibido, e toda alteração passa por
   // applyStudySettingsChange.
   const applyStudyRuntimeSettings = useCallback((
-    next: StudySettingsSnapshotV2,
-    _patch: StudySettingsPatchV2,
+    next: StudySettingsSnapshotV3,
+    _patch: StudySettingsPatchV3,
   ) => {
     setGameSettings({
       mode: next.order === "sequential" ? "sequential" : "random",
@@ -1334,7 +1339,7 @@ const Study = () => {
     setFlipDirection(next.direction);
   }, [setGameSettings]);
 
-  const handleQueueAffectingSettingsChange = useCallback((next: StudySettingsSnapshotV2) => {
+  const handleQueueAffectingSettingsChange = useCallback((next: StudySettingsSnapshotV3) => {
     // Política explícita: a sessão anterior é salva antes da fila ser
     // reconciliada. Nunca reiniciamos em silêncio.
     void saveProgressNow();
@@ -2517,6 +2522,7 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
+              playTarget={effectivePreset.playTarget}
               fastMode={gameSettings.fastMode}
               writeSettings={writeSessionSettings}
               ttsEnabled={effectiveStudySettings.ttsEnabled}
@@ -2655,6 +2661,8 @@ const Study = () => {
               key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
+              direction={resolvedDirection}
+              flashcardId={displayedCard.id}
               wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}

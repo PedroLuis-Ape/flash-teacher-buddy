@@ -55,7 +55,11 @@ import {
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
-import type { StudySettingsSnapshotV2 } from "@/features/study/lib/studySettingsSnapshotV2";
+import {
+  resolveEffectiveStudyDirection,
+  type StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
+import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
@@ -172,8 +176,13 @@ export default function MixedStudy() {
   const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
   const restoredSessionDirectionRef = useRef<Direction | null>(null);
   const restoredSessionSubsetRef = useRef<"all" | "favorites" | null>(null);
-  const baseDirection: Direction = restoredSessionDirectionRef.current
-    ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction);
+  // Direção EFETIVA — mesma política do Study: no Modo gamificado a direção é
+  // sempre automática (`any`), sem sobrescrever a preferência base.
+  const baseDirection: Direction = resolveEffectiveStudyDirection(
+    restoredSessionDirectionRef.current
+      ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction),
+    effectivePreset.studyFlowMode,
+  );
   const requestedFavoritesOnly = restoredSessionSubsetRef.current
     ? restoredSessionSubsetRef.current === "favorites"
     : explicitFavorites === "true"
@@ -213,8 +222,7 @@ export default function MixedStudy() {
       scope: subset,
       fastMode: settings.fastMode,
       studyFlowMode: settings.studyFlowMode,
-      ...(settings.playMode ? { playMode: settings.playMode } : {}),
-      ...(settings.playSide ? { playSide: settings.playSide } : {}),
+      playTarget: legacyPlayToTarget(settings.playMode, settings.playSide, settings.direction),
       ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
       ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
       ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
@@ -615,8 +623,7 @@ export default function MixedStudy() {
         redFocus: gameSettings.redFocus,
         fastMode: gameSettings.fastMode,
         direction: baseDirection,
-        playMode: effectivePreset.playMode,
-        playSide: effectivePreset.playSide,
+        playTarget: effectivePreset.playTarget,
         studyFlowMode: selectedFlowMode,
       }),
       current_index: state.currentIndex,
@@ -694,7 +701,7 @@ export default function MixedStudy() {
       studySessionIdRef.current = createdSessionId;
       setStudySessionId(createdSessionId);
     }
-  }, [baseDirection, effectivePreset.playMode, effectivePreset.playSide, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
+  }, [baseDirection, effectivePreset.playTarget, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
 
   const flushMixedStudyOutbox = useCallback(async () => {
     if (!userId) return;
@@ -826,7 +833,7 @@ export default function MixedStudy() {
   }, [canUsePersonalFavorites, favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
 
   // Fonte única de verdade da janela de configurações nesta tela.
-  const applyMixedRuntimeSettings = useCallback((next: StudySettingsSnapshotV2) => {
+  const applyMixedRuntimeSettings = useCallback((next: StudySettingsSnapshotV3) => {
     restoredSessionDirectionRef.current = null;
     restoredSessionSubsetRef.current = next.scope;
     setSelectedFlowMode(next.studyFlowMode);

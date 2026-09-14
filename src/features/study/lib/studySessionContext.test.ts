@@ -122,6 +122,7 @@ describe("study session context", () => {
       direction: "b-a",
       order: "sequential",
       scope: "favorites",
+      playTarget: "both",
       fastMode: true,
       studyFlowMode: "continuous",
       writeActivityMode: "rewrite",

@@ -10,8 +10,15 @@ export const STUDY_PRESET_MODES = [
 export const STUDY_PRESET_DIRECTIONS = ["a-b", "b-a", "any"] as const;
 export const STUDY_PRESET_ORDERS = ["random", "sequential"] as const;
 export const STUDY_PRESET_SCOPES = ["all", "favorites"] as const;
-export const STUDY_PRESET_PLAY_MODES = ["both", "single"] as const;
-export const STUDY_PRESET_PLAY_SIDES = ["a", "b"] as const;
+/**
+ * Alvo semântico do Play. NUNCA um lado físico A/B: quem decide qual lado é
+ * pergunta e qual é resposta é `direction` (autoridade única de lados).
+ */
+export const STUDY_PRESET_PLAY_TARGETS = ["both", "prompt", "answer"] as const;
+/** @deprecated contrato v2 — aceito apenas na migração. */
+export const LEGACY_STUDY_PRESET_PLAY_MODES = ["both", "single"] as const;
+/** @deprecated contrato v2 — aceito apenas na migração. */
+export const LEGACY_STUDY_PRESET_PLAY_SIDES = ["a", "b"] as const;
 export const STUDY_PRESET_FLOW_MODES = ["mastery_rounds", "continuous"] as const;
 export const STUDY_PRESET_WRITE_ACTIVITY_MODES = ["translate", "rewrite"] as const;
 export const STUDY_PRESET_WRITE_REWRITE_SIDES = ["a", "b", "alternating"] as const;
@@ -21,8 +28,27 @@ export type StudyModePreset = (typeof STUDY_PRESET_MODES)[number];
 export type StudyDirectionPreset = (typeof STUDY_PRESET_DIRECTIONS)[number];
 export type StudyOrderPreset = (typeof STUDY_PRESET_ORDERS)[number];
 export type StudyScopePreset = (typeof STUDY_PRESET_SCOPES)[number];
-export type StudyPlayModePreset = (typeof STUDY_PRESET_PLAY_MODES)[number];
-export type StudyPlaySidePreset = (typeof STUDY_PRESET_PLAY_SIDES)[number];
+export type StudyPlayTargetPreset = (typeof STUDY_PRESET_PLAY_TARGETS)[number];
+
+/**
+ * Migração v2 → v3 do Play.
+ *
+ * O contrato antigo guardava um lado FÍSICO (`playSide: a | b`) que competia com
+ * `direction`: com `direction = any` o lado da pergunta muda por card, então
+ * "somente lado A" e "misto" se anulavam. A conversão usa a direção base para
+ * descobrir se o lado escolhido era a pergunta ou a resposta.
+ */
+export function legacyPlayToTarget(
+  playMode: unknown,
+  playSide: unknown,
+  direction: unknown,
+): StudyPlayTargetPreset {
+  if (playMode !== "single") return "both";
+  const promptPhysicalSide = direction === "b-a" ? "b" : "a";
+  return playSide === promptPhysicalSide || playSide === undefined || playSide === null
+    ? "prompt"
+    : "answer";
+}
 export type StudyFlowModePreset = (typeof STUDY_PRESET_FLOW_MODES)[number];
 export type StudyWriteActivityModePreset = (typeof STUDY_PRESET_WRITE_ACTIVITY_MODES)[number];
 export type StudyWriteRewriteSidePreset = (typeof STUDY_PRESET_WRITE_REWRITE_SIDES)[number];
@@ -34,8 +60,7 @@ export type StudyPreset = {
   order: StudyOrderPreset;
   scope: StudyScopePreset;
   fastMode: boolean;
-  playMode: StudyPlayModePreset;
-  playSide: StudyPlaySidePreset;
+  playTarget: StudyPlayTargetPreset;
   studyFlowMode: StudyFlowModePreset;
   writeActivityMode: StudyWriteActivityModePreset;
   writeRewriteSide: StudyWriteRewriteSidePreset;
@@ -51,8 +76,7 @@ export const DEFAULT_STUDY_PRESET: StudyPreset = Object.freeze({
   order: "random",
   scope: "all",
   fastMode: false,
-  playMode: "both",
-  playSide: "a",
+  playTarget: "both",
   studyFlowMode: "mastery_rounds",
   writeActivityMode: "translate",
   writeRewriteSide: "alternating",
@@ -77,12 +101,11 @@ export function normalizeStudyPreset(value: unknown): StudyPreset {
     order: isOneOf(input.order, STUDY_PRESET_ORDERS) ? input.order : DEFAULT_STUDY_PRESET.order,
     scope: isOneOf(input.scope, STUDY_PRESET_SCOPES) ? input.scope : DEFAULT_STUDY_PRESET.scope,
     fastMode: typeof input.fastMode === "boolean" ? input.fastMode : DEFAULT_STUDY_PRESET.fastMode,
-    playMode: isOneOf(input.playMode, STUDY_PRESET_PLAY_MODES)
-      ? input.playMode
-      : DEFAULT_STUDY_PRESET.playMode,
-    playSide: isOneOf(input.playSide, STUDY_PRESET_PLAY_SIDES)
-      ? input.playSide
-      : DEFAULT_STUDY_PRESET.playSide,
+    playTarget: isOneOf(input.playTarget, STUDY_PRESET_PLAY_TARGETS)
+      ? input.playTarget
+      : (input.playMode !== undefined || input.playSide !== undefined)
+        ? legacyPlayToTarget(input.playMode, input.playSide, input.direction)
+        : DEFAULT_STUDY_PRESET.playTarget,
     studyFlowMode: isOneOf(input.studyFlowMode, STUDY_PRESET_FLOW_MODES)
       ? input.studyFlowMode
       : DEFAULT_STUDY_PRESET.studyFlowMode,
@@ -107,8 +130,11 @@ export function normalizeStudyPresetOverride(value: unknown): StudyPresetOverrid
   if (isOneOf(value.order, STUDY_PRESET_ORDERS)) result.order = value.order;
   if (isOneOf(value.scope, STUDY_PRESET_SCOPES)) result.scope = value.scope;
   if (typeof value.fastMode === "boolean") result.fastMode = value.fastMode;
-  if (isOneOf(value.playMode, STUDY_PRESET_PLAY_MODES)) result.playMode = value.playMode;
-  if (isOneOf(value.playSide, STUDY_PRESET_PLAY_SIDES)) result.playSide = value.playSide;
+  if (isOneOf(value.playTarget, STUDY_PRESET_PLAY_TARGETS)) {
+    result.playTarget = value.playTarget;
+  } else if (isOneOf(value.playMode, LEGACY_STUDY_PRESET_PLAY_MODES)) {
+    result.playTarget = legacyPlayToTarget(value.playMode, value.playSide, value.direction);
+  }
   if (isOneOf(value.studyFlowMode, STUDY_PRESET_FLOW_MODES)) result.studyFlowMode = value.studyFlowMode;
   if (isOneOf(value.writeActivityMode, STUDY_PRESET_WRITE_ACTIVITY_MODES)) result.writeActivityMode = value.writeActivityMode;
   if (isOneOf(value.writeRewriteSide, STUDY_PRESET_WRITE_REWRITE_SIDES)) result.writeRewriteSide = value.writeRewriteSide;

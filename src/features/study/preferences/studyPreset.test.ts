@@ -28,8 +28,7 @@ describe("studyPreset", () => {
     })).toEqual({
       mode: "write",
       fastMode: false,
-      playMode: "single",
-      playSide: "b",
+      playTarget: "answer",
     });
   });
 
@@ -39,30 +38,27 @@ describe("studyPreset", () => {
         ...DEFAULT_STUDY_PRESET,
         mode: "mixed",
         direction: "a-b",
-        playMode: "both",
-        playSide: "a",
+        playTarget: "both",
       },
-      listOverride: { mode: "write", playMode: "single", playSide: "b" },
+      listOverride: { mode: "write", playTarget: "answer" },
       sessionOverrides: { direction: "b-a" },
     })).toEqual({
       ...DEFAULT_STUDY_PRESET,
       mode: "write",
       direction: "b-a",
-      playMode: "single",
-      playSide: "b",
+      playTarget: "answer",
     });
   });
 
   it("computes only fields different from global", () => {
     expect(diffStudyPreset(
-      { ...DEFAULT_STUDY_PRESET, mode: "write", fastMode: true, playMode: "single" },
+      { ...DEFAULT_STUDY_PRESET, mode: "write", fastMode: true, playTarget: "prompt" },
       { ...DEFAULT_STUDY_PRESET, mode: "mixed", fastMode: true },
-    )).toEqual({ mode: "write", playMode: "single" });
+    )).toEqual({ mode: "write", playTarget: "prompt" });
   });
 
   it("preserves the current autoplay behavior by default", () => {
-    expect(DEFAULT_STUDY_PRESET.playMode).toBe("both");
-    expect(DEFAULT_STUDY_PRESET.playSide).toBe("a");
+    expect(DEFAULT_STUDY_PRESET.playTarget).toBe("both");
   });
 
   it("recognizes empty overrides", () => {

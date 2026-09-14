@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useStudyResumePublisher, type StudyResumePublisherInput } from "./useStudyResumePublisher";
 import { readStudyResumePointer, studyResumePointerKey } from "@/features/study/lib/studyResumePointer";
-import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "@/features/study/lib/studySettingsSnapshotV2";
+import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "@/features/study/lib/studySettingsSnapshotV3";
 
 function createStorage() {
   const map = new Map<string, string>();
