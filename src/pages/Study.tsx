@@ -2661,6 +2661,8 @@ const Study = () => {
               key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
+              direction={resolvedDirection}
+              flashcardId={displayedCard.id}
               wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
