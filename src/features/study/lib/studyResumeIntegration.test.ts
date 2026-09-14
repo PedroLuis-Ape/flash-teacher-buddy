@@ -12,7 +12,7 @@ import {
   resumableFromRemoteSession,
 } from "./resumableStudySession";
 import { fetchRequestedStudySession } from "./requestedStudySession";
-import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV2";
+import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV3";
 import type { StudyResumeSnapshotV2 } from "./studyResumePointer";
 import { isSafeStudyResumePath } from "./studyResume";
 

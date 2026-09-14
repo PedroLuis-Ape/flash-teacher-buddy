@@ -74,9 +74,9 @@ import {
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
 import type {
-  StudySettingsPatchV2,
-  StudySettingsSnapshotV2,
-} from "@/features/study/lib/studySettingsSnapshotV2";
+  StudySettingsPatchV3,
+  StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
@@ -1321,8 +1321,8 @@ const Study = () => {
   // sessão restaurada) é o único valor exibido, e toda alteração passa por
   // applyStudySettingsChange.
   const applyStudyRuntimeSettings = useCallback((
-    next: StudySettingsSnapshotV2,
-    _patch: StudySettingsPatchV2,
+    next: StudySettingsSnapshotV3,
+    _patch: StudySettingsPatchV3,
   ) => {
     setGameSettings({
       mode: next.order === "sequential" ? "sequential" : "random",
@@ -1334,7 +1334,7 @@ const Study = () => {
     setFlipDirection(next.direction);
   }, [setGameSettings]);
 
-  const handleQueueAffectingSettingsChange = useCallback((next: StudySettingsSnapshotV2) => {
+  const handleQueueAffectingSettingsChange = useCallback((next: StudySettingsSnapshotV3) => {
     // Política explícita: a sessão anterior é salva antes da fila ser
     // reconciliada. Nunca reiniciamos em silêncio.
     void saveProgressNow();

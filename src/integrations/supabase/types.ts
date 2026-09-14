@@ -3106,6 +3106,7 @@ export type Database = {
           mode: string | null
           play_mode: string | null
           play_side: string | null
+          play_target: string | null
           scope: string | null
           study_flow_mode: string | null
           updated_at: string
@@ -3123,6 +3124,7 @@ export type Database = {
           mode?: string | null
           play_mode?: string | null
           play_side?: string | null
+          play_target?: string | null
           scope?: string | null
           study_flow_mode?: string | null
           updated_at?: string
@@ -3140,6 +3142,7 @@ export type Database = {
           mode?: string | null
           play_mode?: string | null
           play_side?: string | null
+          play_target?: string | null
           scope?: string | null
           study_flow_mode?: string | null
           updated_at?: string
@@ -3446,6 +3449,7 @@ export type Database = {
           mode: string
           play_mode: string
           play_side: string
+          play_target: string | null
           scope: string
           study_flow_mode: string
           updated_at: string
@@ -3462,6 +3466,7 @@ export type Database = {
           mode?: string
           play_mode?: string
           play_side?: string
+          play_target?: string | null
           scope?: string
           study_flow_mode?: string
           updated_at?: string
@@ -3478,6 +3483,7 @@ export type Database = {
           mode?: string
           play_mode?: string
           play_side?: string
+          play_target?: string | null
           scope?: string
           study_flow_mode?: string
           updated_at?: string

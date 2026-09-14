@@ -11,9 +11,9 @@ import {
   studyResumeStorageKey as legacyStudyResumeStorageKey,
 } from "./studyResume";
 import {
-  normalizeStudySettingsSnapshotV2,
-  type StudySettingsSnapshotV2,
-} from "./studySettingsSnapshotV2";
+  normalizeStudySettingsSnapshotV3,
+  type StudySettingsSnapshotV3,
+} from "./studySettingsSnapshotV3";
 import { canonicalizeStudyResumePath } from "./studyResumeRoute";
 
 export interface StudyResumeSnapshotV2 {
@@ -25,7 +25,7 @@ export interface StudyResumeSnapshotV2 {
   gameMode: string;
   institutionId: string | null;
   path: string;
-  settingsSummary: StudySettingsSnapshotV2;
+  settingsSummary: StudySettingsSnapshotV3;
   currentIndex: number;
   currentCardId: string | null;
   layerIndex: number | null;
@@ -83,7 +83,7 @@ export function writeStudyResumePointer(
     ...input,
     path,
     version: 2,
-    settingsSummary: normalizeStudySettingsSnapshotV2(input.settingsSummary),
+    settingsSummary: normalizeStudySettingsSnapshotV3(input.settingsSummary),
     currentIndex: Number.isFinite(input.currentIndex) ? Math.max(0, Math.trunc(input.currentIndex)) : 0,
     currentCardId: input.currentCardId ?? null,
     layerIndex: Number.isFinite(input.layerIndex as number) ? (input.layerIndex as number) : null,
@@ -141,7 +141,7 @@ export function readStudyResumePointer(
       gameMode: parsed.gameMode as string,
       institutionId: parsed.institutionId ?? null,
       path: parsed.path as string,
-      settingsSummary: normalizeStudySettingsSnapshotV2(parsed.settingsSummary),
+      settingsSummary: normalizeStudySettingsSnapshotV3(parsed.settingsSummary),
       currentIndex: typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0,
       currentCardId: typeof parsed.currentCardId === "string" ? parsed.currentCardId : null,
       layerIndex: typeof parsed.layerIndex === "number" ? parsed.layerIndex : null,

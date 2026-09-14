@@ -32,9 +32,9 @@ import type {
 import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import type {
-  StudySettingsPatchV2,
-  StudySettingsSnapshotV2,
-} from "@/features/study/lib/studySettingsSnapshotV2";
+  StudySettingsPatchV3,
+  StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
 import { cn } from "@/lib/utils";
 import { WriteActivitySettings } from "./WriteActivitySettings";
 
@@ -52,8 +52,8 @@ interface GameSettingsModalProps {
    * em Study/MixedStudy. A janela é 100% controlada: não hidrata preferências,
    * não lê URL e não guarda estado de configuração próprio.
    */
-  settings: StudySettingsSnapshotV2;
-  onSettingsChange: (patch: StudySettingsPatchV2) => void;
+  settings: StudySettingsSnapshotV3;
+  onSettingsChange: (patch: StudySettingsPatchV3) => void;
   /** Confirms the current remote session is closed before changing flow. */
   onFlowModeChange?: (next: StudyFlowModePreset) => void | Promise<void>;
   /** Token canônico do modo (write, flip, mixed, ...). */

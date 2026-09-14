@@ -8,10 +8,10 @@ import {
   releaseRedFocusConstraints,
   studySettingsFromPreset,
   studySettingsSemanticOverride,
-  type StudySettingsSnapshotV2,
-} from "./studySettingsSnapshotV2";
+  type StudySettingsSnapshotV3,
+} from "./studySettingsSnapshotV3";
 
-function snapshot(overrides: Partial<StudySettingsSnapshotV2> = {}): StudySettingsSnapshotV2 {
+function snapshot(overrides: Partial<StudySettingsSnapshotV3> = {}): StudySettingsSnapshotV3 {
   return { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, ...overrides };
 }
 

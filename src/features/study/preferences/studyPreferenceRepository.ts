@@ -13,8 +13,11 @@ type GlobalPreferenceRow = {
   card_order?: unknown;
   scope?: unknown;
   fast_mode?: unknown;
+  /** @deprecated contrato v2 — lido apenas para migrar. */
   play_mode?: unknown;
+  /** @deprecated contrato v2 — lido apenas para migrar. */
   play_side?: unknown;
+  play_target?: unknown;
   study_flow_mode?: unknown;
   write_activity_mode?: unknown;
   write_rewrite_side?: unknown;
@@ -43,6 +46,7 @@ export function mapGlobalPreferenceRow(
     order: row.card_order,
     scope: row.scope,
     fastMode: row.fast_mode,
+    playTarget: row.play_target,
     playMode: row.play_mode,
     playSide: row.play_side,
     studyFlowMode: row.study_flow_mode,
@@ -63,6 +67,7 @@ export function mapListPreferenceRow(
     order: row.card_order,
     scope: row.scope,
     fastMode: row.fast_mode,
+    playTarget: row.play_target,
     playMode: row.play_mode,
     playSide: row.play_side,
     studyFlowMode: row.study_flow_mode,
@@ -88,8 +93,7 @@ export function toGlobalPreferenceRow(
     card_order: normalized.order,
     scope: normalized.scope,
     fast_mode: normalized.fastMode,
-    play_mode: normalized.playMode,
-    play_side: normalized.playSide,
+    play_target: normalized.playTarget,
     study_flow_mode: normalized.studyFlowMode,
     write_activity_mode: normalized.writeActivityMode,
     write_rewrite_side: normalized.writeRewriteSide,
@@ -114,8 +118,7 @@ export function toListPreferenceRow(
     card_order: normalized.order ?? null,
     scope: normalized.scope ?? null,
     fast_mode: normalized.fastMode ?? null,
-    play_mode: normalized.playMode ?? null,
-    play_side: normalized.playSide ?? null,
+    play_target: normalized.playTarget ?? null,
     study_flow_mode: normalized.studyFlowMode ?? null,
     write_activity_mode: normalized.writeActivityMode ?? null,
     write_rewrite_side: normalized.writeRewriteSide ?? null,
@@ -132,8 +135,7 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
     || message.includes("user_study_preferences") && message.includes("not found")
     || message.includes("user_list_study_preferences") && message.includes("not found")
     || message.includes("game_mode") && message.includes("column")
-    || message.includes("play_mode") && message.includes("column")
-    || message.includes("play_side") && message.includes("column")
+    || message.includes("play_target") && message.includes("column")
     || message.includes("study_flow_mode") && message.includes("column")
     || message.includes("write_activity_mode") && message.includes("column")
     || message.includes("write_rewrite_side") && message.includes("column")
@@ -170,7 +172,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
         .eq("user_id", userId)
         .eq("game_mode", identityMode)
         .maybeSingle();
@@ -207,7 +209,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
         .eq("user_id", userId)
         .eq("list_id", listId)
         .eq("game_mode", identityMode)

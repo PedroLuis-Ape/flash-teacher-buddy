@@ -9,9 +9,9 @@ import {
   studySettingsFromPreset,
   studySettingsSemanticOverride,
   studySettingsToPresetOverride,
-  type StudySettingsPatchV2,
-  type StudySettingsSnapshotV2,
-} from "@/features/study/lib/studySettingsSnapshotV2";
+  type StudySettingsPatchV3,
+  type StudySettingsSnapshotV3,
+} from "@/features/study/lib/studySettingsSnapshotV3";
 
 export interface UseStudySettingsControllerInput {
   /**
@@ -27,18 +27,18 @@ export interface UseStudySettingsControllerInput {
   /** Mantém os overrides da sessão em andamento coerentes com a mudança. */
   setSessionOverrides: (override: StudyPresetOverride) => void;
   /** Aplica o valor imediatamente no runtime (engine, deck, áudio). */
-  applyRuntime: (next: StudySettingsSnapshotV2, patch: StudySettingsPatchV2) => void;
+  applyRuntime: (next: StudySettingsSnapshotV3, patch: StudySettingsPatchV3) => void;
   /**
    * Política explícita para campos que reconstroem a fila: salvar a sessão
    * anterior e reconciliar. Nunca reiniciar em silêncio.
    */
-  onQueueAffectingChange?: (next: StudySettingsSnapshotV2, patch: StudySettingsPatchV2) => void;
+  onQueueAffectingChange?: (next: StudySettingsSnapshotV3, patch: StudySettingsPatchV3) => void;
   onFavoritesUnavailable?: () => void;
 }
 
 export interface StudySettingsController {
-  settings: StudySettingsSnapshotV2;
-  applyStudySettingsChange: (patch: StudySettingsPatchV2) => StudySettingsSnapshotV2;
+  settings: StudySettingsSnapshotV3;
+  applyStudySettingsChange: (patch: StudySettingsPatchV3) => StudySettingsSnapshotV3;
 }
 
 /**
@@ -67,7 +67,7 @@ export function useStudySettingsController(
     [effectivePreset, redFocus],
   );
 
-  const applyStudySettingsChange = useCallback((patch: StudySettingsPatchV2) => {
+  const applyStudySettingsChange = useCallback((patch: StudySettingsPatchV3) => {
     let requested = patch;
     if (requested.scope === "favorites" && !canUseFavorites) {
       onFavoritesUnavailable?.();
@@ -80,7 +80,7 @@ export function useStudySettingsController(
     const next = settings.redFocus && requested.redFocus === false
       ? releaseRedFocusConstraints(patched, effectivePreset)
       : patched;
-    const effectivePatch: StudySettingsPatchV2 = { ...requested };
+    const effectivePatch: StudySettingsPatchV3 = { ...requested };
     if (next.order !== settings.order) effectivePatch.order = next.order;
     if (next.studyFlowMode !== settings.studyFlowMode) effectivePatch.studyFlowMode = next.studyFlowMode;
 

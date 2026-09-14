@@ -7,9 +7,9 @@
  * sessão remota é o fallback/validação.
  */
 import {
-  normalizeStudySettingsSnapshotV2,
-  type StudySettingsSnapshotV2,
-} from "./studySettingsSnapshotV2";
+  normalizeStudySettingsSnapshotV3,
+  type StudySettingsSnapshotV3,
+} from "./studySettingsSnapshotV3";
 import type { StudyResumeSnapshotV2 } from "./studyResumePointer";
 import { buildStudyPathFromRemoteSession } from "./studyResumeRoute";
 
@@ -26,7 +26,7 @@ export interface ResumableStudySession {
   progressUnit: "respondidos" | "dominados";
   currentCardId: string | null;
   layerIndex: number | null;
-  settings: StudySettingsSnapshotV2;
+  settings: StudySettingsSnapshotV3;
   institutionId: string | null;
   updatedAt: number;
   source: "local-pointer" | "remote-session";
@@ -165,7 +165,7 @@ export function resumableFromRemoteSession(
   const list = visibleListFromRemoteSession(row);
   if (!list || list.id !== listId) return null;
 
-  const settings = normalizeStudySettingsSnapshotV2(row.settings_snapshot);
+  const settings = normalizeStudySettingsSnapshotV3(row.settings_snapshot);
   const path = buildStudyPathFromRemoteSession({ listId, mode, settings });
   if (!path) return null;
 

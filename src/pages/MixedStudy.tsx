@@ -55,7 +55,7 @@ import {
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
-import type { StudySettingsSnapshotV2 } from "@/features/study/lib/studySettingsSnapshotV2";
+import type { StudySettingsSnapshotV3 } from "@/features/study/lib/studySettingsSnapshotV3";
 import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
@@ -826,7 +826,7 @@ export default function MixedStudy() {
   }, [canUsePersonalFavorites, favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
 
   // Fonte única de verdade da janela de configurações nesta tela.
-  const applyMixedRuntimeSettings = useCallback((next: StudySettingsSnapshotV2) => {
+  const applyMixedRuntimeSettings = useCallback((next: StudySettingsSnapshotV3) => {
     restoredSessionDirectionRef.current = null;
     restoredSessionSubsetRef.current = next.scope;
     setSelectedFlowMode(next.studyFlowMode);

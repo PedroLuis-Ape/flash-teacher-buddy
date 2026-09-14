@@ -5,7 +5,7 @@ import {
   readStudyResumePointer,
   writeStudyResumePointer,
 } from "./studyResumePointer";
-import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV2";
+import { DEFAULT_STUDY_SETTINGS_SNAPSHOT } from "./studySettingsSnapshotV3";
 
 const base = {
   userId: "user-1",

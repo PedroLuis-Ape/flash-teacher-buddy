@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect } from "react";
 import { writeStudyResumePointer } from "@/features/study/lib/studyResumePointer";
-import type { StudySettingsSnapshotV2 } from "@/features/study/lib/studySettingsSnapshotV2";
+import type { StudySettingsSnapshotV3 } from "@/features/study/lib/studySettingsSnapshotV3";
 
 export type StudyResumePublisherStorage = Pick<Storage, "setItem" | "removeItem">;
 
@@ -21,7 +21,7 @@ export interface StudyResumePublisherInput {
   gameMode?: string | null;
   institutionId: string | null;
   path?: string | null;
-  settingsSummary: StudySettingsSnapshotV2;
+  settingsSummary: StudySettingsSnapshotV3;
   currentIndex: number;
   currentCardId?: string | null;
   layerIndex?: number | null;

@@ -20,10 +20,11 @@ function installStorage(initial?: Record<string, string>) {
 describe("flip entry audio and responsive tools", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("starts enabled, persists the choice and waits one second", () => {
+  it("starts enabled, persists the choice and never waits artificially", () => {
     installStorage();
     expect(readFlipEntryAudioPreference()).toBe(true);
-    expect(FLIP_ENTRY_AUDIO_DELAY_MS).toBe(1000);
+    // Contrato V3: nenhum delay artificial antes do áudio de entrada.
+    expect(FLIP_ENTRY_AUDIO_DELAY_MS).toBe(0);
 
     writeFlipEntryAudioPreference(false);
     expect(readFlipEntryAudioPreference()).toBe(false);
@@ -32,13 +33,26 @@ describe("flip entry audio and responsive tools", () => {
     expect(readFlipEntryAudioPreference()).toBe(true);
   });
 
-  it("keeps card-change audio separate from the seven-second autoplay", () => {
+  it("triggers card-change audio through the TTS contract, never through a DOM click", () => {
     const wrapper = readFileSync("src/features/study/components/FlipStudyView.tsx", "utf8");
+    const impl = readFileSync("src/features/study/components/FlipStudyView.impl.tsx", "utf8");
 
-    expect(wrapper).toContain("readFlipAutoPlayState().enabled");
-    expect(wrapper).toContain("window.speechSynthesis?.speaking");
     expect(wrapper).toContain("Áudio ao trocar:");
-    expect(wrapper).toContain("FLIP_ENTRY_AUDIO_DELAY_MS");
+    expect(wrapper).toContain("autoSpeakOnCardChange={autoSpeakOnCardChange");
+    // Nenhum clique simulado em botão de áudio e nenhuma espera fixa.
+    expect(wrapper).not.toContain("audioButton?.click()");
+    expect(wrapper).not.toContain("FLIP_ENTRY_AUDIO_DELAY_MS");
+    expect(impl).toContain("speakSide(isAFirst ? \"a\" : \"b\")");
+  });
+
+  it("keeps a single swipe owner: the deck navigates, the card only suppresses the tap", () => {
+    const wrapper = readFileSync("src/features/study/components/FlipStudyView.tsx", "utf8");
+    const impl = readFileSync("src/features/study/components/FlipStudyView.impl.tsx", "utf8");
+    const touchHandler = impl.slice(impl.indexOf("const onCardTouchEnd"), impl.indexOf("const onCardTouchEnd") + 900);
+
+    expect(wrapper).toContain("swipeNavigation={{");
+    expect(touchHandler).not.toContain("onNext()");
+    expect(touchHandler).not.toContain("onPrevious()");
   });
 
   it("replaces the mobile toolbox with the existing direct action buttons", () => {
