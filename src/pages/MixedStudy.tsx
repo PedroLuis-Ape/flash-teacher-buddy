@@ -1381,7 +1381,6 @@ export default function MixedStudy() {
               currentCard={currentCard}
               allCards={cards}
               direction={resolvedDirection}
-              playTarget={effectivePreset.playTarget}
               writeSettings={writeSessionSettings}
               langA={effectiveListSettings.langA}
               langB={effectiveListSettings.langB}
