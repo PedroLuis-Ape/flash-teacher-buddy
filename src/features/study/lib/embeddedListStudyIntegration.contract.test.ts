@@ -28,7 +28,9 @@ const readMigrationContaining = (needle: string): string => {
 };
 
 const EMBEDDED_SQL = readMigrationContaining("CREATE TABLE IF NOT EXISTS public.embedded_list_cards");
-const PROGRESS_SQL = readMigrationContaining("FUNCTION public.record_flashcard_progress_v1");
+const PROGRESS_SQL = readMigrationContaining(
+  "CREATE OR REPLACE FUNCTION public.record_flashcard_progress_v1",
+);
 
 describe("migração aplicada de lista combinada", () => {
   it("guarda apenas referências, com card único por lista combinada", () => {
