@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { duplicateList, LIST_TITLE_MAX, MAX_DUPLICATE_CARDS } from "../domain/listWrites";
+import { folderIdentifierSchema, listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "duplicate_list",
@@ -12,9 +13,9 @@ export default defineTool({
     "Layer structure is rebuilt with new card ids and fresh status-group identity, so Favorite/Red List state is never inherited; deleted cards are not copied. " +
     "Cards are copied in batches (one insert per 200 cards, limit " + MAX_DUPLICATE_CARDS + "). If a batch fails, the partially copied list goes to the trash instead of staying as a half-copy. Not idempotent: each call creates a new list.",
   inputSchema: {
-    list_id: z.string().uuid().describe("Source list uuid to copy."),
+    list_id: listIdentifierSchema.describe("Source list UUID or L-XXXXXX reference to copy."),
     title: z.string().min(1).max(LIST_TITLE_MAX).optional().describe('Title for the copy. Default: "<original> (cópia)".'),
-    folder_id: z.string().uuid().optional().describe("Destination folder uuid. Default: the source list's own folder."),
+    folder_id: folderIdentifierSchema.optional().describe("Destination folder UUID or F-XXXXXX reference. Default: the source list's own folder."),
   },
   annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {

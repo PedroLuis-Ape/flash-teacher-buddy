@@ -1,7 +1,8 @@
 import type { UserScopedDb } from "./client";
 import { McpDomainError, toMcpDomainError } from "./errors";
 import { asRow, num, str, truncatedStr } from "./query";
-import { requireUuid, type LibraryScope } from "./scope";
+import { referenceSelector, type ReferenceKind } from "./referenceIds";
+import { type LibraryScope } from "./scope";
 
 /**
  * Canonical projection of a list plus its folder.
@@ -11,8 +12,8 @@ import { requireUuid, type LibraryScope } from "./scope";
  * scope, exactly like the product's own library queries.
  */
 export const ACCESSIBLE_LIST_SELECT =
-  "id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at," +
-  "folders!inner(id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
+  "id,reference_id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at," +
+  "folders!inner(id,reference_id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
 
 export interface CompactList {
   id: string;
@@ -20,6 +21,7 @@ export interface CompactList {
   description?: string;
   folder_id?: string;
   folder_title?: string;
+  reference_id: string;
   lang?: string;
   lang_a?: string;
   lang_b?: string;
@@ -32,6 +34,7 @@ export function compactList(row: Record<string, unknown>): CompactList {
   const folder = asRow(row.folders);
   return {
     id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
     title: str(row, "title") ?? "",
     description: truncatedStr(row, "description", 160),
     folder_id: str(row, "folder_id"),
@@ -49,7 +52,24 @@ export function compactFolderRef(row: Record<string, unknown>): Record<string, s
   const folder = asRow(row.folders);
   const id = str(folder, "id");
   if (!id) return null;
-  return { id, ...(str(folder, "title") ? { title: str(folder, "title") as string } : {}) };
+  const referenceId = str(folder, "reference_id");
+  return {
+    id,
+    ...(referenceId ? { reference_id: referenceId } : {}),
+    ...(str(folder, "title") ? { title: str(folder, "title") as string } : {}),
+  };
+}
+
+function applyIdentifierFilter(query: any, selector: ReturnType<typeof referenceSelector>, referenceColumn = "reference_id") {
+  return selector.kind === "uuid"
+    ? query.eq("id", selector.id)
+    : query.eq(referenceColumn, selector.referenceId);
+}
+
+function assertReferenceKind(selector: ReturnType<typeof referenceSelector>, expectedKind: ReferenceKind, field: string): void {
+  if (selector.kind !== "uuid" && selector.kind !== expectedKind) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um identificador de ${expectedKind}.`);
+  }
 }
 
 /**
@@ -62,18 +82,19 @@ export async function findAccessibleList(
   listId: unknown,
   scope: LibraryScope,
 ): Promise<Record<string, unknown>> {
-  const id = requireUuid(listId, "list_id");
+  const selector = referenceSelector(listId);
+  assertReferenceKind(selector, "list", "list_id");
 
-  const base = db.client
+  let base = db.client
     .from("lists")
     .select(ACCESSIBLE_LIST_SELECT)
-    .eq("id", id)
     .eq("folders.owner_id", db.userId)
     .eq("folders.system_kind", "user")
     .is("folders.deleted_at", null)
     .is("folders.class_id", null)
     .eq("system_kind", "user")
     .is("deleted_at", null);
+  base = applyIdentifierFilter(base, selector);
 
   const scoped = scope.kind === "personal"
     ? base.is("folders.institution_id", null)
@@ -92,7 +113,7 @@ export async function findAccessibleList(
 }
 
 export const OWNED_FOLDER_SELECT =
-  "id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
+  "id,reference_id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
 
 export interface FindOwnedOptions {
   /** Used by the trash flow: a soft-deleted row is still an owned row. */
@@ -103,6 +124,7 @@ export function compactFolderSummary(row: Record<string, unknown>): Record<strin
   const institutionId = str(row, "institution_id") ?? null;
   return {
     id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
     title: str(row, "title") ?? "",
     description: truncatedStr(row, "description", 160),
     visibility: str(row, "visibility"),
@@ -125,15 +147,16 @@ export async function findOwnedFolder(
   folderId: unknown,
   options: FindOwnedOptions = {},
 ): Promise<Record<string, unknown>> {
-  const id = requireUuid(folderId, "folder_id");
+  const selector = referenceSelector(folderId);
+  assertReferenceKind(selector, "folder", "folder_id");
 
   let query = db.client
     .from("folders")
     .select(OWNED_FOLDER_SELECT)
-    .eq("id", id)
     .eq("owner_id", db.userId)
     .eq("system_kind", "user")
     .is("class_id", null);
+  query = applyIdentifierFilter(query, selector);
   if (!options.includeDeleted) query = query.is("deleted_at", null);
 
   const { data, error } = await query.maybeSingle();
@@ -157,15 +180,16 @@ export async function findOwnedList(
   listId: unknown,
   options: FindOwnedOptions = {},
 ): Promise<Record<string, unknown>> {
-  const id = requireUuid(listId, "list_id");
+  const selector = referenceSelector(listId);
+  assertReferenceKind(selector, "list", "list_id");
 
   let query = db.client
     .from("lists")
     .select(ACCESSIBLE_LIST_SELECT)
-    .eq("id", id)
     .eq("folders.owner_id", db.userId)
     .eq("folders.system_kind", "user")
     .eq("system_kind", "user");
+  query = applyIdentifierFilter(query, selector);
   if (!options.includeDeleted) {
     query = query
       .is("deleted_at", null)
@@ -180,6 +204,37 @@ export async function findOwnedList(
   if (!record) {
     throw new McpDomainError("not_found", "Lista não encontrada na biblioteca desta conta.", {
       hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir.",
+    });
+  }
+  return record;
+}
+
+/** Resolves a folder after applying account ownership and the requested scope. */
+export async function findAccessibleFolder(
+  db: UserScopedDb,
+  folderId: unknown,
+  scope: LibraryScope,
+): Promise<Record<string, unknown>> {
+  const selector = referenceSelector(folderId);
+  assertReferenceKind(selector, "folder", "folder_id");
+  let query = db.client
+    .from("folders")
+    .select(OWNED_FOLDER_SELECT)
+    .eq("owner_id", db.userId)
+    .eq("system_kind", "user")
+    .is("deleted_at", null)
+    .is("class_id", null);
+  query = applyIdentifierFilter(query, selector);
+  query = scope.kind === "personal"
+    ? query.is("institution_id", null)
+    : query.eq("institution_id", scope.institutionId);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "Não foi possível ler a pasta.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Pasta não encontrada na biblioteca desta conta.", {
+      hint: "Use list_folders para descobrir o identificador correto.",
     });
   }
   return record;

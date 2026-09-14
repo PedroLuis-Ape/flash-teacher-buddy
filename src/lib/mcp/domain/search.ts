@@ -10,7 +10,7 @@ import {
   str,
   truncatedStr,
 } from "./query";
-import { assertScopeAccessible, requireUuid, scopeName, type LibraryScope } from "./scope";
+import { assertScopeAccessible, scopeName, type LibraryScope } from "./scope";
 
 export const SEARCH_TYPES = ["folders", "lists", "flashcards"] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
@@ -257,10 +257,10 @@ export async function searchMyContent(
   const { limit } = resolvePage(input, { defaultLimit: DEFAULT_SEARCH_LIMIT, maxLimit: MAX_SEARCH_LIMIT });
   const pattern = likePattern(query);
   const requested = normalizeTypes(input.types);
-  const scopedListId = input.listId === undefined || input.listId === null
+  const scopedList = input.listId === undefined || input.listId === null
     ? undefined
-    : requireUuid(input.listId, "list_id");
-  if (scopedListId) await findAccessibleList(db, scopedListId, input.scope);
+    : await findAccessibleList(db, input.listId, input.scope);
+  const scopedListId = scopedList ? String(scopedList.id) : undefined;
 
   const [foldersGroup, listsGroup, cardsGroup] = await Promise.all([
     !scopedListId && requested.includes("folders")

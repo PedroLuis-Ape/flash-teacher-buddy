@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface LibraryFolder {
   id: string;
+  reference_id?: string | null;
   title: string;
   description: string | null;
   visibility: string;
@@ -14,6 +15,7 @@ export interface LibraryFolder {
 
 export interface LibraryList {
   id: string;
+  reference_id?: string | null;
   title: string;
   description: string | null;
   folder_id: string;
@@ -62,6 +64,7 @@ export function normalizeLibrarySnapshot(input: {
     );
     return {
       id: folder.id,
+      ...(typeof folder.reference_id === "string" ? { reference_id: folder.reference_id } : {}),
       title: folder.title,
       description: folder.description ?? null,
       visibility: folder.visibility,
@@ -78,6 +81,7 @@ export function normalizeLibrarySnapshot(input: {
 
   const lists: LibraryList[] = input.lists.map((list) => ({
     id: list.id,
+    ...(typeof list.reference_id === "string" ? { reference_id: list.reference_id } : {}),
     title: list.title,
     description: list.description ?? null,
     folder_id: list.folder_id,
@@ -114,10 +118,22 @@ export async function fetchLibrarySnapshot(
   institutionId: string | null,
 ): Promise<LibrarySnapshot> {
   const client = supabase as any;
-  const buildFoldersQuery = (includeEmoji: boolean) => {
+  const buildFoldersQuery = (includeEmoji: boolean, includeReferenceId: boolean) => {
+    const folderColumns = [
+      ...(includeEmoji ? ["emoji"] : []),
+      "id",
+      ...(includeReferenceId ? ["reference_id"] : []),
+      "title",
+      "description",
+      "visibility",
+      "owner_id",
+      "institution_id",
+      "system_kind",
+      `lists(${["id", ...(includeReferenceId ? ["reference_id"] : []), "deleted_at", "system_kind"].join(",")})`,
+    ].join(",");
     let query = client
       .from("folders")
-      .select(`${includeEmoji ? "emoji," : ""}id,title,description,visibility,owner_id,institution_id,system_kind,lists(id,deleted_at,system_kind)`)
+      .select(folderColumns)
       .eq("owner_id", userId)
       .eq("system_kind", "user")
       .is("class_id", null)
@@ -129,36 +145,54 @@ export async function fetchLibrarySnapshot(
     return query;
   };
 
-  const foldersQuery = buildFoldersQuery(true);
+  // Optional columns are attempted from richest to safest, so the library keeps
+  // working while `folders.emoji` / `reference_id` are still being migrated.
+  const folderVariants: Array<[boolean, boolean]> = [
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ];
 
-  let listsQuery = client
-    .from("lists")
-    .select("id,title,description,folder_id,system_kind,folders!inner(title,owner_id,institution_id,class_id,system_kind)")
-    .eq("folders.owner_id", userId)
-    .eq("system_kind", "user")
-    .eq("folders.system_kind", "user")
-    .is("folders.class_id", null)
-    .is("deleted_at", null);
+  const buildListsQuery = (includeReferenceId: boolean) => {
+    let query = client
+      .from("lists")
+      .select(`${includeReferenceId ? "id,reference_id" : "id"},title,description,folder_id,system_kind,folders!inner(title,owner_id,institution_id,class_id,system_kind)`)
+      .eq("folders.owner_id", userId)
+      .eq("system_kind", "user")
+      .eq("folders.system_kind", "user")
+      .is("folders.class_id", null)
+      .is("deleted_at", null);
 
-  if (institutionId) {
-    listsQuery = listsQuery.eq("folders.institution_id", institutionId);
-  } else {
-    listsQuery = listsQuery.is("folders.institution_id", null);
-  }
+    if (institutionId) {
+      query = query.eq("folders.institution_id", institutionId);
+    } else {
+      query = query.is("folders.institution_id", null);
+    }
+    return query;
+  };
 
-  const [initialFoldersResult, listsResult, countsResult] = await Promise.all([
-    foldersQuery,
-    listsQuery,
+  const [firstFoldersResult, firstListsResult, countsResult] = await Promise.all([
+    buildFoldersQuery(...folderVariants[0]),
+    buildListsQuery(true),
     client.rpc("get_user_card_counts", {
       _user_id: userId,
       _institution_id: institutionId,
     }),
   ]);
 
-  let foldersResult = initialFoldersResult;
+  let foldersResult = firstFoldersResult;
   if (foldersResult.error) {
-    // Keep the library usable before the optional emoji column is migrated.
-    foldersResult = await buildFoldersQuery(false);
+    for (const variant of folderVariants.slice(1)) {
+      foldersResult = await buildFoldersQuery(...variant);
+      if (!foldersResult.error) break;
+    }
+  }
+
+  let listsResult = firstListsResult;
+  if (listsResult.error) {
+    // Keep the library usable before `lists.reference_id` is migrated.
+    listsResult = await buildListsQuery(false);
   }
 
   if (foldersResult.error) throw foldersResult.error;

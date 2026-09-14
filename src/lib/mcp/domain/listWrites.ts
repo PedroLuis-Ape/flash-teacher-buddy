@@ -3,14 +3,13 @@ import type { UserScopedDb } from "./client";
 import { McpDomainError, toMcpDomainError } from "./errors";
 import { invalidateScopeInventory, listInstitutionId } from "./inventoryInvalidation";
 import { asRow, asRows, str } from "./query";
-import { requireUuid } from "./scope";
+import { requireReferenceList } from "./referenceIds";
 import {
   optionalBoolean,
   optionalEnum,
   optionalLanguageTag,
   optionalText,
   requireText,
-  requireUuidList,
 } from "./validation";
 
 export const LIST_TITLE_MAX = 120;
@@ -268,7 +267,9 @@ export interface ReorderListsInput {
 export async function reorderLists(db: UserScopedDb, input: ReorderListsInput): Promise<Record<string, unknown>> {
   const folder = await findOwnedFolder(db, input.folder_id);
   const folderId = String(folder.id);
-  const listIds = requireUuidList(input.list_ids, "list_ids", MAX_REORDER_LISTS);
+  const requestedListIds = requireReferenceList(input.list_ids, "list_ids", "list", MAX_REORDER_LISTS);
+  const resolvedLists = await Promise.all(requestedListIds.map((listId) => findOwnedList(db, listId)));
+  const listIds = resolvedLists.map((list) => String(list.id));
 
   const { data, error } = await db.client
     .from("lists")
@@ -328,14 +329,10 @@ export async function duplicateList(db: UserScopedDb, input: DuplicateListInput)
   const source = await findOwnedList(db, input.list_id);
   const sourceId = String(source.id);
   const sourceFolderId = str(source, "folder_id");
-  const destinationFolderId = input.folder_id === undefined || input.folder_id === null
-    ? sourceFolderId
-    : requireUuid(input.folder_id, "folder_id");
-
-  const destination = destinationFolderId === sourceFolderId
+  const destination = input.folder_id === undefined || input.folder_id === null
     ? null
-    : await findOwnedFolder(db, destinationFolderId);
-  const targetFolderId = String(destinationFolderId);
+    : await findOwnedFolder(db, input.folder_id);
+  const targetFolderId = destination ? String(destination.id) : String(sourceFolderId);
   const targetInstitution = destination
     ? folderInstitutionId(destination)
     : (str(source, "institution_id") ?? null);

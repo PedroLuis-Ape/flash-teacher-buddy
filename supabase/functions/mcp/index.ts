@@ -2,20 +2,37 @@
 // To take ownership, delete this banner line; the plugin then leaves the file alone.
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+
 // <define:import.meta.env>
-var define_import_meta_env_default = {};
+var define_import_meta_env_default;
+var init_define_import_meta_env = __esm({
+  "<define:import.meta.env>"() {
+    define_import_meta_env_default = {};
+  }
+});
+
+// lovable-mcp-supabase-entry.ts
+init_define_import_meta_env();
 
 // src/lib/mcp/index.ts
+init_define_import_meta_env();
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
 
 // src/lib/mcp/tools/analyzeText.ts
+init_define_import_meta_env();
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z } from "npm:zod@^3.23.8";
+import { z as z2 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/client.ts
+init_define_import_meta_env();
 import { createClient } from "npm:@supabase/supabase-js@^2.106.2";
 
 // src/integrations/supabase/platformRuntime.ts
+init_define_import_meta_env();
 var PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
 var PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
 var PRODUCTION_DATA_PUBLIC_VALUE = [
@@ -79,6 +96,7 @@ function readPlatformRuntime() {
 }
 
 // src/lib/mcp/domain/errors.ts
+init_define_import_meta_env();
 var McpDomainError = class extends Error {
   code;
   hint;
@@ -209,7 +227,300 @@ function createToolIdentity(ctx) {
   };
 }
 
+// src/lib/mcp/domain/access.ts
+init_define_import_meta_env();
+
+// src/lib/mcp/domain/query.ts
+init_define_import_meta_env();
+var DEFAULT_PAGE_SIZE = 20;
+var MAX_PAGE_SIZE = 50;
+var DEFAULT_CARD_LIMIT = 25;
+var MAX_CARD_LIMIT = 100;
+var MAX_SEARCH_LIMIT = 25;
+var MAX_SEARCH_TERM_LENGTH = 80;
+function resolvePage(input, options = { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE }) {
+  const rawLimit = input.limit;
+  const limitValue = rawLimit === void 0 || rawLimit === null ? options.defaultLimit : Number(rawLimit);
+  if (!Number.isFinite(limitValue) || limitValue < 1) {
+    throw new McpDomainError(
+      "invalid_input",
+      `"limit" precisa ser um n\xFAmero inteiro entre 1 e ${options.maxLimit}.`
+    );
+  }
+  const rawOffset = input.offset;
+  const offsetValue = rawOffset === void 0 || rawOffset === null ? 0 : Number(rawOffset);
+  if (!Number.isFinite(offsetValue) || offsetValue < 0) {
+    throw new McpDomainError("invalid_input", '"offset" precisa ser um n\xFAmero inteiro maior ou igual a 0.');
+  }
+  return {
+    limit: Math.min(Math.trunc(limitValue), options.maxLimit),
+    offset: Math.trunc(offsetValue)
+  };
+}
+var RESERVED_FILTER_CHARACTERS = /[,()*%_\\"']/g;
+function sanitizeSearchTerm(raw, maxLength = MAX_SEARCH_TERM_LENGTH) {
+  const value = typeof raw === "string" ? raw : "";
+  const cleaned = value.normalize("NFKC").replace(RESERVED_FILTER_CHARACTERS, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    throw new McpDomainError(
+      "invalid_input",
+      "O termo de busca n\xE3o cont\xE9m caracteres pesquis\xE1veis.",
+      { hint: "Envie texto simples, sem apenas pontua\xE7\xE3o ou curingas." }
+    );
+  }
+  return cleaned.slice(0, maxLength);
+}
+function asRows(data) {
+  return Array.isArray(data) ? data : [];
+}
+function asRow(data) {
+  return data && typeof data === "object" && !Array.isArray(data) ? data : null;
+}
+function str(row, key) {
+  const value = row?.[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function truncatedStr(row, key, maxLength) {
+  const value = str(row, key);
+  if (value === void 0) return void 0;
+  const trimmed2 = value.trim();
+  if (!trimmed2) return void 0;
+  return trimmed2.length > maxLength ? `${trimmed2.slice(0, maxLength)}\u2026` : trimmed2;
+}
+function num(row, key) {
+  const value = row?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+}
+function bool(row, key) {
+  const value = row?.[key];
+  return typeof value === "boolean" ? value : void 0;
+}
+
+// src/lib/mcp/domain/referenceIds.ts
+init_define_import_meta_env();
+
+// src/lib/mcp/domain/scope.ts
+init_define_import_meta_env();
+var PERSONAL_SCOPE = Object.freeze({ kind: "personal" });
+var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(value) {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim());
+}
+function requireUuid(value, field) {
+  if (!isUuid(value)) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um UUID v\xE1lido.`, {
+      hint: `Use as tools de listagem/busca para descobrir o UUID correto de "${field}".`
+    });
+  }
+  return String(value).trim().toLowerCase();
+}
+function scopeName(scope) {
+  return scope.kind === "personal" ? "personal" : "institution";
+}
+async function listAccessibleScopes(db) {
+  const { data, error } = await db.client.from("institutions").select("id,name,owner_id").eq("owner_id", db.userId).order("name", { ascending: true });
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as institui\xE7\xF5es desta conta.");
+  const scopes = [{ kind: "personal", role: "owner" }];
+  for (const row of Array.isArray(data) ? data : []) {
+    const record = asRow(row);
+    const id = str(record, "id");
+    if (!id) continue;
+    const name = str(record, "name");
+    scopes.push({
+      kind: "institution",
+      institution_id: id,
+      ...name ? { name } : {},
+      role: "owner"
+    });
+  }
+  return scopes;
+}
+async function assertScopeAccessible(db, scope) {
+  if (scope.kind === "personal") return;
+  const institutionId = requireUuid(scope.institutionId, "institution_id");
+  const { data, error } = await db.client.from("institutions").select("id").eq("id", institutionId).eq("owner_id", db.userId).maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar o escopo institucional.");
+  if (!data) {
+    throw new McpDomainError("not_found", "Institui\xE7\xE3o n\xE3o encontrada para esta conta.", {
+      hint: "Liste os escopos dispon\xEDveis antes de repetir a opera\xE7\xE3o."
+    });
+  }
+}
+
+// src/lib/mcp/domain/referenceIds.ts
+var REFERENCE_ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+var FOLDER_REFERENCE_ID_PATTERN = new RegExp(`^F-[${REFERENCE_ID_ALPHABET}]{6}$`, "i");
+var LIST_REFERENCE_ID_PATTERN = new RegExp(`^L-[${REFERENCE_ID_ALPHABET}]{6}$`, "i");
+function referenceIdKind(value) {
+  if (typeof value !== "string") return null;
+  const normalized2 = value.trim().toUpperCase();
+  if (FOLDER_REFERENCE_ID_PATTERN.test(normalized2)) return "folder";
+  if (LIST_REFERENCE_ID_PATTERN.test(normalized2)) return "list";
+  return null;
+}
+function isReferenceIdentifier(value, expectedKind) {
+  if (isUuid(value)) return true;
+  const kind = referenceIdKind(value);
+  return kind !== null && (expectedKind === void 0 || kind === expectedKind);
+}
+function referenceSelector(value) {
+  if (isUuid(value)) return { kind: "uuid", id: value.trim().toLowerCase() };
+  const referenceId = typeof value === "string" ? value.trim().toUpperCase() : "";
+  const kind = referenceIdKind(referenceId);
+  if (kind) return { kind, referenceId };
+  throw new McpDomainError("invalid_input", "O identificador precisa ser um UUID ou uma refer\xEAncia F-/L- v\xE1lida.", {
+    hint: "Use o UUID can\xF4nico ou a refer\xEAncia devolvida por list_folders/list_lists."
+  });
+}
+function requireReferenceIdentifier(value, expectedKind, field) {
+  const selector2 = referenceSelector(value);
+  if (selector2.kind === "uuid") return selector2.id;
+  if (selector2.kind !== expectedKind) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um identificador de ${expectedKind}.`, {
+      hint: `Use um UUID ou uma refer\xEAncia ${expectedKind === "folder" ? "F-XXXXXX" : "L-XXXXXX"}.`
+    });
+  }
+  return selector2.referenceId;
+}
+function requireReferenceList(raw, field, expectedKind, maxItems) {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser uma lista n\xE3o vazia de identificadores.`);
+  }
+  if (raw.length > maxItems) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" aceita no m\xE1ximo ${maxItems} itens por chamada.`);
+  }
+  return raw.map((value, index) => requireReferenceIdentifier(value, expectedKind, `${field}[${index}]`));
+}
+
+// src/lib/mcp/domain/access.ts
+var ACCESSIBLE_LIST_SELECT = "id,reference_id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at,folders!inner(id,reference_id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
+function compactList(row) {
+  const folder = asRow(row.folders);
+  return {
+    id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    folder_id: str(row, "folder_id"),
+    folder_title: str(folder, "title"),
+    lang: str(row, "lang"),
+    lang_a: str(row, "lang_a"),
+    lang_b: str(row, "lang_b"),
+    primary_side: str(row, "primary_side"),
+    order_index: num(row, "order_index"),
+    updated_at: str(row, "updated_at")
+  };
+}
+function compactFolderRef(row) {
+  const folder = asRow(row.folders);
+  const id = str(folder, "id");
+  if (!id) return null;
+  const referenceId = str(folder, "reference_id");
+  return {
+    id,
+    ...referenceId ? { reference_id: referenceId } : {},
+    ...str(folder, "title") ? { title: str(folder, "title") } : {}
+  };
+}
+function applyIdentifierFilter(query, selector2, referenceColumn = "reference_id") {
+  return selector2.kind === "uuid" ? query.eq("id", selector2.id) : query.eq(referenceColumn, selector2.referenceId);
+}
+function assertReferenceKind(selector2, expectedKind, field) {
+  if (selector2.kind !== "uuid" && selector2.kind !== expectedKind) {
+    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um identificador de ${expectedKind}.`);
+  }
+}
+async function findAccessibleList(db, listId, scope) {
+  const selector2 = referenceSelector(listId);
+  assertReferenceKind(selector2, "list", "list_id");
+  let base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
+  base = applyIdentifierFilter(base, selector2);
+  const scoped = scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", scope.institutionId);
+  const { data, error } = await scoped.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+var OWNED_FOLDER_SELECT = "id,reference_id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
+function compactFolderSummary(row) {
+  const institutionId = str(row, "institution_id") ?? null;
+  return {
+    id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    visibility: str(row, "visibility"),
+    institution_id: institutionId,
+    scope: institutionId ? "institution" : "personal"
+  };
+}
+function folderInstitutionId(row) {
+  return str(row, "institution_id") ?? null;
+}
+async function findOwnedFolder(db, folderId, options = {}) {
+  const selector2 = referenceSelector(folderId);
+  assertReferenceKind(selector2, "folder", "folder_id");
+  let query = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("owner_id", db.userId).eq("system_kind", "user").is("class_id", null);
+  query = applyIdentifierFilter(query, selector2);
+  if (!options.includeDeleted) query = query.is("deleted_at", null);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a pasta.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Pasta n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_folders para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+async function findOwnedList(db, listId, options = {}) {
+  const selector2 = referenceSelector(listId);
+  assertReferenceKind(selector2, "list", "list_id");
+  let query = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").eq("system_kind", "user");
+  query = applyIdentifierFilter(query, selector2);
+  if (!options.includeDeleted) {
+    query = query.is("deleted_at", null).is("folders.deleted_at", null).is("folders.class_id", null);
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
+    });
+  }
+  return record;
+}
+async function findAccessibleFolder(db, folderId, scope) {
+  const selector2 = referenceSelector(folderId);
+  assertReferenceKind(selector2, "folder", "folder_id");
+  let query = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).is("class_id", null);
+  query = applyIdentifierFilter(query, selector2);
+  query = scope.kind === "personal" ? query.is("institution_id", null) : query.eq("institution_id", scope.institutionId);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a pasta.");
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Pasta n\xE3o encontrada na biblioteca desta conta.", {
+      hint: "Use list_folders para descobrir o identificador correto."
+    });
+  }
+  return record;
+}
+
+// src/lib/mcp/domain/inventoryInvalidation.ts
+init_define_import_meta_env();
+
+// src/lib/mcp/learning/inventory.ts
+init_define_import_meta_env();
+
 // src/lib/mcp/learning/types.ts
+init_define_import_meta_env();
 var ANALYSIS_LANGUAGES = ["en", "pt"];
 var INVENTORY_VERSION = 1;
 var KNOWN_STATUSES = [
@@ -242,6 +553,7 @@ function emptyStatusCounts() {
 }
 
 // src/lib/mcp/learning/normalize.ts
+init_define_import_meta_env();
 var CASE_FOLD_SPECIALS = {
   "\xDF": "ss",
   // sharp s
@@ -512,10 +824,10 @@ function phraseVariants(keys, language) {
 var TOKEN_PATTERN = /\p{L}[\p{L}\p{N}]*(?:['\-]\p{L}[\p{L}\p{N}]*)*/gu;
 function tokenizeText(text, language) {
   const tokens = [];
-  const normalized = foldApostrophes(text);
+  const normalized2 = foldApostrophes(text);
   const pattern = new RegExp(TOKEN_PATTERN.source, "gu");
   let match;
-  while ((match = pattern.exec(normalized)) !== null) {
+  while ((match = pattern.exec(normalized2)) !== null) {
     const raw = match[0];
     const key = normalizeSurface(raw);
     if (!key) continue;
@@ -581,6 +893,7 @@ function editDistanceAtMost(a, b, max) {
 }
 
 // src/lib/mcp/learning/lemmas.ts
+init_define_import_meta_env();
 var EN_VERB_IRREGULAR = {
   am: ["be"],
   is: ["be"],
@@ -1187,118 +1500,6 @@ async function buildVocabularyInventory(source, options) {
   };
 }
 
-// src/lib/mcp/domain/query.ts
-var DEFAULT_PAGE_SIZE = 20;
-var MAX_PAGE_SIZE = 50;
-var DEFAULT_CARD_LIMIT = 25;
-var MAX_CARD_LIMIT = 100;
-var MAX_SEARCH_LIMIT = 25;
-var MAX_SEARCH_TERM_LENGTH = 80;
-function resolvePage(input, options = { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE }) {
-  const rawLimit = input.limit;
-  const limitValue = rawLimit === void 0 || rawLimit === null ? options.defaultLimit : Number(rawLimit);
-  if (!Number.isFinite(limitValue) || limitValue < 1) {
-    throw new McpDomainError(
-      "invalid_input",
-      `"limit" precisa ser um n\xFAmero inteiro entre 1 e ${options.maxLimit}.`
-    );
-  }
-  const rawOffset = input.offset;
-  const offsetValue = rawOffset === void 0 || rawOffset === null ? 0 : Number(rawOffset);
-  if (!Number.isFinite(offsetValue) || offsetValue < 0) {
-    throw new McpDomainError("invalid_input", '"offset" precisa ser um n\xFAmero inteiro maior ou igual a 0.');
-  }
-  return {
-    limit: Math.min(Math.trunc(limitValue), options.maxLimit),
-    offset: Math.trunc(offsetValue)
-  };
-}
-var RESERVED_FILTER_CHARACTERS = /[,()*%_\\"']/g;
-function sanitizeSearchTerm(raw, maxLength = MAX_SEARCH_TERM_LENGTH) {
-  const value = typeof raw === "string" ? raw : "";
-  const cleaned = value.normalize("NFKC").replace(RESERVED_FILTER_CHARACTERS, " ").replace(/\s+/g, " ").trim();
-  if (!cleaned) {
-    throw new McpDomainError(
-      "invalid_input",
-      "O termo de busca n\xE3o cont\xE9m caracteres pesquis\xE1veis.",
-      { hint: "Envie texto simples, sem apenas pontua\xE7\xE3o ou curingas." }
-    );
-  }
-  return cleaned.slice(0, maxLength);
-}
-function asRows(data) {
-  return Array.isArray(data) ? data : [];
-}
-function asRow(data) {
-  return data && typeof data === "object" && !Array.isArray(data) ? data : null;
-}
-function str(row, key) {
-  const value = row?.[key];
-  return typeof value === "string" && value.length > 0 ? value : void 0;
-}
-function truncatedStr(row, key, maxLength) {
-  const value = str(row, key);
-  if (value === void 0) return void 0;
-  const trimmed = value.trim();
-  if (!trimmed) return void 0;
-  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength)}\u2026` : trimmed;
-}
-function num(row, key) {
-  const value = row?.[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : void 0;
-}
-function bool(row, key) {
-  const value = row?.[key];
-  return typeof value === "boolean" ? value : void 0;
-}
-
-// src/lib/mcp/domain/scope.ts
-var PERSONAL_SCOPE = Object.freeze({ kind: "personal" });
-var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isUuid(value) {
-  return typeof value === "string" && UUID_PATTERN.test(value.trim());
-}
-function requireUuid(value, field) {
-  if (!isUuid(value)) {
-    throw new McpDomainError("invalid_input", `O campo "${field}" precisa ser um UUID v\xE1lido.`, {
-      hint: `Use as tools de listagem/busca para descobrir o UUID correto de "${field}".`
-    });
-  }
-  return String(value).trim().toLowerCase();
-}
-function scopeName(scope) {
-  return scope.kind === "personal" ? "personal" : "institution";
-}
-async function listAccessibleScopes(db) {
-  const { data, error } = await db.client.from("institutions").select("id,name,owner_id").eq("owner_id", db.userId).order("name", { ascending: true });
-  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel listar as institui\xE7\xF5es desta conta.");
-  const scopes = [{ kind: "personal", role: "owner" }];
-  for (const row of Array.isArray(data) ? data : []) {
-    const record = asRow(row);
-    const id = str(record, "id");
-    if (!id) continue;
-    const name = str(record, "name");
-    scopes.push({
-      kind: "institution",
-      institution_id: id,
-      ...name ? { name } : {},
-      role: "owner"
-    });
-  }
-  return scopes;
-}
-async function assertScopeAccessible(db, scope) {
-  if (scope.kind === "personal") return;
-  const institutionId = requireUuid(scope.institutionId, "institution_id");
-  const { data, error } = await db.client.from("institutions").select("id").eq("id", institutionId).eq("owner_id", db.userId).maybeSingle();
-  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar o escopo institucional.");
-  if (!data) {
-    throw new McpDomainError("not_found", "Institui\xE7\xE3o n\xE3o encontrada para esta conta.", {
-      hint: "Liste os escopos dispon\xEDveis antes de repetir a opera\xE7\xE3o."
-    });
-  }
-}
-
 // src/lib/mcp/domain/inventoryInvalidation.ts
 function scopeForInstitution(institutionId) {
   return institutionId ? { kind: "institution", institutionId } : { kind: "personal" };
@@ -1314,7 +1515,24 @@ function listInstitutionId(row) {
   return str(asRow(row.folders), "institution_id") ?? str(row, "institution_id") ?? null;
 }
 
+// src/lib/mcp/tools/identifierSchemas.ts
+init_define_import_meta_env();
+import { z } from "npm:zod@^3.23.8";
+function identifierSchema(kind) {
+  return z.string().min(1).refine(
+    (value) => isReferenceIdentifier(value, kind),
+    kind ? `Use um UUID ou uma refer\xEAncia ${kind === "folder" ? "F-XXXXXX" : "L-XXXXXX"}.` : "Use um UUID ou uma refer\xEAncia F-/L- v\xE1lida."
+  );
+}
+var folderIdentifierSchema = identifierSchema("folder");
+var listIdentifierSchema = identifierSchema("list");
+var anyResourceIdentifierSchema = identifierSchema();
+
+// src/lib/mcp/learning/analyze.ts
+init_define_import_meta_env();
+
 // src/lib/mcp/learning/language.ts
+init_define_import_meta_env();
 var EN_FUNCTION_WORDS = [
   "a",
   "an",
@@ -2368,91 +2586,11 @@ function validateFilters(filters) {
   }
 }
 
-// src/lib/mcp/domain/access.ts
-var ACCESSIBLE_LIST_SELECT = "id,title,description,folder_id,order_index,primary_side,lang,lang_a,lang_b,study_type,labels_a,labels_b,tts_enabled,visibility,updated_at,deleted_at,folders!inner(id,title,owner_id,deleted_at,class_id,system_kind,institution_id)";
-function compactList(row) {
-  const folder = asRow(row.folders);
-  return {
-    id: str(row, "id") ?? "",
-    title: str(row, "title") ?? "",
-    description: truncatedStr(row, "description", 160),
-    folder_id: str(row, "folder_id"),
-    folder_title: str(folder, "title"),
-    lang: str(row, "lang"),
-    lang_a: str(row, "lang_a"),
-    lang_b: str(row, "lang_b"),
-    primary_side: str(row, "primary_side"),
-    order_index: num(row, "order_index"),
-    updated_at: str(row, "updated_at")
-  };
-}
-function compactFolderRef(row) {
-  const folder = asRow(row.folders);
-  const id = str(folder, "id");
-  if (!id) return null;
-  return { id, ...str(folder, "title") ? { title: str(folder, "title") } : {} };
-}
-async function findAccessibleList(db, listId, scope) {
-  const id = requireUuid(listId, "list_id");
-  const base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("id", id).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
-  const scoped = scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", scope.institutionId);
-  const { data, error } = await scoped.maybeSingle();
-  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
-  const record = asRow(data);
-  if (!record) {
-    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
-      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
-    });
-  }
-  return record;
-}
-var OWNED_FOLDER_SELECT = "id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
-function compactFolderSummary(row) {
-  const institutionId = str(row, "institution_id") ?? null;
-  return {
-    id: str(row, "id") ?? "",
-    title: str(row, "title") ?? "",
-    description: truncatedStr(row, "description", 160),
-    visibility: str(row, "visibility"),
-    institution_id: institutionId,
-    scope: institutionId ? "institution" : "personal"
-  };
-}
-function folderInstitutionId(row) {
-  return str(row, "institution_id") ?? null;
-}
-async function findOwnedFolder(db, folderId, options = {}) {
-  const id = requireUuid(folderId, "folder_id");
-  let query = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("id", id).eq("owner_id", db.userId).eq("system_kind", "user").is("class_id", null);
-  if (!options.includeDeleted) query = query.is("deleted_at", null);
-  const { data, error } = await query.maybeSingle();
-  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a pasta.");
-  const record = asRow(data);
-  if (!record) {
-    throw new McpDomainError("not_found", "Pasta n\xE3o encontrada na biblioteca desta conta.", {
-      hint: "Use list_folders para descobrir o id correto antes de repetir."
-    });
-  }
-  return record;
-}
-async function findOwnedList(db, listId, options = {}) {
-  const id = requireUuid(listId, "list_id");
-  let query = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT).eq("id", id).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").eq("system_kind", "user");
-  if (!options.includeDeleted) {
-    query = query.is("deleted_at", null).is("folders.deleted_at", null).is("folders.class_id", null);
-  }
-  const { data, error } = await query.maybeSingle();
-  if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel ler a lista.");
-  const record = asRow(data);
-  if (!record) {
-    throw new McpDomainError("not_found", "Lista n\xE3o encontrada na biblioteca desta conta.", {
-      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir."
-    });
-  }
-  return record;
-}
+// src/lib/mcp/learning/supabaseSource.ts
+init_define_import_meta_env();
 
 // src/lib/mcp/domain/flashcards.ts
+init_define_import_meta_env();
 var CARD_SELECT = "id,term,translation,hint,example_text,example_translation,context_tag,layer_index,parent_card_id,created_at";
 var MAX_CARD_TEXT_LENGTH = 300;
 function compactCard(row) {
@@ -2588,9 +2726,9 @@ function createSupabaseVocabularySource(db, scope) {
 }
 
 // src/lib/mcp/tools/analyzeText.ts
-var scopeSchema = z.object({
-  kind: z.enum(["personal", "institution"]).describe('Escopo da biblioteca: "personal" (padrao) ou "institution".'),
-  institution_id: z.string().uuid().optional().describe('Obrigatorio quando kind = "institution"; descubra o id com get_my_profile.')
+var scopeSchema = z2.object({
+  kind: z2.enum(["personal", "institution"]).describe('Escopo da biblioteca: "personal" (padrao) ou "institution".'),
+  institution_id: z2.string().uuid().optional().describe('Obrigatorio quando kind = "institution"; descubra o id com get_my_profile.')
 }).strict();
 function resolveScope(raw) {
   if (!raw || raw.kind === "personal") return PERSONAL_SCOPE;
@@ -2601,30 +2739,58 @@ function resolveScope(raw) {
   }
   return { kind: "institution", institutionId: requireUuid(raw.institution_id, "institution_id") };
 }
+var NO_MATCH_ID = "00000000-0000-4000-8000-000000000000";
+async function resolveScopedIdentifiers(db, scope, values, kind) {
+  if (!values?.length) return values;
+  const resolved = [];
+  for (const value of values) {
+    const selector2 = referenceSelector(value);
+    if (selector2.kind === "uuid") {
+      resolved.push(selector2.id);
+      continue;
+    }
+    try {
+      const row = kind === "folder" ? await findAccessibleFolder(db, value, scope) : await findAccessibleList(db, value, scope);
+      const id = typeof row.id === "string" ? row.id : null;
+      if (id) resolved.push(id);
+    } catch (error) {
+      if (error instanceof McpDomainError && error.code === "not_found") {
+        resolved.push(NO_MATCH_ID);
+        continue;
+      }
+      throw error;
+    }
+  }
+  return resolved;
+}
 var analyzeText_default = defineTool({
   name: "analyze_text_against_library",
   title: "Analyze text against my vocabulary",
   description: `Linguistic analysis of a text against the authenticated account's own library: which words/expressions the learner ALREADY has (exact form, spelling variant, inflection/lemma, phrasal verb or multi-word expression) and which are genuinely NEW to this library. Normalization is real: casefold, punctuation, contractions, plural/singular, verb inflection, spelling variants and multi-word expressions are compared as whole units, so "look", "look for", "look after" and "look up to" are never collapsed into each other. Very basic function words (articles, particles, prepositions) are ignored by default, but expressions that contain them are still analyzed; set ignore_basic_function_words=true/false to include them. Each candidate is classified as IGNORE_BASIC, KNOWN_EXACT, KNOWN_VARIANT, KNOWN_LEMMA, KNOWN_EXPRESSION, POSSIBLE_DUPLICATE, NEW or AMBIGUOUS, with evidence (matched card, existing senses, context sentence). Duplicates are not decided by term alone: translation, definition, example and context are considered, so a second sense of an existing term ("bank" as a river margin vs a financial bank) is reported as POSSIBLE_DUPLICATE instead of being silently treated as known. This tool ONLY analyzes: it never creates, edits or deletes cards. The heavy work (building the library index with aggregated, paginated queries) runs on the server; the model receives only the candidates that appear in the text. Always confirm with the user before creating anything, and never claim a word is new without reading the returned evidence.`,
   inputSchema: {
-    text: z.string().min(1).max(MAX_TEXT_CHARS).describe(
+    text: z2.string().min(1).max(MAX_TEXT_CHARS).describe(
       "Text to analyze (any language). Hard limits: " + MAX_TEXT_CHARS + " characters and " + MAX_TEXT_TOKENS + " words per call; split longer texts."
     ),
-    language: z.enum(["en", "pt"]).optional().describe("Language of the text. Omit to let the engine detect it (the result reports analyzed_language and confidence)."),
+    language: z2.enum(["en", "pt"]).optional().describe("Language of the text. Omit to let the engine detect it (the result reports analyzed_language and confidence)."),
     scope: scopeSchema.optional().describe("Library scope to compare against. Default: personal library."),
-    folder_ids: z.array(z.string().uuid()).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these folders (max " + MAX_FILTER_IDS + " ids)."),
-    list_ids: z.array(z.string().uuid()).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these lists (max " + MAX_FILTER_IDS + " ids)."),
-    ignore_basic_function_words: z.boolean().optional().describe("Default true: basic articles/particles/prepositions are classified IGNORE_BASIC. Set false to treat them as normal candidates.")
+    folder_ids: z2.array(folderIdentifierSchema).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these folders by UUID or F- reference (max " + MAX_FILTER_IDS + " ids)."),
+    list_ids: z2.array(listIdentifierSchema).max(MAX_FILTER_IDS).optional().describe("Restrict the comparison to these lists by UUID or L- reference (max " + MAX_FILTER_IDS + " ids)."),
+    ignore_basic_function_words: z2.boolean().optional().describe("Default true: basic articles/particles/prepositions are classified IGNORE_BASIC. Set false to treat them as normal candidates.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
     try {
       const db = createUserScopedDb(ctx);
       const scope = resolveScope(args.scope);
+      const [folderIds, listIds] = await Promise.all([
+        resolveScopedIdentifiers(db, scope, args.folder_ids, "folder"),
+        resolveScopedIdentifiers(db, scope, args.list_ids, "list")
+      ]);
       const result = await analyzeTextAgainstLibrary({
         text: args.text,
         language: args.language,
         source: createSupabaseVocabularySource(db, scope),
-        filters: { folderIds: args.folder_ids, listIds: args.list_ids },
+        filters: { folderIds, listIds },
         ignoreBasicFunctionWords: args.ignore_basic_function_words,
         cacheKey: inventoryCacheKey(db.userId, scope.kind === "institution" ? scope.institutionId : null),
         cacheMode: "use",
@@ -2638,28 +2804,30 @@ var analyzeText_default = defineTool({
 });
 
 // src/lib/mcp/tools/echo.ts
+init_define_import_meta_env();
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z2 } from "npm:zod@^3.23.8";
+import { z as z3 } from "npm:zod@^3.23.8";
 var echo_default = defineTool2({
   name: "echo",
   title: "Echo",
   description: "Echo the input text back to the caller. Use to verify connectivity.",
-  inputSchema: { text: z2.string().min(1).describe("Text to echo back.") },
+  inputSchema: { text: z3.string().min(1).describe("Text to echo back.") },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: ({ text }) => ({ content: [{ type: "text", text }] })
 });
 
 // src/lib/mcp/tools/getFlashcards.ts
+init_define_import_meta_env();
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z3 } from "npm:zod@^3.23.8";
+import { z as z4 } from "npm:zod@^3.23.8";
 var getFlashcards_default = defineTool3({
   name: "get_flashcards",
   title: "Get flashcards of a list",
   description: "Returns one bounded page of flashcards of a list owned by the authenticated account, ordered like the study deck (created_at, id). Responses are always paginated: read returned/total_count/has_more and continue with offset when the user really asked for more. Never use this to dump a whole library into the conversation; for vocabulary analysis prefer search_my_content and narrow queries.",
   inputSchema: {
-    list_id: z3.string().uuid().describe("List uuid discovered via list_lists or search_my_content."),
-    limit: z3.number().int().min(1).max(100).optional().describe("Cards per page. Default 25, hard cap 100."),
-    offset: z3.number().int().min(0).optional().describe("Pagination offset, default 0.")
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference discovered via list_lists or search_my_content."),
+    limit: z4.number().int().min(1).max(100).optional().describe("Cards per page. Default 25, hard cap 100."),
+    offset: z4.number().int().min(0).optional().describe("Pagination offset, default 0.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -2679,14 +2847,17 @@ var getFlashcards_default = defineTool3({
 });
 
 // src/lib/mcp/tools/getList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z4 } from "npm:zod@^3.23.8";
+import { z as z5 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/lists.ts
+init_define_import_meta_env();
 async function listLists(db, input) {
   await assertScopeAccessible(db, input.scope);
   const { limit, offset } = resolvePage(input, { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE });
-  const folderId = input.folderId === void 0 || input.folderId === null ? void 0 : requireUuid(input.folderId, "folder_id");
+  const folder = input.folderId === void 0 || input.folderId === null ? void 0 : await findAccessibleFolder(db, input.folderId, input.scope);
+  const folderId = folder ? String(folder.id) : void 0;
   const search = input.search === void 0 || input.search === null ? void 0 : sanitizeSearchTerm(input.search);
   const base = db.client.from("lists").select(ACCESSIBLE_LIST_SELECT, { count: "exact" }).eq("folders.owner_id", db.userId).eq("folders.system_kind", "user").is("folders.deleted_at", null).is("folders.class_id", null).eq("system_kind", "user").is("deleted_at", null);
   const scoped = input.scope.kind === "personal" ? base.is("folders.institution_id", null) : base.eq("folders.institution_id", input.scope.institutionId);
@@ -2740,10 +2911,10 @@ var getList_default = defineTool4({
   title: "Get one list",
   description: "Returns one list of the authenticated account: metadata, owning folder, and the exact card_count. Cards are returned only when include_cards is true, and then as one bounded page (cards_limit, cards_offset). Calling it with an id that is not in this account returns a controlled not_found \u2014 do not retry the same id, resolve it with list_lists or search_my_content instead.",
   inputSchema: {
-    list_id: z4.string().uuid().describe("List uuid, discovered via list_lists or search_my_content."),
-    include_cards: z4.boolean().optional().describe("When true, also returns a page of cards. Default false keeps the response small."),
-    cards_limit: z4.number().int().min(1).max(100).optional().describe("Cards per page when include_cards is true. Default 25, hard cap 100."),
-    cards_offset: z4.number().int().min(0).optional().describe("Card pagination offset when include_cards is true. Default 0.")
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference, discovered via list_lists or search_my_content."),
+    include_cards: z5.boolean().optional().describe("When true, also returns a page of cards. Default false keeps the response small."),
+    cards_limit: z5.number().int().min(1).max(100).optional().describe("Cards per page when include_cards is true. Default 25, hard cap 100."),
+    cards_offset: z5.number().int().min(0).optional().describe("Card pagination offset when include_cards is true. Default 0.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -2764,9 +2935,11 @@ var getList_default = defineTool4({
 });
 
 // src/lib/mcp/tools/getMyProfile.ts
+init_define_import_meta_env();
 import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.1";
 
 // src/lib/mcp/domain/profile.ts
+init_define_import_meta_env();
 var PROFILE_SELECT = "id,first_name,avatar_url,is_teacher,level,public_slug";
 async function getMyProfile(db) {
   const { data, error } = await db.client.from("profiles").select(PROFILE_SELECT).eq("id", db.userId).maybeSingle();
@@ -2805,11 +2978,13 @@ var getMyProfile_default = defineTool5({
 });
 
 // src/lib/mcp/tools/listFolders.ts
+init_define_import_meta_env();
 import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z5 } from "npm:zod@^3.23.8";
+import { z as z6 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/folders.ts
-var FOLDER_SELECT = "id,title,description,visibility,lang_a,lang_b,tts_enabled,updated_at,lists(id,deleted_at,system_kind)";
+init_define_import_meta_env();
+var FOLDER_SELECT = "id,reference_id,title,description,visibility,lang_a,lang_b,tts_enabled,updated_at,lists(id,deleted_at,system_kind)";
 function countUserLists(embedded) {
   return asRows(embedded).filter((item) => {
     const record = asRow(item);
@@ -2820,6 +2995,7 @@ function countUserLists(embedded) {
 function compactFolder(row) {
   return {
     id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
     title: str(row, "title") ?? "",
     description: truncatedStr(row, "description", 160),
     visibility: str(row, "visibility"),
@@ -2858,9 +3034,9 @@ var listFolders_default = defineTool6({
   title: "List my folders",
   description: "Lists folders of the authenticated account's personal library (newest activity first), with the number of user lists inside each folder. Excludes trash, system collections (Refor\xE7o / Pontos de aten\xE7\xE3o) and classroom content. Paginated: use limit/offset and read returned/total_count/has_more. Use this to resolve a folder name spoken by the user into a folder_id; never invent or reuse ids from memory.",
   inputSchema: {
-    search: z5.string().min(1).max(80).optional().describe("Optional plain-text filter over folder title and description. Wildcards are ignored."),
-    limit: z5.number().int().min(1).max(50).optional().describe("Folders per page. Default 20, hard cap 50."),
-    offset: z5.number().int().min(0).optional().describe("Pagination offset, default 0. Combine with has_more/total_count.")
+    search: z6.string().min(1).max(80).optional().describe("Optional plain-text filter over folder title and description. Wildcards are ignored."),
+    limit: z6.number().int().min(1).max(50).optional().describe("Folders per page. Default 20, hard cap 50."),
+    offset: z6.number().int().min(0).optional().describe("Pagination offset, default 0. Combine with has_more/total_count.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -2880,17 +3056,18 @@ var listFolders_default = defineTool6({
 });
 
 // src/lib/mcp/tools/listLists.ts
+init_define_import_meta_env();
 import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z6 } from "npm:zod@^3.23.8";
+import { z as z7 } from "npm:zod@^3.23.8";
 var listLists_default = defineTool7({
   name: "list_lists",
   title: "List my lists",
   description: "Lists study lists of the authenticated account's personal library, newest activity first, optionally restricted to one folder. Excludes trash, system collections (Refor\xE7o / Pontos de aten\xE7\xE3o) and classroom content. Paginated via limit/offset (returned/total_count/has_more). Each item carries folder_id/folder_title so you can navigate without extra calls. Resolve folder_id with list_folders first; never invent ids.",
   inputSchema: {
-    folder_id: z6.string().uuid().optional().describe("Restrict the result to this folder (uuid from list_folders)."),
-    search: z6.string().min(1).max(80).optional().describe("Optional plain-text filter over list title and description."),
-    limit: z6.number().int().min(1).max(50).optional().describe("Lists per page. Default 20, hard cap 50."),
-    offset: z6.number().int().min(0).optional().describe("Pagination offset, default 0.")
+    folder_id: z7.string().min(1).refine((value) => folderIdentifierSchema.safeParse(value).success, "Use um UUID ou uma refer\xEAncia F-XXXXXX.").optional().describe("Restrict the result to this folder (UUID or F-XXXXXX from list_folders)."),
+    search: z7.string().min(1).max(80).optional().describe("Optional plain-text filter over list title and description."),
+    limit: z7.number().int().min(1).max(50).optional().describe("Lists per page. Default 20, hard cap 50."),
+    offset: z7.number().int().min(0).optional().describe("Pagination offset, default 0.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -2911,10 +3088,12 @@ var listLists_default = defineTool7({
 });
 
 // src/lib/mcp/tools/searchMyContent.ts
+init_define_import_meta_env();
 import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z7 } from "npm:zod@^3.23.8";
+import { z as z8 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/search.ts
+init_define_import_meta_env();
 var SEARCH_TYPES = ["folders", "lists", "flashcards"];
 var DEFAULT_SEARCH_LIMIT = 10;
 var FOLDER_SEARCH_SELECT = "id,title,description,updated_at";
@@ -3019,8 +3198,8 @@ async function searchMyContent(db, input) {
   const { limit } = resolvePage(input, { defaultLimit: DEFAULT_SEARCH_LIMIT, maxLimit: MAX_SEARCH_LIMIT });
   const pattern = likePattern(query);
   const requested = normalizeTypes(input.types);
-  const scopedListId = input.listId === void 0 || input.listId === null ? void 0 : requireUuid(input.listId, "list_id");
-  if (scopedListId) await findAccessibleList(db, scopedListId, input.scope);
+  const scopedList = input.listId === void 0 || input.listId === null ? void 0 : await findAccessibleList(db, input.listId, input.scope);
+  const scopedListId = scopedList ? String(scopedList.id) : void 0;
   const [foldersGroup, listsGroup, cardsGroup] = await Promise.all([
     !scopedListId && requested.includes("folders") ? searchFolders(db, input.scope, pattern, limit) : Promise.resolve({ items: [], total: null }),
     !scopedListId && requested.includes("lists") ? searchLists(db, input.scope, pattern, limit) : Promise.resolve({ items: [], total: null }),
@@ -3052,10 +3231,10 @@ var searchMyContent_default = defineTool8({
   title: "Search my library",
   description: "Literal, case-insensitive search across the authenticated account's own content: folders, lists and flashcards (term, translation and example). Results are compact and hard-capped by limit: the response reports per-type counts and truncated=true when more matched. This is discovery, not linguistic analysis: it never decides whether a word is genuinely new vocabulary, and it never touches other accounts, classroom content or system collections. When list_id is given, the search is confined to that list's cards.",
   inputSchema: {
-    query: z7.string().min(1).max(80).describe("Plain-text term to look for (accents are significant). Wildcards are ignored."),
-    limit: z7.number().int().min(1).max(25).describe("Required. Hard budget of returned items, 1-25. Use a small value first and narrow with types."),
-    types: z7.array(z7.enum(SEARCH_TYPES)).optional().describe('Restrict to any of "folders", "lists", "flashcards". Default: all three.'),
-    list_id: z7.string().uuid().optional().describe("Optional list uuid to confine the search to one list's cards.")
+    query: z8.string().min(1).max(80).describe("Plain-text term to look for (accents are significant). Wildcards are ignored."),
+    limit: z8.number().int().min(1).max(25).describe("Required. Hard budget of returned items, 1-25. Use a small value first and narrow with types."),
+    types: z8.array(z8.enum(SEARCH_TYPES)).optional().describe('Restrict to any of "folders", "lists", "flashcards". Default: all three.'),
+    list_id: z8.string().min(1).refine((value) => listIdentifierSchema.safeParse(value).success, "Use um UUID ou uma refer\xEAncia L-XXXXXX.").optional().describe("Optional list UUID or L-XXXXXX reference to confine the search to one list's cards.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -3076,10 +3255,15 @@ var searchMyContent_default = defineTool8({
 });
 
 // src/lib/mcp/tools/addFlashcards.ts
+init_define_import_meta_env();
 import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z8 } from "npm:zod@^3.23.8";
+import { z as z9 } from "npm:zod@^3.23.8";
+
+// src/lib/mcp/domain/cardWrites.ts
+init_define_import_meta_env();
 
 // src/lib/mcp/domain/confirmation.ts
+init_define_import_meta_env();
 var CONFIRMATION_TTL_SECONDS = 600;
 var encoder = new TextEncoder();
 function base64Url(bytes) {
@@ -3101,7 +3285,7 @@ function canonical(claim, expiresAtSeconds) {
   ].join("|");
 }
 async function confirmationStateFingerprint(rows) {
-  const normalized = rows.map((row) => ({
+  const normalized2 = rows.map((row) => ({
     kind: row.kind,
     id: row.id,
     updatedAt: row.updatedAt ?? null,
@@ -3109,7 +3293,7 @@ async function confirmationStateFingerprint(rows) {
   })).sort(
     (left, right) => `${left.kind}|${left.id}|${String(left.updatedAt)}|${String(left.deletedAt)}`.localeCompare(`${right.kind}|${right.id}|${String(right.updatedAt)}|${String(right.deletedAt)}`)
   );
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(JSON.stringify(normalized)));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(JSON.stringify(normalized2)));
   return base64Url(new Uint8Array(digest));
 }
 async function sign(key, message) {
@@ -3165,6 +3349,7 @@ async function verifyConfirmationToken(key, token, claim, nowMs = Date.now()) {
 }
 
 // src/lib/mcp/domain/validation.ts
+init_define_import_meta_env();
 function fail(message, hint) {
   throw new McpDomainError("invalid_input", message, hint ? { hint } : {});
 }
@@ -3350,8 +3535,8 @@ async function addCards(db, input) {
     throw new McpDomainError("invalid_input", `"cards" aceita no m\xE1ximo ${MAX_BATCH_CARDS} cards por chamada.`);
   }
   const policy = input.on_duplicate === "insert" ? "insert" : "skip";
-  const normalized = input.cards.map((card, index) => normalizeNewCard(card, index));
-  const parentIds = Array.from(new Set(normalized.map((card) => card.parent_card_id).filter(Boolean)));
+  const normalized2 = input.cards.map((card, index) => normalizeNewCard(card, index));
+  const parentIds = Array.from(new Set(normalized2.map((card) => card.parent_card_id).filter(Boolean)));
   if (parentIds.length > 0) {
     const { data: data2, error: error2 } = await db.client.from("flashcards").select("id").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("id", parentIds);
     if (error2) throw toMcpDomainError(error2, "N\xE3o foi poss\xEDvel validar os cards pai.");
@@ -3364,10 +3549,10 @@ async function addCards(db, input) {
     }
   }
   const skipped = [];
-  let toInsert = normalized;
+  let toInsert = normalized2;
   if (policy === "skip") {
     const candidates = Array.from(
-      new Set(normalized.flatMap((card) => [card.term, card.term.toLowerCase()]))
+      new Set(normalized2.flatMap((card) => [card.term, card.term.toLowerCase()]))
     );
     const { data: data2, error: error2 } = await db.client.from("flashcards").select("term,translation").eq("list_id", listId).eq("user_id", db.userId).is("deleted_at", null).in("term", candidates);
     if (error2) throw toMcpDomainError(error2, "N\xE3o foi poss\xEDvel verificar cards repetidos.");
@@ -3377,7 +3562,7 @@ async function addCards(db, input) {
         return cardKey(str(record, "term") ?? "", str(record, "translation") ?? "");
       })
     );
-    toInsert = normalized.filter((card) => {
+    toInsert = normalized2.filter((card) => {
       const key = cardKey(card.term, card.translation);
       if (existing.has(key)) {
         skipped.push({ term: card.term, translation: card.translation });
@@ -3578,27 +3763,27 @@ async function removeCards(db, input, key) {
 }
 
 // src/lib/mcp/tools/addFlashcards.ts
-var cardSchema = z8.object({
-  term: z8.string().min(1).max(CARD_TEXT_MAX).describe("Front of the card (the term, word or question)."),
-  translation: z8.string().min(1).max(CARD_TEXT_MAX).describe("Back of the card (the translation or answer)."),
-  hint: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional hint shown in study."),
-  example_text: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional example sentence."),
-  example_translation: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional translation of the example."),
-  context_tag: z8.string().max(CARD_CONTEXT_TAG_MAX).optional().describe("Optional short context label."),
-  word_hints: z8.union([z8.array(z8.unknown()), z8.record(z8.unknown())]).optional().describe("Optional structured word hints (same JSON the app stores)."),
-  image_url_a: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side A."),
-  image_url_b: z8.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side B."),
-  layer_index: z8.number().int().min(0).max(50).optional().describe("Optional layer position when building a layered card."),
-  parent_card_id: z8.string().uuid().optional().describe("Optional parent card id (same list) to create this card as a layer.")
+var cardSchema = z9.object({
+  term: z9.string().min(1).max(CARD_TEXT_MAX).describe("Front of the card (the term, word or question)."),
+  translation: z9.string().min(1).max(CARD_TEXT_MAX).describe("Back of the card (the translation or answer)."),
+  hint: z9.string().max(CARD_TEXT_MAX).optional().describe("Optional hint shown in study."),
+  example_text: z9.string().max(CARD_TEXT_MAX).optional().describe("Optional example sentence."),
+  example_translation: z9.string().max(CARD_TEXT_MAX).optional().describe("Optional translation of the example."),
+  context_tag: z9.string().max(CARD_CONTEXT_TAG_MAX).optional().describe("Optional short context label."),
+  word_hints: z9.union([z9.array(z9.unknown()), z9.record(z9.unknown())]).optional().describe("Optional structured word hints (same JSON the app stores)."),
+  image_url_a: z9.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side A."),
+  image_url_b: z9.string().max(CARD_TEXT_MAX).optional().describe("Optional image URL for side B."),
+  layer_index: z9.number().int().min(0).max(50).optional().describe("Optional layer position when building a layered card."),
+  parent_card_id: z9.string().uuid().optional().describe("Optional parent card id (same list) to create this card as a layer.")
 });
 var addFlashcards_default = defineTool9({
   name: "add_flashcards",
   title: "Add flashcards to a list (batch)",
   description: "Adds a batch of flashcards to an owned list in ONE request (multi-row insert), so 30 cards do not need 30 calls. Default on_duplicate=skip makes retries safe: a card whose term+translation already exists in that list is reported in skipped_existing instead of being inserted again. Use on_duplicate=insert only when the user explicitly wants repeated terms (same word, different meaning). Max " + MAX_BATCH_CARDS + " cards per call.",
   inputSchema: {
-    list_id: z8.string().uuid().describe("Destination list uuid (from list_lists or get_list)."),
-    cards: z8.array(cardSchema).min(1).max(MAX_BATCH_CARDS).describe("Cards to insert, in the order they should appear."),
-    on_duplicate: z8.enum(["skip", "insert"]).optional().describe("skip (default) avoids duplicating the same term+translation in the list; insert forces the insert.")
+    list_id: listIdentifierSchema.describe("Destination list UUID or L-XXXXXX reference (from list_lists or get_list)."),
+    cards: z9.array(cardSchema).min(1).max(MAX_BATCH_CARDS).describe("Cards to insert, in the order they should appear."),
+    on_duplicate: z9.enum(["skip", "insert"]).optional().describe("skip (default) avoids duplicating the same term+translation in the list; insert forces the insert.")
   },
   annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -3617,10 +3802,12 @@ var addFlashcards_default = defineTool9({
 });
 
 // src/lib/mcp/tools/confirmDeleteFolder.ts
+init_define_import_meta_env();
 import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z9 } from "npm:zod@^3.23.8";
+import { z as z10 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/trash.ts
+init_define_import_meta_env();
 var TRASH_TARGETS = ["list", "folder"];
 async function callTrashRpc(db, fn, params, failureMessage) {
   const { data, error } = await db.client.rpc(fn, params);
@@ -3722,8 +3909,8 @@ async function previewListDeletion(db, input, key) {
   };
 }
 async function confirmListDeletion(db, input, key) {
-  const listId = requireUuid(input.list_id, "list_id");
-  const existing = await findOwnedList(db, listId, { includeDeleted: true });
+  const existing = await findOwnedList(db, input.list_id, { includeDeleted: true });
+  const listId = String(existing.id);
   if (str(existing, "deleted_at")) {
     return { deleted: false, already_deleted: true, list_id: listId, cards_removed: 0 };
   }
@@ -3785,8 +3972,8 @@ async function previewFolderDeletion(db, input, key) {
   };
 }
 async function confirmFolderDeletion(db, input, key) {
-  const folderId = requireUuid(input.folder_id, "folder_id");
-  const existing = await findOwnedFolder(db, folderId, { includeDeleted: true });
+  const existing = await findOwnedFolder(db, input.folder_id, { includeDeleted: true });
+  const folderId = String(existing.id);
   if (str(existing, "deleted_at")) {
     return { deleted: false, already_deleted: true, folder_id: folderId, lists_removed: 0, cards_removed: 0 };
   }
@@ -3820,28 +4007,29 @@ async function confirmFolderDeletion(db, input, key) {
 }
 async function restoreFromTrash(db, input) {
   const target = requireEnum(input.target, "target", TRASH_TARGETS);
-  const id = requireUuid(input.id, "id");
   if (target === "list") {
-    const existing2 = await findOwnedList(db, id, { includeDeleted: true });
+    const existing2 = await findOwnedList(db, input.id, { includeDeleted: true });
+    const id2 = String(existing2.id);
     if (!str(existing2, "deleted_at")) {
-      return { restored: false, already_active: true, target, id };
+      return { restored: false, already_active: true, target, id: id2 };
     }
     await callTrashRpc(
       db,
       "restore_list",
-      { p_list_id: id, p_user_id: db.userId },
+      { p_list_id: id2, p_user_id: db.userId },
       "N\xE3o foi poss\xEDvel restaurar a lista."
     );
     invalidateScopeInventory(db.userId, listInstitutionId(existing2));
     return {
       restored: true,
       target,
-      id,
+      id: id2,
       title: str(existing2, "title"),
       note: "A pasta pai tamb\xE9m \xE9 restaurada quando estava na lixeira."
     };
   }
-  const existing = await findOwnedFolder(db, id, { includeDeleted: true });
+  const existing = await findOwnedFolder(db, input.id, { includeDeleted: true });
+  const id = String(existing.id);
   if (!str(existing, "deleted_at")) {
     return { restored: false, already_active: true, target, id };
   }
@@ -3861,8 +4049,8 @@ var confirmDeleteFolder_default = defineTool10({
   title: "Confirm deletion of a folder",
   description: "Step 2 of deleting a folder: requires the confirmation_token from preview_delete_folder for this same folder. The token is bound to the authenticated account and to the list count the preview showed, so a changed folder or a stale/expired token fails safely. Deletion is a soft delete through the product's own trash RPC (folder + its lists + their cards, never hard delete).",
   inputSchema: {
-    folder_id: z9.string().uuid().describe("Same folder uuid used in the preview."),
-    confirmation_token: z9.string().min(8).describe("Token returned by preview_delete_folder.")
+    folder_id: folderIdentifierSchema.describe("Same folder UUID or F-XXXXXX used in the preview."),
+    confirmation_token: z10.string().min(8).describe("Token returned by preview_delete_folder.")
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -3881,15 +4069,16 @@ var confirmDeleteFolder_default = defineTool10({
 });
 
 // src/lib/mcp/tools/confirmDeleteList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z10 } from "npm:zod@^3.23.8";
+import { z as z11 } from "npm:zod@^3.23.8";
 var confirmDeleteList_default = defineTool11({
   name: "confirm_delete_list",
   title: "Confirm deletion of a list",
   description: "Step 2 of deleting a list: requires the confirmation_token from preview_delete_list for this same list. The token is bound to the authenticated account and to the card count the preview showed, so a changed list or a stale/expired token fails safely and asks for a new preview. The deletion is a soft delete through the product's own trash RPC; deleting an already deleted list returns already_deleted instead of an error.",
   inputSchema: {
-    list_id: z10.string().uuid().describe("Same list uuid used in the preview."),
-    confirmation_token: z10.string().min(8).describe("Token returned by preview_delete_list.")
+    list_id: listIdentifierSchema.describe("Same list UUID or L-XXXXXX used in the preview."),
+    confirmation_token: z11.string().min(8).describe("Token returned by preview_delete_list.")
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -3908,10 +4097,12 @@ var confirmDeleteList_default = defineTool11({
 });
 
 // src/lib/mcp/tools/createFolder.ts
+init_define_import_meta_env();
 import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z11 } from "npm:zod@^3.23.8";
+import { z as z12 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/folderWrites.ts
+init_define_import_meta_env();
 var FOLDER_TITLE_MAX = 120;
 var FOLDER_DESCRIPTION_MAX = 1e3;
 var FOLDER_VISIBILITIES = ["private", "class"];
@@ -3981,10 +4172,10 @@ var createFolder_default = defineTool12({
   title: "Create folder",
   description: "Creates a folder in the authenticated account's library (personal by default, or inside an institution hub the account owns). The owner always comes from the verified token, so this tool cannot create content for anyone else. Creating twice creates two folders: this tool is NOT idempotent, so confirm the folder does not exist yet with list_folders.",
   inputSchema: {
-    title: z11.string().min(1).max(FOLDER_TITLE_MAX).describe("Folder title as the user said it."),
-    description: z11.string().max(FOLDER_DESCRIPTION_MAX).optional().describe("Optional folder description; empty clears it."),
-    visibility: z11.enum(FOLDER_VISIBILITIES).optional().describe('private (default) or class. "class" is visible to the teacher portal rules, not to other accounts in general.'),
-    institution_id: z11.string().uuid().optional().describe("Institution hub id (from get_my_profile scopes) to create the folder inside. Omit for the personal library.")
+    title: z12.string().min(1).max(FOLDER_TITLE_MAX).describe("Folder title as the user said it."),
+    description: z12.string().max(FOLDER_DESCRIPTION_MAX).optional().describe("Optional folder description; empty clears it."),
+    visibility: z12.enum(FOLDER_VISIBILITIES).optional().describe('private (default) or class. "class" is visible to the teacher portal rules, not to other accounts in general.'),
+    institution_id: z12.string().uuid().optional().describe("Institution hub id (from get_my_profile scopes) to create the folder inside. Omit for the personal library.")
   },
   annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4004,10 +4195,12 @@ var createFolder_default = defineTool12({
 });
 
 // src/lib/mcp/tools/createList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z12 } from "npm:zod@^3.23.8";
+import { z as z13 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/listWrites.ts
+init_define_import_meta_env();
 var LIST_TITLE_MAX = 120;
 var LIST_DESCRIPTION_MAX = 1e3;
 var LIST_LABEL_MAX = 40;
@@ -4161,7 +4354,9 @@ async function moveList(db, input) {
 async function reorderLists(db, input) {
   const folder = await findOwnedFolder(db, input.folder_id);
   const folderId = String(folder.id);
-  const listIds = requireUuidList(input.list_ids, "list_ids", MAX_REORDER_LISTS);
+  const requestedListIds = requireReferenceList(input.list_ids, "list_ids", "list", MAX_REORDER_LISTS);
+  const resolvedLists = await Promise.all(requestedListIds.map((listId) => findOwnedList(db, listId)));
+  const listIds = resolvedLists.map((list) => String(list.id));
   const { data, error } = await db.client.from("lists").select("id").eq("folder_id", folderId).eq("system_kind", "user").is("deleted_at", null).in("id", listIds);
   if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel validar as listas da pasta.");
   const found = new Set(asRows(data).map((row) => String(asRow(row)?.id)));
@@ -4193,9 +4388,8 @@ async function duplicateList(db, input) {
   const source = await findOwnedList(db, input.list_id);
   const sourceId = String(source.id);
   const sourceFolderId = str(source, "folder_id");
-  const destinationFolderId = input.folder_id === void 0 || input.folder_id === null ? sourceFolderId : requireUuid(input.folder_id, "folder_id");
-  const destination = destinationFolderId === sourceFolderId ? null : await findOwnedFolder(db, destinationFolderId);
-  const targetFolderId = String(destinationFolderId);
+  const destination = input.folder_id === void 0 || input.folder_id === null ? null : await findOwnedFolder(db, input.folder_id);
+  const targetFolderId = destination ? String(destination.id) : String(sourceFolderId);
   const targetInstitution = destination ? folderInstitutionId(destination) : str(source, "institution_id") ?? null;
   const title = input.title === void 0 ? `${str(source, "title") ?? "Lista"} (c\xF3pia)` : requireText(input.title, "title", LIST_TITLE_MAX);
   const { count, error: countError } = await db.client.from("flashcards").select("id", { count: "exact", head: true }).eq("list_id", sourceId).eq("user_id", db.userId).is("deleted_at", null);
@@ -4297,16 +4491,16 @@ var createList_default = defineTool13({
   title: "Create list inside a folder",
   description: "Creates a study list inside an owned folder (the folder defines the workspace: personal or institution). Study settings default to the product's language mode (en/pt, TTS on, side A primary). Not idempotent: resolve the folder first with list_folders and check the list does not already exist.",
   inputSchema: {
-    folder_id: z12.string().uuid().describe("Destination folder uuid (from list_folders)."),
-    title: z12.string().min(1).max(LIST_TITLE_MAX).describe("List title as the user said it."),
-    description: z12.string().max(LIST_DESCRIPTION_MAX).optional().describe("Optional description."),
-    study_type: z12.enum(STUDY_TYPES).optional().describe("language (default) or general. The database CHECK rejects anything else."),
-    lang_a: z12.string().max(10).optional().describe('Language of side A, e.g. "en". Default en.'),
-    lang_b: z12.string().max(10).optional().describe('Language of side B, e.g. "pt". Default pt.'),
-    labels_a: z12.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side A."),
-    labels_b: z12.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side B."),
-    tts_enabled: z12.boolean().optional().describe("Whether study may speak the cards."),
-    primary_side: z12.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" (default) or "b".')
+    folder_id: folderIdentifierSchema.describe("Destination folder UUID or F-XXXXXX reference (from list_folders)."),
+    title: z13.string().min(1).max(LIST_TITLE_MAX).describe("List title as the user said it."),
+    description: z13.string().max(LIST_DESCRIPTION_MAX).optional().describe("Optional description."),
+    study_type: z13.enum(STUDY_TYPES).optional().describe("language (default) or general. The database CHECK rejects anything else."),
+    lang_a: z13.string().max(10).optional().describe('Language of side A, e.g. "en". Default en.'),
+    lang_b: z13.string().max(10).optional().describe('Language of side B, e.g. "pt". Default pt.'),
+    labels_a: z13.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side A."),
+    labels_b: z13.string().max(LIST_LABEL_MAX).optional().describe("Label shown for side B."),
+    tts_enabled: z13.boolean().optional().describe("Whether study may speak the cards."),
+    primary_side: z13.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" (default) or "b".')
   },
   annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4332,16 +4526,17 @@ var createList_default = defineTool13({
 });
 
 // src/lib/mcp/tools/duplicateList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z13 } from "npm:zod@^3.23.8";
+import { z as z14 } from "npm:zod@^3.23.8";
 var duplicateList_default = defineTool14({
   name: "duplicate_list",
   title: "Duplicate a list with its cards",
   description: "Copies an owned list (title, description and study settings) plus its active deck into the same folder or another owned folder. Layer structure is rebuilt with new card ids and fresh status-group identity, so Favorite/Red List state is never inherited; deleted cards are not copied. Cards are copied in batches (one insert per 200 cards, limit " + MAX_DUPLICATE_CARDS + "). If a batch fails, the partially copied list goes to the trash instead of staying as a half-copy. Not idempotent: each call creates a new list.",
   inputSchema: {
-    list_id: z13.string().uuid().describe("Source list uuid to copy."),
-    title: z13.string().min(1).max(LIST_TITLE_MAX).optional().describe('Title for the copy. Default: "<original> (c\xF3pia)".'),
-    folder_id: z13.string().uuid().optional().describe("Destination folder uuid. Default: the source list's own folder.")
+    list_id: listIdentifierSchema.describe("Source list UUID or L-XXXXXX reference to copy."),
+    title: z14.string().min(1).max(LIST_TITLE_MAX).optional().describe('Title for the copy. Default: "<original> (c\xF3pia)".'),
+    folder_id: folderIdentifierSchema.optional().describe("Destination folder UUID or F-XXXXXX reference. Default: the source list's own folder.")
   },
   annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4360,15 +4555,15 @@ var duplicateList_default = defineTool14({
 });
 
 // src/lib/mcp/tools/moveList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool15 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z14 } from "npm:zod@^3.23.8";
 var moveList_default = defineTool15({
   name: "move_list",
   title: "Move list to another folder",
   description: "Moves an owned list to another owned folder - including a folder of another institution hub, when the user asked for that. The list mirrors the destination folder's workspace, so list and folder never disagree about the scope. Idempotent: moving to the folder it already is in changes nothing.",
   inputSchema: {
-    list_id: z14.string().uuid().describe("List uuid to move."),
-    folder_id: z14.string().uuid().describe("Destination folder uuid (owned by the same account).")
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference to move."),
+    folder_id: folderIdentifierSchema.describe("Destination folder UUID or F-XXXXXX reference (owned by the same account).")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4383,14 +4578,14 @@ var moveList_default = defineTool15({
 });
 
 // src/lib/mcp/tools/previewDeleteFolder.ts
+init_define_import_meta_env();
 import { defineTool as defineTool16 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z15 } from "npm:zod@^3.23.8";
 var previewDeleteFolder_default = defineTool16({
   name: "preview_delete_folder",
   title: "Preview deleting a folder",
   description: "Step 1 of deleting a folder: returns how many owned lists and cards would go to the trash, the cascading consequences (soft delete, 7-day retention, restore possible) and a short-lived confirmation_token. Show this to the user before confirming. Read-only: it changes nothing.",
   inputSchema: {
-    folder_id: z15.string().uuid().describe("Folder uuid to be deleted.")
+    folder_id: folderIdentifierSchema.describe("Folder UUID or F-XXXXXX to be deleted.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4405,14 +4600,14 @@ var previewDeleteFolder_default = defineTool16({
 });
 
 // src/lib/mcp/tools/previewDeleteList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool17 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z16 } from "npm:zod@^3.23.8";
 var previewDeleteList_default = defineTool17({
   name: "preview_delete_list",
   title: "Preview deleting a list",
   description: "Step 1 of deleting a list: returns the target, how many cards would go to the trash, the real consequences (soft delete, 7-day retention, restore possible) and a short-lived confirmation_token. Show this to the user before confirming. Read-only: it changes nothing.",
   inputSchema: {
-    list_id: z16.string().uuid().describe("List uuid to be deleted.")
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX to be deleted.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4427,17 +4622,18 @@ var previewDeleteList_default = defineTool17({
 });
 
 // src/lib/mcp/tools/removeFlashcards.ts
+init_define_import_meta_env();
 import { defineTool as defineTool18 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z17 } from "npm:zod@^3.23.8";
+import { z as z15 } from "npm:zod@^3.23.8";
 var removeFlashcards_default = defineTool18({
   name: "remove_flashcards",
   title: "Remove flashcards (soft delete)",
   description: "Removes cards from an owned list. This is a SOFT delete: the card and its child layers receive deleted_at exactly like the app's own removal, stay recoverable in the trash and are purged by the product after 7 days - this tool never hard deletes. Removals of " + MAX_REMOVAL_WITHOUT_CONFIRMATION + " or more rows are material: they need the two-step flow, so call with dry_run=true first, show the preview to the user and then repeat with the returned confirmation_token. Repeating a removal is safe (already removed cards are reported, not an error).",
   inputSchema: {
-    list_id: z17.string().uuid().describe("List that owns the cards."),
-    card_ids: z17.array(z17.string().uuid()).min(1).max(MAX_BATCH_CARDS).describe("Cards to remove; their layers (cards with parent_card_id pointing at them) go too."),
-    dry_run: z17.boolean().optional().describe("true returns what would be removed plus the confirmation_token when confirmation is required."),
-    confirmation_token: z17.string().min(8).optional().describe("Token from the dry_run preview of this same removal.")
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX that owns the cards."),
+    card_ids: z15.array(z15.string().uuid()).min(1).max(MAX_BATCH_CARDS).describe("Cards to remove; their layers (cards with parent_card_id pointing at them) go too."),
+    dry_run: z15.boolean().optional().describe("true returns what would be removed plus the confirmation_token when confirmation is required."),
+    confirmation_token: z15.string().min(8).optional().describe("Token from the dry_run preview of this same removal.")
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4461,15 +4657,16 @@ var removeFlashcards_default = defineTool18({
 });
 
 // src/lib/mcp/tools/reorderLists.ts
+init_define_import_meta_env();
 import { defineTool as defineTool19 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z18 } from "npm:zod@^3.23.8";
+import { z as z16 } from "npm:zod@^3.23.8";
 var reorderLists_default = defineTool19({
   name: "reorder_lists",
   title: "Reorder lists inside a folder",
   description: "Sets the display order of lists inside one owned folder: the array order you send becomes the folder order (first item is 0). Send every list you want positioned; lists not sent keep their current order_index. Idempotent: sending the same order twice changes nothing.",
   inputSchema: {
-    folder_id: z18.string().uuid().describe("Folder whose lists are being ordered."),
-    list_ids: z18.array(z18.string().uuid()).min(1).max(MAX_REORDER_LISTS).describe("List uuids in the exact desired order (first = position 0).")
+    folder_id: folderIdentifierSchema.describe("Folder UUID or F-XXXXXX whose lists are being ordered."),
+    list_ids: z16.array(listIdentifierSchema).min(1).max(MAX_REORDER_LISTS).describe("List UUIDs or L-XXXXXX references in the exact desired order (first = position 0).")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4484,15 +4681,16 @@ var reorderLists_default = defineTool19({
 });
 
 // src/lib/mcp/tools/restoreFromTrash.ts
+init_define_import_meta_env();
 import { defineTool as defineTool20 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z19 } from "npm:zod@^3.23.8";
+import { z as z17 } from "npm:zod@^3.23.8";
 var restoreFromTrash_default = defineTool20({
   name: "restore_from_trash",
   title: "Restore a list or folder from the trash",
   description: "Undoes a soft delete using the product's own restore RPC: restores the list (and its cards, plus the parent folder when needed) or the folder (with its lists and cards). Only objects of the authenticated account can be restored. If the object is already active, returns already_active instead of failing.",
   inputSchema: {
-    target: z19.enum(TRASH_TARGETS).describe('"list" or "folder".'),
-    id: z19.string().uuid().describe("Uuid of the trashed list or folder.")
+    target: z17.enum(TRASH_TARGETS).describe('"list" or "folder".'),
+    id: anyResourceIdentifierSchema.describe("UUID, F-XXXXXX or L-XXXXXX of the trashed list or folder.")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4507,29 +4705,30 @@ var restoreFromTrash_default = defineTool20({
 });
 
 // src/lib/mcp/tools/updateFlashcards.ts
+init_define_import_meta_env();
 import { defineTool as defineTool21 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z20 } from "npm:zod@^3.23.8";
-var patchSchema = z20.object({
-  term: z20.string().min(1).max(CARD_TEXT_MAX).optional().describe("New front text."),
-  translation: z20.string().min(1).max(CARD_TEXT_MAX).optional().describe("New back text."),
-  hint: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New hint; null clears it."),
-  example_text: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example sentence; null clears it."),
-  example_translation: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example translation; null clears it."),
-  context_tag: z20.string().max(CARD_CONTEXT_TAG_MAX).nullable().optional().describe("New context label; null clears it."),
-  word_hints: z20.union([z20.array(z20.unknown()), z20.record(z20.unknown()), z20.null()]).optional().describe("New structured word hints; null clears them."),
-  image_url_a: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side A; null clears it."),
-  image_url_b: z20.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side B; null clears it."),
-  layer_index: z20.number().int().min(0).max(50).nullable().optional().describe("New layer position.")
+import { z as z18 } from "npm:zod@^3.23.8";
+var patchSchema = z18.object({
+  term: z18.string().min(1).max(CARD_TEXT_MAX).optional().describe("New front text."),
+  translation: z18.string().min(1).max(CARD_TEXT_MAX).optional().describe("New back text."),
+  hint: z18.string().max(CARD_TEXT_MAX).nullable().optional().describe("New hint; null clears it."),
+  example_text: z18.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example sentence; null clears it."),
+  example_translation: z18.string().max(CARD_TEXT_MAX).nullable().optional().describe("New example translation; null clears it."),
+  context_tag: z18.string().max(CARD_CONTEXT_TAG_MAX).nullable().optional().describe("New context label; null clears it."),
+  word_hints: z18.union([z18.array(z18.unknown()), z18.record(z18.unknown()), z18.null()]).optional().describe("New structured word hints; null clears them."),
+  image_url_a: z18.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side A; null clears it."),
+  image_url_b: z18.string().max(CARD_TEXT_MAX).nullable().optional().describe("New image URL for side B; null clears it."),
+  layer_index: z18.number().int().min(0).max(50).nullable().optional().describe("New layer position.")
 });
 var updateFlashcards_default = defineTool21({
   name: "update_flashcards",
   title: "Edit flashcards in batch",
   description: "Edits existing cards of an owned list. Two shapes: card_ids + set applies the SAME values to many cards in one UPDATE (e.g. give every card a context tag), while updates applies DIFFERENT values per card (one update per card, run concurrently). Cards that are not found (other list, other account, already deleted) are reported in not_found instead of failing the whole batch. term/translation/hint/example/context/word_hints/images/layer_index are editable; structural identity (list, owner, parent) is not. Max " + MAX_BATCH_CARDS + " cards per call.",
   inputSchema: {
-    list_id: z20.string().uuid().describe("List that owns the cards."),
-    card_ids: z20.array(z20.string().uuid()).min(1).max(MAX_BATCH_CARDS).optional().describe("Cards that receive the same values (use together with set)."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX that owns the cards."),
+    card_ids: z18.array(z18.string().uuid()).min(1).max(MAX_BATCH_CARDS).optional().describe("Cards that receive the same values (use together with set)."),
     set: patchSchema.optional().describe("Values applied to every card in card_ids."),
-    updates: z20.array(patchSchema.extend({ card_id: z20.string().uuid() })).min(1).max(MAX_BATCH_CARDS).optional().describe("Per-card values: each item needs card_id plus the fields to change.")
+    updates: z18.array(patchSchema.extend({ card_id: z18.string().uuid() })).min(1).max(MAX_BATCH_CARDS).optional().describe("Per-card values: each item needs card_id plus the fields to change.")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4549,18 +4748,19 @@ var updateFlashcards_default = defineTool21({
 });
 
 // src/lib/mcp/tools/updateFolder.ts
+init_define_import_meta_env();
 import { defineTool as defineTool22 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z21 } from "npm:zod@^3.23.8";
+import { z as z19 } from "npm:zod@^3.23.8";
 var updateFolder_default = defineTool22({
   name: "update_folder",
   title: "Update or move folder",
   description: "Updates an owned folder: title, description, visibility and/or the institution hub it belongs to. Send institution_id with a hub id to move the folder into that institution, or null to return it to the personal library. Only the fields you send change; repeating the same call is safe (idempotent).",
   inputSchema: {
-    folder_id: z21.string().uuid().describe("Folder uuid discovered with list_folders."),
-    title: z21.string().min(1).max(FOLDER_TITLE_MAX).optional().describe("New folder title."),
-    description: z21.string().max(FOLDER_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
-    visibility: z21.enum(FOLDER_VISIBILITIES).optional().describe("private or class."),
-    institution_id: z21.string().uuid().nullable().optional().describe("Institution hub id to move the folder into, or null to move it back to the personal library. Omit to leave it where it is.")
+    folder_id: folderIdentifierSchema.describe("Folder UUID or F-XXXXXX reference discovered with list_folders."),
+    title: z19.string().min(1).max(FOLDER_TITLE_MAX).optional().describe("New folder title."),
+    description: z19.string().max(FOLDER_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
+    visibility: z19.enum(FOLDER_VISIBILITIES).optional().describe("private or class."),
+    institution_id: z19.string().uuid().nullable().optional().describe("Institution hub id to move the folder into, or null to move it back to the personal library. Omit to leave it where it is.")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4581,23 +4781,24 @@ var updateFolder_default = defineTool22({
 });
 
 // src/lib/mcp/tools/updateList.ts
+init_define_import_meta_env();
 import { defineTool as defineTool23 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z22 } from "npm:zod@^3.23.8";
+import { z as z20 } from "npm:zod@^3.23.8";
 var updateList_default = defineTool23({
   name: "update_list",
   title: "Update list metadata and study settings",
   description: "Renames an owned list and/or changes its study settings (study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side). Only the fields you send change; repeating the same call is safe (idempotent). Card content is not touched by this tool.",
   inputSchema: {
-    list_id: z22.string().uuid().describe("List uuid discovered with list_lists or get_list."),
-    title: z22.string().min(1).max(LIST_TITLE_MAX).optional().describe("New list title."),
-    description: z22.string().max(LIST_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
-    study_type: z22.enum(STUDY_TYPES).optional().describe("language or general."),
-    lang_a: z22.string().max(10).optional().describe('Language of side A, e.g. "en".'),
-    lang_b: z22.string().max(10).optional().describe('Language of side B, e.g. "pt".'),
-    labels_a: z22.string().max(LIST_LABEL_MAX).optional().describe("Label for side A."),
-    labels_b: z22.string().max(LIST_LABEL_MAX).optional().describe("Label for side B."),
-    tts_enabled: z22.boolean().optional().describe("Whether study may speak the cards."),
-    primary_side: z22.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" or "b".')
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference discovered with list_lists or get_list."),
+    title: z20.string().min(1).max(LIST_TITLE_MAX).optional().describe("New list title."),
+    description: z20.string().max(LIST_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
+    study_type: z20.enum(STUDY_TYPES).optional().describe("language or general."),
+    lang_a: z20.string().max(10).optional().describe('Language of side A, e.g. "en".'),
+    lang_b: z20.string().max(10).optional().describe('Language of side B, e.g. "pt".'),
+    labels_a: z20.string().max(LIST_LABEL_MAX).optional().describe("Label for side A."),
+    labels_b: z20.string().max(LIST_LABEL_MAX).optional().describe("Label for side B."),
+    tts_enabled: z20.boolean().optional().describe("Whether study may speak the cards."),
+    primary_side: z20.enum(PRIMARY_SIDES).optional().describe('Which side is shown first: "a" or "b".')
   },
   annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4623,22 +4824,24 @@ var updateList_default = defineTool23({
 });
 
 // src/lib/mcp/tools/createStudyMaterial.ts
+init_define_import_meta_env();
 import { defineTool as defineTool24 } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { z as z23 } from "npm:zod@^3.23.8";
+import { z as z21 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/studyMaterialWrites.ts
+init_define_import_meta_env();
 function normalizedName(value) {
   return value.trim().toLocaleLowerCase();
 }
 function selector(selector2, field) {
-  const id = selector2?.id === void 0 || selector2.id === null ? void 0 : requireUuid(selector2.id, `${field}.id`);
+  const parsedId = selector2?.id === void 0 || selector2.id === null ? void 0 : referenceSelector(selector2.id);
   const name = selector2?.name === void 0 || selector2.name === null ? void 0 : requireText(selector2.name, `${field}.name`, 120);
-  if (id && name || !id && !name) {
+  if (parsedId && name || !parsedId && !name) {
     throw new McpDomainError("invalid_input", `Informe exatamente um id ou name em "${field}".`, {
       hint: `Use list_folders/list_lists para descobrir o ${field} atual antes de criar material.`
     });
   }
-  return id ? { id } : { name };
+  return parsedId ? { id: parsedId.kind === "uuid" ? parsedId.id : parsedId.referenceId } : { name };
 }
 function resolveScope2(rawScope, rawInstitutionId) {
   if (rawScope !== "personal" && rawScope !== "institution") {
@@ -4668,7 +4871,8 @@ function ambiguous(entity, candidates) {
 async function resolveFolder(db, scope, requested) {
   const base = db.client.from("folders").select(OWNED_FOLDER_SELECT).eq("owner_id", db.userId).eq("system_kind", "user").is("deleted_at", null).is("class_id", null);
   const scoped = scope.kind === "personal" ? base.is("institution_id", null) : base.eq("institution_id", scope.institutionId);
-  const query = requested.id ? scoped.eq("id", requested.id) : scoped.ilike("title", requested.name);
+  const requestedId = requested.id ? referenceSelector(requested.id) : void 0;
+  const query = requestedId ? requestedId.kind === "uuid" ? scoped.eq("id", requestedId.id) : scoped.eq("reference_id", requestedId.referenceId) : scoped.ilike("title", requested.name);
   const { data, error } = await query.order("title", { ascending: true }).order("id", { ascending: true });
   if (error) throw toMcpDomainError(error, "N\xE3o foi poss\xEDvel resolver a pasta do material.");
   const rows = asRows(data).map(asRow).filter((row) => Boolean(row));
@@ -4792,35 +4996,35 @@ async function createStudyMaterial(db, input) {
 }
 
 // src/lib/mcp/tools/createStudyMaterial.ts
-var selectorSchema = z23.object({
-  id: z23.string().uuid().optional().describe("Current object uuid discovered from a list tool."),
-  name: z23.string().min(1).max(120).optional().describe("Exact object name; ambiguity returns current candidates.")
+var selectorSchema = z21.object({
+  id: anyResourceIdentifierSchema.optional().describe("Current object UUID or F-/L- reference discovered from a list tool."),
+  name: z21.string().min(1).max(120).optional().describe("Exact object name; ambiguity returns current candidates.")
 }).strict().refine((value) => Boolean(value.id) !== Boolean(value.name), "Informe exatamente um id ou name.");
-var cardSchema2 = z23.object({
-  term: z23.string().min(1).max(CARD_TEXT_MAX).describe("Card term/front."),
-  translation: z23.string().min(1).max(CARD_TEXT_MAX).describe("Card translation/back."),
-  hint: z23.string().max(CARD_TEXT_MAX).optional(),
-  example_text: z23.string().max(CARD_TEXT_MAX).optional(),
-  example_translation: z23.string().max(CARD_TEXT_MAX).optional(),
-  context_tag: z23.string().max(CARD_CONTEXT_TAG_MAX).optional(),
-  word_hints: z23.union([z23.array(z23.unknown()), z23.record(z23.unknown())]).optional(),
-  image_url_a: z23.string().max(CARD_TEXT_MAX).optional(),
-  image_url_b: z23.string().max(CARD_TEXT_MAX).optional(),
-  layer_index: z23.number().int().min(0).max(50).optional(),
-  parent_card_id: z23.string().uuid().optional()
+var cardSchema2 = z21.object({
+  term: z21.string().min(1).max(CARD_TEXT_MAX).describe("Card term/front."),
+  translation: z21.string().min(1).max(CARD_TEXT_MAX).describe("Card translation/back."),
+  hint: z21.string().max(CARD_TEXT_MAX).optional(),
+  example_text: z21.string().max(CARD_TEXT_MAX).optional(),
+  example_translation: z21.string().max(CARD_TEXT_MAX).optional(),
+  context_tag: z21.string().max(CARD_CONTEXT_TAG_MAX).optional(),
+  word_hints: z21.union([z21.array(z21.unknown()), z21.record(z21.unknown())]).optional(),
+  image_url_a: z21.string().max(CARD_TEXT_MAX).optional(),
+  image_url_b: z21.string().max(CARD_TEXT_MAX).optional(),
+  layer_index: z21.number().int().min(0).max(50).optional(),
+  parent_card_id: z21.string().uuid().optional()
 });
 var createStudyMaterial_default = defineTool24({
   name: "create_study_material",
   title: "Create study material by name or id",
   description: "Creates or reuses a folder and list inside the authenticated account's personal or institution scope, then inserts all supplied cards in one batch. Resolve names at call time: an ambiguous name fails with candidate ids and paths. dry_run or preview only plans the operation and performs no writes. This tool creates material only when explicitly called with cards; for analysis without creation use analyze_text_against_library, which is read-only. The owner is always derived from the verified token, never from model input; repeated cards are skipped safely.",
   inputSchema: {
-    scope: z23.enum(["personal", "institution"]).describe("Library scope to use."),
-    institution_id: z23.string().uuid().optional().describe("Required for institution scope; discover with get_my_profile."),
+    scope: z21.enum(["personal", "institution"]).describe("Library scope to use."),
+    institution_id: z21.string().uuid().optional().describe("Required for institution scope; discover with get_my_profile."),
     folder: selectorSchema.describe("Folder selected by its current id or exact name."),
     list: selectorSchema.describe("List selected by its current id or exact name within the folder."),
-    cards: z23.array(cardSchema2).min(1).max(MAX_BATCH_CARDS).describe("Cards inserted in one multi-row batch."),
-    dry_run: z23.boolean().optional().describe("Preview the resolved targets and planned counts without writing."),
-    preview: z23.boolean().optional().describe("Alias for dry_run; no folder, list or card is created.")
+    cards: z21.array(cardSchema2).min(1).max(MAX_BATCH_CARDS).describe("Cards inserted in one multi-row batch."),
+    dry_run: z21.boolean().optional().describe("Preview the resolved targets and planned counts without writing."),
+    preview: z21.boolean().optional().describe("Alias for dry_run; no folder, list or card is created.")
   },
   annotations: { readOnlyHint: false, idempotentHint: true, destructiveHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
@@ -4834,7 +5038,2893 @@ var createStudyMaterial_default = defineTool24({
   }
 });
 
+// src/lib/mcp/tools/getPitecoCapabilities.ts
+init_define_import_meta_env();
+import { defineTool as defineTool25 } from "npm:@lovable.dev/mcp-js@0.20.1";
+
+// src/lib/mcp/domain/capabilities.ts
+init_define_import_meta_env();
+var LIMITS = Object.freeze({
+  max_file_bytes: 50 * 1024 * 1024,
+  max_folders: 200,
+  max_lists: 1e3,
+  max_cards: 2e4,
+  max_glossary_entries: 2e4,
+  max_text_length: 25e4,
+  max_name_length: 160,
+  max_word_hints_per_card: 200,
+  max_layers_per_group: 500
+});
+var BASIC_FIELDS = ["front", "back", "term", "translation"];
+var ENRICHED_FIELDS = [
+  "hint",
+  "examples",
+  "context_tag",
+  "detailed_explanation",
+  "usage_notes",
+  "common_mistakes",
+  "word_hints"
+];
+function recordOf(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function stringValue(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function statusOf(value) {
+  if (value === true || value === "ready") return "ready";
+  if (value === false || value === "missing") return "missing";
+  return "unknown";
+}
+function safeChecks(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const check = recordOf(item);
+    if (!check) return [];
+    return [{
+      key: stringValue(check.key) ?? "unknown",
+      code: stringValue(check.code) ?? "unknown",
+      status: statusOf(check.status),
+      required: check.required === true,
+      detail: stringValue(check.detail) ?? "Diagn\xF3stico sem detalhe."
+    }];
+  });
+}
+function safeDiagnostics(value) {
+  if (!Array.isArray(value)) return ["unknown"];
+  const values = value.filter((item) => typeof item === "string" && Boolean(item.trim()));
+  return values.length ? values : ["unknown"];
+}
+function unavailableResult() {
+  const unknown = "unknown";
+  return {
+    contract_version: null,
+    engine_version: null,
+    migration_revision: null,
+    project_ref: null,
+    rpc_available: false,
+    source: "unavailable",
+    capability_rpc: null,
+    capabilities: {
+      basic_fields: unknown,
+      enriched_fields: unknown,
+      layered_cards: unknown,
+      glossary: unknown,
+      safe_import: unknown
+    },
+    fields: {
+      basic: { status: unknown, supported: BASIC_FIELDS },
+      enriched: { status: unknown, supported: ENRICHED_FIELDS }
+    },
+    layers: { status: unknown, contract: "Smart Import 2.0" },
+    glossary: { status: unknown, contract: "import_folder_glossary_v2" },
+    destinations: {
+      personal: { status: "ready", owner_only: true, supported: true },
+      institutional: {
+        status: "owner_only",
+        owner_only: true,
+        supported: false,
+        reason: "O MCP desta vers\xE3o exp\xF5e somente o destino pessoal."
+      }
+    },
+    importers: {
+      content: {
+        rpc: "import_app_piteco_super_package_current",
+        status: unknown,
+        scope: "personal",
+        preserves: ["camadas", "campos enriquecidos", "gloss\xE1rio incorporado"]
+      },
+      glossary: {
+        rpc: "import_folder_glossary_v2",
+        status: unknown,
+        scope: "personal",
+        preserves: ["merge", "replace", "dry-run"]
+      }
+    },
+    limits: { ...LIMITS },
+    routing: {
+      bulk: { route: "importadores oficiais", tools: ["preview_content_import", "execute_content_import", "preview_glossary_import", "execute_glossary_import"] },
+      granular: { route: "tools granulares de cards/listas", tools: ["add_flashcards", "update_flashcards", "create_list", "update_list"] }
+    },
+    checks: [],
+    diagnostic_codes: ["rpc"],
+    availability_note: "get_import_capabilities_v2/v1 est\xE3o indispon\xEDveis; nenhum suporte de importa\xE7\xE3o foi inferido."
+  };
+}
+var CAPABILITY_RPCS = ["get_import_capabilities_v2", "get_import_capabilities_v1"];
+async function getPitecoCapabilities(db) {
+  for (const rpcName of CAPABILITY_RPCS) {
+    const result = await readCapabilityRpc(db, rpcName);
+    if (result) return result;
+  }
+  return unavailableResult();
+}
+async function readCapabilityRpc(db, rpcName) {
+  let response;
+  try {
+    response = await db.client.rpc(rpcName);
+  } catch {
+    return null;
+  }
+  if (response.error) return null;
+  const payload = recordOf(response.data);
+  if (!payload) return null;
+  const raw = recordOf(payload.capabilities);
+  if (!raw) return null;
+  const basic = statusOf(raw?.basic_import);
+  const enriched = statusOf(raw?.enriched_fields);
+  const layered = statusOf(raw?.layered_cards);
+  const glossary = statusOf(raw?.glossary ?? raw?.glossary_import);
+  const safe = statusOf(raw?.safe_import);
+  return {
+    contract_version: stringValue(payload.contract_version),
+    engine_version: stringValue(payload.engine_version),
+    migration_revision: stringValue(payload.migration_revision),
+    project_ref: stringValue(payload.project_ref),
+    rpc_available: true,
+    source: "rpc",
+    capability_rpc: rpcName,
+    capabilities: {
+      basic_fields: basic,
+      enriched_fields: enriched,
+      layered_cards: layered,
+      glossary,
+      safe_import: safe
+    },
+    fields: {
+      basic: { status: basic, supported: BASIC_FIELDS },
+      enriched: { status: enriched, supported: ENRICHED_FIELDS }
+    },
+    layers: { status: layered, contract: "Smart Import 2.0" },
+    glossary: { status: glossary, contract: "import_folder_glossary_v2" },
+    destinations: {
+      personal: { status: "ready", owner_only: true, supported: true },
+      institutional: {
+        status: "owner_only",
+        owner_only: true,
+        supported: false,
+        reason: "O MCP desta vers\xE3o exp\xF5e somente o destino pessoal."
+      }
+    },
+    importers: {
+      content: {
+        rpc: "import_app_piteco_super_package_current",
+        status: safe,
+        scope: "personal",
+        preserves: ["camadas", "campos enriquecidos", "gloss\xE1rio incorporado"]
+      },
+      glossary: {
+        rpc: "import_folder_glossary_v2",
+        status: glossary,
+        scope: "personal",
+        preserves: ["merge", "replace", "dry-run"]
+      }
+    },
+    limits: { ...LIMITS },
+    routing: {
+      bulk: { route: "importadores oficiais", tools: ["preview_content_import", "execute_content_import", "preview_glossary_import", "execute_glossary_import"] },
+      granular: { route: "tools granulares de cards/listas", tools: ["add_flashcards", "update_flashcards", "create_list", "update_list"] }
+    },
+    checks: safeChecks(payload.checks),
+    diagnostic_codes: safeDiagnostics(payload.diagnostic_codes)
+  };
+}
+
+// src/lib/mcp/tools/getPitecoCapabilities.ts
+var getPitecoCapabilities_default = defineTool25({
+  name: "get_piteco_capabilities",
+  title: "Get Piteco capabilities",
+  description: "Returns a compact, authenticated capability map for the real Piteco backend: basic and enriched fields, layered cards, glossary status, owner-only personal/institution destinations, importador oficial and other official routes, limits, and bulk versus granular routing. It reads get_import_capabilities_v2 and falls back to get_import_capabilities_v1, reporting the contract that answered in capability_rpc; an unavailable or unusable RPC is reported as unknown and it never invents support.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (_args, ctx) => {
+    try {
+      return toolSuccess(await getPitecoCapabilities(createUserScopedDb(ctx)));
+    } catch (error) {
+      return toolErrorResult(error, "get_piteco_capabilities");
+    }
+  }
+});
+
+// src/lib/mcp/tools/previewContentImport.ts
+init_define_import_meta_env();
+import { defineTool as defineTool26 } from "npm:@lovable.dev/mcp-js@0.20.1";
+
+// src/lib/mcp/domain/importers.ts
+init_define_import_meta_env();
+import { z as z26 } from "npm:zod@^3.23.8";
+
+// src/features/smart-import/parseAnySource.ts
+init_define_import_meta_env();
+
+// src/features/global-import/normalizer.ts
+init_define_import_meta_env();
+
+// src/features/global-import/schema/globalImportSchema.ts
+init_define_import_meta_env();
+import { z as z22 } from "npm:zod@^3.23.8";
+var GLOBAL_IMPORT_FORMAT = "ape-global-import";
+var GLOBAL_IMPORT_SCHEMA_VERSION = 1;
+var GLOBAL_IMPORT_LIMITS = {
+  maxFileBytes: 5 * 1024 * 1024,
+  maxFolders: 100,
+  maxLists: 500,
+  maxCards: 5e3,
+  maxTitleLength: 160,
+  maxTermLength: 8e3,
+  maxTranslationLength: 8e3,
+  maxExplanationLength: 16e3,
+  maxDescriptionLength: 8e3,
+  maxLanguageLength: 80,
+  maxLabelLength: 120
+};
+var requiredText = (label, max) => z22.string().trim().min(1, `${label} n\xE3o pode ficar vazio.`).max(max, `${label} excede ${max} caracteres.`);
+var nullableText = (label, max) => z22.union([
+  z22.string().trim().max(max, `${label} excede ${max} caracteres.`),
+  z22.null()
+]).optional().default(null);
+var globalImportStudySettingsSchema = z22.object({
+  study_type: z22.enum(["language", "general", "math", "visual"]),
+  lang_a: requiredText("O idioma do lado A", GLOBAL_IMPORT_LIMITS.maxLanguageLength),
+  lang_b: requiredText("O idioma do lado B", GLOBAL_IMPORT_LIMITS.maxLanguageLength),
+  labels_a: requiredText("O r\xF3tulo do lado A", GLOBAL_IMPORT_LIMITS.maxLabelLength),
+  labels_b: requiredText("O r\xF3tulo do lado B", GLOBAL_IMPORT_LIMITS.maxLabelLength),
+  tts_enabled: z22.boolean()
+}).strict();
+var globalImportNormalCardSchema = z22.object({
+  type: z22.literal("normal"),
+  term: requiredText("O termo", GLOBAL_IMPORT_LIMITS.maxTermLength),
+  translation: requiredText("A tradu\xE7\xE3o", GLOBAL_IMPORT_LIMITS.maxTranslationLength),
+  hint: nullableText("A dica", GLOBAL_IMPORT_LIMITS.maxExplanationLength),
+  example_text: nullableText("O exemplo", GLOBAL_IMPORT_LIMITS.maxExplanationLength),
+  example_translation: nullableText("A tradu\xE7\xE3o do exemplo", GLOBAL_IMPORT_LIMITS.maxExplanationLength),
+  detailed_explanation: nullableText("A explica\xE7\xE3o detalhada", GLOBAL_IMPORT_LIMITS.maxExplanationLength),
+  usage_notes: nullableText("As notas de uso", GLOBAL_IMPORT_LIMITS.maxExplanationLength),
+  common_mistakes: nullableText("Os erros comuns", GLOBAL_IMPORT_LIMITS.maxExplanationLength)
+}).strict();
+var globalImportCardSchema = z22.discriminatedUnion("type", [
+  globalImportNormalCardSchema
+]);
+var globalImportListSchema = z22.object({
+  title: requiredText("O t\xEDtulo da lista", GLOBAL_IMPORT_LIMITS.maxTitleLength),
+  description: nullableText("A descri\xE7\xE3o da lista", GLOBAL_IMPORT_LIMITS.maxDescriptionLength),
+  order_index: z22.number().int().nonnegative(),
+  expected_card_count: z22.number().int().positive(),
+  cards: z22.array(globalImportCardSchema).min(1, "A lista precisa ter pelo menos um card.")
+}).strict();
+var globalImportFolderSchema = z22.object({
+  title: requiredText("O t\xEDtulo da pasta", GLOBAL_IMPORT_LIMITS.maxTitleLength),
+  description: nullableText("A descri\xE7\xE3o da pasta", GLOBAL_IMPORT_LIMITS.maxDescriptionLength),
+  order_index: z22.number().int().nonnegative(),
+  expected_list_count: z22.number().int().positive(),
+  expected_card_count: z22.number().int().positive(),
+  lists: z22.array(globalImportListSchema).min(1, "A pasta precisa ter pelo menos uma lista.")
+}).strict();
+var globalImportSchema = z22.object({
+  format: z22.literal(GLOBAL_IMPORT_FORMAT),
+  schema_version: z22.literal(GLOBAL_IMPORT_SCHEMA_VERSION),
+  request_id: z22.string().uuid("request_id precisa ser um UUID v\xE1lido."),
+  package: z22.object({
+    title: requiredText("O t\xEDtulo do pacote", GLOBAL_IMPORT_LIMITS.maxTitleLength),
+    description: nullableText("A descri\xE7\xE3o do pacote", GLOBAL_IMPORT_LIMITS.maxDescriptionLength),
+    study_settings: globalImportStudySettingsSchema,
+    expected_folder_count: z22.number().int().positive(),
+    expected_list_count: z22.number().int().positive(),
+    expected_card_count: z22.number().int().positive(),
+    folders: z22.array(globalImportFolderSchema).min(1, "O pacote precisa ter pelo menos uma pasta.").max(GLOBAL_IMPORT_LIMITS.maxFolders)
+  }).strict()
+}).strict().superRefine((value, context) => {
+  const folders = value.package.folders;
+  const listCount = folders.reduce((sum, folder) => sum + folder.lists.length, 0);
+  const cardCount = folders.reduce(
+    (sum, folder) => sum + folder.lists.reduce((listSum, list) => listSum + list.cards.length, 0),
+    0
+  );
+  if (value.package.expected_folder_count !== folders.length) {
+    context.addIssue({
+      code: z22.ZodIssueCode.custom,
+      path: ["package", "expected_folder_count"],
+      message: `O pacote declara ${value.package.expected_folder_count} pastas, mas cont\xE9m ${folders.length}.`
+    });
+  }
+  if (value.package.expected_list_count !== listCount) {
+    context.addIssue({
+      code: z22.ZodIssueCode.custom,
+      path: ["package", "expected_list_count"],
+      message: `O pacote declara ${value.package.expected_list_count} listas, mas cont\xE9m ${listCount}.`
+    });
+  }
+  if (value.package.expected_card_count !== cardCount) {
+    context.addIssue({
+      code: z22.ZodIssueCode.custom,
+      path: ["package", "expected_card_count"],
+      message: `O pacote declara ${value.package.expected_card_count} cards, mas cont\xE9m ${cardCount}.`
+    });
+  }
+  if (listCount > GLOBAL_IMPORT_LIMITS.maxLists) {
+    context.addIssue({
+      code: z22.ZodIssueCode.custom,
+      path: ["package", "folders"],
+      message: `O pacote cont\xE9m ${listCount} listas; o limite \xE9 ${GLOBAL_IMPORT_LIMITS.maxLists}.`
+    });
+  }
+  if (cardCount > GLOBAL_IMPORT_LIMITS.maxCards) {
+    context.addIssue({
+      code: z22.ZodIssueCode.custom,
+      path: ["package", "folders"],
+      message: `O pacote cont\xE9m ${cardCount} cards; o limite \xE9 ${GLOBAL_IMPORT_LIMITS.maxCards}.`
+    });
+  }
+  folders.forEach((folder, folderIndex) => {
+    const folderCardCount = folder.lists.reduce((sum, list) => sum + list.cards.length, 0);
+    if (folder.order_index !== folderIndex) {
+      context.addIssue({
+        code: z22.ZodIssueCode.custom,
+        path: ["package", "folders", folderIndex, "order_index"],
+        message: `A ordem esperada \xE9 ${folderIndex}, mas foi recebido ${folder.order_index}.`
+      });
+    }
+    if (folder.expected_list_count !== folder.lists.length) {
+      context.addIssue({
+        code: z22.ZodIssueCode.custom,
+        path: ["package", "folders", folderIndex, "expected_list_count"],
+        message: `A pasta declara ${folder.expected_list_count} listas, mas cont\xE9m ${folder.lists.length}.`
+      });
+    }
+    if (folder.expected_card_count !== folderCardCount) {
+      context.addIssue({
+        code: z22.ZodIssueCode.custom,
+        path: ["package", "folders", folderIndex, "expected_card_count"],
+        message: `A pasta declara ${folder.expected_card_count} cards, mas cont\xE9m ${folderCardCount}.`
+      });
+    }
+    folder.lists.forEach((list, listIndex) => {
+      if (list.order_index !== listIndex) {
+        context.addIssue({
+          code: z22.ZodIssueCode.custom,
+          path: ["package", "folders", folderIndex, "lists", listIndex, "order_index"],
+          message: `A ordem esperada \xE9 ${listIndex}, mas foi recebido ${list.order_index}.`
+        });
+      }
+      if (list.expected_card_count !== list.cards.length) {
+        context.addIssue({
+          code: z22.ZodIssueCode.custom,
+          path: ["package", "folders", folderIndex, "lists", listIndex, "expected_card_count"],
+          message: `A lista declara ${list.expected_card_count} cards, mas cont\xE9m ${list.cards.length}.`
+        });
+      }
+    });
+  });
+});
+var DANGEROUS_IMPORT_KEYS = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]);
+function findDangerousImportKey(value, path = "$", seen = /* @__PURE__ */ new WeakSet()) {
+  if (!value || typeof value !== "object") return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const found = findDangerousImportKey(value[index], `${path}[${index}]`, seen);
+      if (found) return found;
+    }
+    return null;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (DANGEROUS_IMPORT_KEYS.has(key)) return `${path}.${key}`;
+    const found = findDangerousImportKey(child, `${path}.${key}`, seen);
+    if (found) return found;
+  }
+  return null;
+}
+function createOfficialGlobalImportExample(requestId = "00000000-0000-4000-8000-000000000001") {
+  return globalImportSchema.parse({
+    format: GLOBAL_IMPORT_FORMAT,
+    schema_version: GLOBAL_IMPORT_SCHEMA_VERSION,
+    request_id: requestId,
+    package: {
+      title: "Pacote de exemplo",
+      description: null,
+      study_settings: {
+        study_type: "language",
+        lang_a: "en",
+        lang_b: "pt-BR",
+        labels_a: "English",
+        labels_b: "Portugu\xEAs",
+        tts_enabled: true
+      },
+      expected_folder_count: 1,
+      expected_list_count: 1,
+      expected_card_count: 1,
+      folders: [{
+        title: "Pasta definida pelo usu\xE1rio",
+        description: null,
+        order_index: 0,
+        expected_list_count: 1,
+        expected_card_count: 1,
+        lists: [{
+          title: "Lista definida pelo usu\xE1rio",
+          description: null,
+          order_index: 0,
+          expected_card_count: 1,
+          cards: [{
+            type: "normal",
+            term: "Content on side A",
+            translation: "Conte\xFAdo do lado B",
+            hint: null,
+            example_text: null,
+            example_translation: null,
+            detailed_explanation: null,
+            usage_notes: null,
+            common_mistakes: null
+          }]
+        }]
+      }]
+    }
+  });
+}
+var GLOBAL_IMPORT_EXAMPLE = createOfficialGlobalImportExample();
+
+// src/features/global-import/schema/appPitecoSuperImportSchema.ts
+init_define_import_meta_env();
+import { z as z23 } from "npm:zod@^3.23.8";
+var APP_PITECO_SUPER_IMPORT_SCHEMA = "app-piteco-super-import";
+var APP_PITECO_SUPER_IMPORT_VERSION = "1.0";
+var APP_PITECO_SUPER_IMPORT_LIMITS = {
+  maxFileBytes: 10 * 1024 * 1024,
+  maxFolders: 200,
+  maxLists: 1e3,
+  maxCards: 2e4,
+  maxListsPerFolder: 500,
+  maxCardsPerList: 5e3,
+  maxNameLength: 120,
+  maxCardSideLength: 2e3,
+  maxLanguageCodeLength: 20
+};
+var requiredText2 = (label, maxLength) => z23.string().transform((value) => value.trim()).pipe(z23.string().min(1, `${label} n\xE3o pode ficar vazio.`).max(maxLength, `${label} excede ${maxLength} caracteres.`));
+var appPitecoLanguageCodeSchema = z23.string().min(2).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxLanguageCodeLength).regex(
+  /^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$/,
+  "C\xF3digo de idioma BCP 47 inv\xE1lido."
+);
+var appPitecoSuperImportCardSchema = z23.object({
+  front: requiredText2("A frente do card", APP_PITECO_SUPER_IMPORT_LIMITS.maxCardSideLength),
+  back: requiredText2("O verso do card", APP_PITECO_SUPER_IMPORT_LIMITS.maxCardSideLength)
+}).strict();
+var appPitecoSuperImportListSchema = z23.object({
+  name: requiredText2("O nome da lista", APP_PITECO_SUPER_IMPORT_LIMITS.maxNameLength),
+  front_language: appPitecoLanguageCodeSchema,
+  back_language: appPitecoLanguageCodeSchema,
+  declared_card_count: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxCardsPerList),
+  cards: z23.array(appPitecoSuperImportCardSchema).min(1, "A lista precisa ter pelo menos um card.").max(APP_PITECO_SUPER_IMPORT_LIMITS.maxCardsPerList)
+}).strict();
+var appPitecoSuperImportFolderSchema = z23.object({
+  name: requiredText2("O nome da pasta", APP_PITECO_SUPER_IMPORT_LIMITS.maxNameLength),
+  declared_totals: z23.object({
+    lists: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxListsPerFolder),
+    cards: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxCards)
+  }).strict(),
+  lists: z23.array(appPitecoSuperImportListSchema).min(1, "A pasta precisa ter pelo menos uma lista.").max(APP_PITECO_SUPER_IMPORT_LIMITS.maxListsPerFolder)
+}).strict();
+var appPitecoSuperImportSchema = z23.object({
+  schema: z23.literal(APP_PITECO_SUPER_IMPORT_SCHEMA),
+  version: z23.literal(APP_PITECO_SUPER_IMPORT_VERSION),
+  declared_totals: z23.object({
+    folders: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxFolders),
+    lists: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxLists),
+    cards: z23.number().int().min(1).max(APP_PITECO_SUPER_IMPORT_LIMITS.maxCards)
+  }).strict(),
+  package: z23.object({
+    name: requiredText2("O nome do pacote", APP_PITECO_SUPER_IMPORT_LIMITS.maxNameLength),
+    folders: z23.array(appPitecoSuperImportFolderSchema).min(1, "O pacote precisa ter pelo menos uma pasta.").max(APP_PITECO_SUPER_IMPORT_LIMITS.maxFolders)
+  }).strict()
+}).strict().superRefine((value, context) => {
+  const actualFolders = value.package.folders.length;
+  let actualLists = 0;
+  let actualCards = 0;
+  value.package.folders.forEach((folder, folderIndex) => {
+    const folderLists = folder.lists.length;
+    const folderCards = folder.lists.reduce((sum, list) => sum + list.cards.length, 0);
+    actualLists += folderLists;
+    actualCards += folderCards;
+    if (folder.declared_totals.lists !== folderLists) {
+      context.addIssue({
+        code: z23.ZodIssueCode.custom,
+        path: ["package", "folders", folderIndex, "declared_totals", "lists"],
+        message: `[E_COUNT_MISMATCH] A pasta declara ${folder.declared_totals.lists} listas, mas cont\xE9m ${folderLists}.`
+      });
+    }
+    if (folder.declared_totals.cards !== folderCards) {
+      context.addIssue({
+        code: z23.ZodIssueCode.custom,
+        path: ["package", "folders", folderIndex, "declared_totals", "cards"],
+        message: `[E_COUNT_MISMATCH] A pasta declara ${folder.declared_totals.cards} cards, mas cont\xE9m ${folderCards}.`
+      });
+    }
+    folder.lists.forEach((list, listIndex) => {
+      if (list.declared_card_count !== list.cards.length) {
+        context.addIssue({
+          code: z23.ZodIssueCode.custom,
+          path: ["package", "folders", folderIndex, "lists", listIndex, "declared_card_count"],
+          message: `[E_COUNT_MISMATCH] A lista declara ${list.declared_card_count} cards, mas cont\xE9m ${list.cards.length}.`
+        });
+      }
+    });
+  });
+  if (value.declared_totals.folders !== actualFolders) {
+    context.addIssue({
+      code: z23.ZodIssueCode.custom,
+      path: ["declared_totals", "folders"],
+      message: `[E_COUNT_MISMATCH] O pacote declara ${value.declared_totals.folders} pastas, mas cont\xE9m ${actualFolders}.`
+    });
+  }
+  if (value.declared_totals.lists !== actualLists) {
+    context.addIssue({
+      code: z23.ZodIssueCode.custom,
+      path: ["declared_totals", "lists"],
+      message: `[E_COUNT_MISMATCH] O pacote declara ${value.declared_totals.lists} listas, mas cont\xE9m ${actualLists}.`
+    });
+  }
+  if (value.declared_totals.cards !== actualCards) {
+    context.addIssue({
+      code: z23.ZodIssueCode.custom,
+      path: ["declared_totals", "cards"],
+      message: `[E_COUNT_MISMATCH] O pacote declara ${value.declared_totals.cards} cards, mas cont\xE9m ${actualCards}.`
+    });
+  }
+});
+var APP_PITECO_SUPER_IMPORT_EXAMPLE = appPitecoSuperImportSchema.parse({
+  schema: APP_PITECO_SUPER_IMPORT_SCHEMA,
+  version: APP_PITECO_SUPER_IMPORT_VERSION,
+  declared_totals: { folders: 1, lists: 1, cards: 2 },
+  package: {
+    name: "Ingl\xEAs para viagens",
+    folders: [{
+      name: "Viagens",
+      declared_totals: { lists: 1, cards: 2 },
+      lists: [{
+        name: "Aeroporto",
+        front_language: "en",
+        back_language: "pt-BR",
+        declared_card_count: 2,
+        cards: [
+          { front: "Where is the boarding gate?", back: "Onde fica o port\xE3o de embarque?" },
+          { front: "My flight has been delayed.", back: "Meu voo foi atrasado." }
+        ]
+      }]
+    }]
+  }
+});
+
+// src/features/global-import/schema.ts
+init_define_import_meta_env();
+import { z as z24 } from "npm:zod@^3.23.8";
+var GLOBAL_IMPORT_SCHEMA = "appteco-global-import";
+var GLOBAL_IMPORT_VERSION = 1;
+var GLOBAL_IMPORT_LIMITS2 = {
+  maxFileBytes: 50 * 1024 * 1024,
+  maxFolders: 200,
+  maxLists: 1e3,
+  maxCards: 2e4,
+  maxNameLength: 160,
+  maxTextLength: 25e4,
+  maxTagsPerCard: 30
+};
+var formatLimit = (value) => value.toLocaleString("pt-BR");
+var trimmedText = (label, max) => z24.string().transform((value) => value.trim()).pipe(z24.string().min(1, `${label} n\xE3o pode ficar vazio.`).max(max, `${label} excede ${formatLimit(max)} caracteres.`));
+var optionalTrimmedText = (max) => z24.string().transform((value) => value.trim()).pipe(z24.string().max(max)).optional();
+var globalImportCardSchema2 = z24.object({
+  front: trimmedText("A frente do card", GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  back: trimmedText("O verso do card", GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  hint: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  context_tag: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxNameLength),
+  example: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  example_translation: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  tags: z24.array(trimmedText("Tag", GLOBAL_IMPORT_LIMITS2.maxNameLength)).max(GLOBAL_IMPORT_LIMITS2.maxTagsPerCard).optional(),
+  metadata: z24.record(z24.unknown()).optional()
+}).strict();
+var globalImportListSchema2 = z24.object({
+  name: trimmedText("O nome da lista", GLOBAL_IMPORT_LIMITS2.maxNameLength),
+  description: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  expected_cards: z24.number().int().nonnegative().optional(),
+  cards: z24.array(globalImportCardSchema2).min(1, "A lista precisa ter pelo menos um card.")
+}).strict();
+var globalImportFolderSchema2 = z24.object({
+  name: trimmedText("O nome da pasta", GLOBAL_IMPORT_LIMITS2.maxNameLength),
+  description: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+  expected_cards: z24.number().int().nonnegative().optional(),
+  lists: z24.array(globalImportListSchema2).min(1, "A pasta precisa ter pelo menos uma lista.")
+}).strict();
+var globalImportPackageSchema = z24.object({
+  schema: z24.literal(GLOBAL_IMPORT_SCHEMA),
+  version: z24.literal(GLOBAL_IMPORT_VERSION),
+  package: z24.object({
+    name: trimmedText("O nome do pacote", GLOBAL_IMPORT_LIMITS2.maxNameLength),
+    source_language: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxNameLength),
+    target_language: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxNameLength),
+    level: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxNameLength),
+    theme: optionalTrimmedText(GLOBAL_IMPORT_LIMITS2.maxTextLength),
+    folders: z24.array(globalImportFolderSchema2).min(1, "O pacote precisa ter pelo menos uma pasta.").max(GLOBAL_IMPORT_LIMITS2.maxFolders)
+  }).strict()
+}).strict();
+
+// src/features/global-import/normalizer.ts
+function firstDirection(value) {
+  const firstList = value.package.folders[0]?.lists[0];
+  return {
+    front: firstList?.front_language ?? "",
+    back: firstList?.back_language ?? ""
+  };
+}
+function officialToInternal(value) {
+  const direction = firstDirection(value);
+  return {
+    schema: GLOBAL_IMPORT_SCHEMA,
+    version: GLOBAL_IMPORT_VERSION,
+    package: {
+      name: value.package.name,
+      source_language: direction.front,
+      target_language: direction.back,
+      folders: value.package.folders.map((folder) => ({
+        name: folder.name,
+        expected_cards: folder.declared_totals.cards,
+        lists: folder.lists.map((list) => ({
+          name: list.name,
+          expected_cards: list.declared_card_count,
+          cards: list.cards.map((card) => ({
+            front: card.front,
+            back: card.back,
+            metadata: {
+              app_piteco_contract: "1.0",
+              front_language: list.front_language,
+              back_language: list.back_language
+            }
+          }))
+        }))
+      }))
+    }
+  };
+}
+function canonicalToInternal(value) {
+  return {
+    schema: GLOBAL_IMPORT_SCHEMA,
+    version: GLOBAL_IMPORT_VERSION,
+    package: {
+      name: value.package.title,
+      source_language: value.package.study_settings.lang_a,
+      target_language: value.package.study_settings.lang_b,
+      folders: value.package.folders.map((folder) => ({
+        name: folder.title,
+        description: folder.description ?? void 0,
+        expected_cards: folder.expected_card_count,
+        lists: folder.lists.map((list) => ({
+          name: list.title,
+          description: list.description ?? void 0,
+          expected_cards: list.expected_card_count,
+          cards: list.cards.map((card) => ({
+            front: card.term,
+            back: card.translation,
+            hint: card.hint ?? void 0,
+            example: card.example_text ?? void 0,
+            example_translation: card.example_translation ?? void 0
+          }))
+        }))
+      }))
+    }
+  };
+}
+function normalizeGlobalImportValue(value) {
+  const dangerousPath = findDangerousImportKey(value);
+  const officialResult = appPitecoSuperImportSchema.safeParse(value);
+  const canonicalResult = globalImportSchema.safeParse(value);
+  const legacyResult = globalImportPackageSchema.safeParse(value);
+  if (dangerousPath) {
+    return {
+      success: false,
+      error: { sourceFormat: "unknown", officialResult, canonicalResult, legacyResult, dangerousPath }
+    };
+  }
+  if (officialResult.success) {
+    return {
+      success: true,
+      data: {
+        sourceFormat: "official",
+        packageValue: officialToInternal(officialResult.data),
+        officialPackage: officialResult.data,
+        canonicalPackage: null,
+        warnings: []
+      }
+    };
+  }
+  if (canonicalResult.success) {
+    return {
+      success: true,
+      data: {
+        sourceFormat: "canonical",
+        packageValue: canonicalToInternal(canonicalResult.data),
+        officialPackage: null,
+        canonicalPackage: canonicalResult.data,
+        warnings: [
+          "Pacote ape-global-import aceito por compatibilidade. Novos pacotes devem usar app-piteco-super-import 1.0."
+        ]
+      }
+    };
+  }
+  if (legacyResult.success) {
+    return {
+      success: true,
+      data: {
+        sourceFormat: "legacy",
+        packageValue: legacyResult.data,
+        officialPackage: null,
+        canonicalPackage: null,
+        warnings: [
+          "Pacote appteco-global-import aceito por compatibilidade. Novos pacotes devem usar app-piteco-super-import 1.0."
+        ]
+      }
+    };
+  }
+  const record = value && typeof value === "object" ? value : null;
+  const sourceFormat = record?.schema === APP_PITECO_SUPER_IMPORT_SCHEMA ? "official" : record?.format === "ape-global-import" ? "canonical" : record?.schema === GLOBAL_IMPORT_SCHEMA ? "legacy" : "unknown";
+  return {
+    success: false,
+    error: { sourceFormat, officialResult, canonicalResult, legacyResult, dangerousPath: null }
+  };
+}
+
+// src/features/smart-import/adapters.ts
+init_define_import_meta_env();
+
+// src/features/smart-import/schema.ts
+init_define_import_meta_env();
+import { z as z25 } from "npm:zod@^3.23.8";
+var SMART_IMPORT_SCHEMA = "app-piteco-super-import";
+var SMART_IMPORT_VERSION = "2.0";
+var SMART_IMPORT_LIMITS = {
+  maxFileBytes: 50 * 1024 * 1024,
+  maxFolders: 200,
+  maxLists: 1e3,
+  maxCards: 2e4,
+  maxGlossaryEntries: 2e4,
+  maxTextLength: 25e4,
+  maxNameLength: 160,
+  maxWordHintsPerCard: 200,
+  maxLayersPerGroup: 500
+};
+var formatLimit2 = (value) => value.toLocaleString("pt-BR");
+var trimmed = (label, max = SMART_IMPORT_LIMITS.maxTextLength) => z25.string().transform((value) => value.trim()).pipe(z25.string().min(1, `${label} n\xE3o pode ficar vazio.`).max(max, `${label} excede ${formatLimit2(max)} caracteres.`));
+var optionalTrimmed = (max = SMART_IMPORT_LIMITS.maxTextLength) => z25.string().transform((value) => value.trim()).pipe(z25.string().max(max)).optional().nullable();
+var smartWordHintSchema = z25.object({
+  side: z25.enum(["A", "B"]).default("A"),
+  text: trimmed("O trecho do gloss\xE1rio contextual"),
+  translation: trimmed("A tradu\xE7\xE3o do gloss\xE1rio contextual"),
+  note: optionalTrimmed(),
+  occurrence: z25.union([z25.literal("all"), z25.number().int().nonnegative()]).default("all"),
+  start_index: z25.number().int().nonnegative().optional(),
+  end_index: z25.number().int().positive().optional(),
+  scope: z25.enum(["global", "contextual"]).optional(),
+  kind: z25.enum(["word", "expression"]).optional(),
+  expression: optionalTrimmed(),
+  segments: z25.array(z25.object({
+    text: z25.string().min(1),
+    startIndex: z25.number().int().nonnegative(),
+    endIndex: z25.number().int().positive()
+  }).strict()).min(2).max(20).optional()
+}).strict().superRefine((value, ctx) => {
+  value.segments?.forEach((span, index, spans) => {
+    if (span.endIndex <= span.startIndex || index > 0 && spans[index - 1].endIndex > span.startIndex) {
+      ctx.addIssue({ code: z25.ZodIssueCode.custom, message: "Segmentos devem ser v\xE1lidos, ordenados e n\xE3o sobrepostos." });
+    }
+  });
+  if (value.start_index === void 0 !== (value.end_index === void 0)) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, message: "start_index e end_index precisam ser informados juntos." });
+  }
+  if (value.start_index !== void 0 && value.end_index !== void 0 && value.end_index <= value.start_index) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, message: "end_index precisa ser maior que start_index." });
+  }
+});
+var smartCardContentShape = {
+  // Keep original text byte-for-byte: hint offsets refer to this exact string.
+  front: z25.string().max(SMART_IMPORT_LIMITS.maxTextLength, `O lado A do card excede ${formatLimit2(SMART_IMPORT_LIMITS.maxTextLength)} caracteres.`).refine((value) => value.trim().length > 0, "O lado A do card n\xE3o pode ficar vazio."),
+  back: z25.string().max(SMART_IMPORT_LIMITS.maxTextLength, `O lado B do card excede ${formatLimit2(SMART_IMPORT_LIMITS.maxTextLength)} caracteres.`).refine((value) => value.trim().length > 0, "O lado B do card n\xE3o pode ficar vazio."),
+  key: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+  hint: optionalTrimmed(),
+  short_observation: optionalTrimmed(),
+  detailed_explanation: optionalTrimmed(),
+  usage_notes: optionalTrimmed(),
+  common_mistakes: optionalTrimmed(),
+  example: optionalTrimmed(),
+  example_translation: optionalTrimmed(),
+  context_tag: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+  tags: z25.array(trimmed("Tag", SMART_IMPORT_LIMITS.maxNameLength)).max(50).optional(),
+  word_hints: z25.array(smartWordHintSchema).max(SMART_IMPORT_LIMITS.maxWordHintsPerCard).optional()
+};
+var smartNormalCardSchema = z25.object({
+  type: z25.literal("normal").default("normal"),
+  ...smartCardContentShape
+}).strict();
+var smartLayerSchema = z25.object({
+  ...smartCardContentShape
+}).strict();
+var smartLayeredCardSchema = z25.object({
+  type: z25.literal("layered"),
+  key: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+  group_title: trimmed("O t\xEDtulo do grupo", SMART_IMPORT_LIMITS.maxNameLength),
+  layers: z25.array(smartLayerSchema).min(2, "Um grupo precisa ter pelo menos duas camadas jog\xE1veis.").max(SMART_IMPORT_LIMITS.maxLayersPerGroup)
+}).strict();
+var smartCardSchema = z25.discriminatedUnion("type", [
+  smartNormalCardSchema,
+  smartLayeredCardSchema
+]);
+var smartGlossaryEntrySchema = z25.object({
+  term: trimmed("O termo do gloss\xE1rio"),
+  translation: trimmed("A tradu\xE7\xE3o do gloss\xE1rio"),
+  side: z25.enum(["A", "B"]).default("A"),
+  note: optionalTrimmed(),
+  active: z25.boolean().default(true)
+}).strict();
+var smartImportListSchema = z25.object({
+  name: trimmed("O nome da lista", SMART_IMPORT_LIMITS.maxNameLength),
+  description: optionalTrimmed(),
+  front_language: trimmed("O idioma do lado A", SMART_IMPORT_LIMITS.maxNameLength),
+  back_language: trimmed("O idioma do lado B", SMART_IMPORT_LIMITS.maxNameLength),
+  primary_side: z25.enum(["a", "b"]).default("a"),
+  study_type: z25.enum(["language", "general", "math", "visual"]).default("language"),
+  label_a: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+  label_b: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+  tts_enabled: z25.boolean().default(true),
+  glossary: z25.array(smartGlossaryEntrySchema).max(SMART_IMPORT_LIMITS.maxGlossaryEntries).default([]),
+  cards: z25.array(smartCardSchema).default([])
+}).strict().superRefine((value, ctx) => {
+  if (value.cards.length === 0 && value.glossary.length === 0) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, message: "A lista precisa ter cards ou entradas de gloss\xE1rio." });
+  }
+});
+var smartImportFolderSchema = z25.object({
+  name: trimmed("O nome da pasta", SMART_IMPORT_LIMITS.maxNameLength),
+  description: optionalTrimmed(),
+  lists: z25.array(smartImportListSchema).min(1).max(SMART_IMPORT_LIMITS.maxLists)
+}).strict();
+var smartImportPackageSchema = z25.object({
+  schema: z25.literal(SMART_IMPORT_SCHEMA),
+  version: z25.literal(SMART_IMPORT_VERSION),
+  declared_totals: z25.object({
+    folders: z25.number().int().nonnegative(),
+    lists: z25.number().int().nonnegative(),
+    cards: z25.number().int().nonnegative(),
+    glossary_entries: z25.number().int().nonnegative().default(0),
+    layered_groups: z25.number().int().nonnegative().default(0)
+  }).strict().optional(),
+  package: z25.object({
+    name: trimmed("O nome do pacote", SMART_IMPORT_LIMITS.maxNameLength),
+    description: optionalTrimmed(),
+    source_language: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+    target_language: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+    level: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
+    theme: optionalTrimmed(),
+    folders: z25.array(smartImportFolderSchema).min(1).max(SMART_IMPORT_LIMITS.maxFolders)
+  }).strict()
+}).strict().superRefine((value, ctx) => {
+  const summary = summarizeSmartImport(value);
+  if (summary.lists > SMART_IMPORT_LIMITS.maxLists) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, path: ["package", "folders"], message: `O pacote excede ${SMART_IMPORT_LIMITS.maxLists} listas.` });
+  }
+  if (summary.cards > SMART_IMPORT_LIMITS.maxCards) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, path: ["package", "folders"], message: `O pacote excede ${SMART_IMPORT_LIMITS.maxCards} cards jog\xE1veis.` });
+  }
+  if (summary.glossaryEntries > SMART_IMPORT_LIMITS.maxGlossaryEntries) {
+    ctx.addIssue({ code: z25.ZodIssueCode.custom, path: ["package", "folders"], message: `O pacote excede ${SMART_IMPORT_LIMITS.maxGlossaryEntries} entradas de gloss\xE1rio.` });
+  }
+  if (value.declared_totals) {
+    const declared = value.declared_totals;
+    const comparisons = [
+      ["folders", summary.folders],
+      ["lists", summary.lists],
+      ["cards", summary.cards],
+      ["glossary_entries", summary.glossaryEntries],
+      ["layered_groups", summary.layeredGroups]
+    ];
+    comparisons.forEach(([key, actual]) => {
+      if (declared[key] !== actual) {
+        ctx.addIssue({ code: z25.ZodIssueCode.custom, path: ["declared_totals", key], message: `Contagem declarada ${declared[key]} difere da contagem real ${actual}.` });
+      }
+    });
+  }
+});
+function summarizeSmartImport(value) {
+  const summary = {
+    folders: value.package.folders.length,
+    lists: 0,
+    cards: 0,
+    normalCards: 0,
+    layeredGroups: 0,
+    glossaryEntries: 0,
+    wordHints: 0,
+    detailedCards: 0
+  };
+  for (const folder of value.package.folders) {
+    summary.lists += folder.lists.length;
+    for (const list of folder.lists) {
+      summary.glossaryEntries += list.glossary.length;
+      for (const card of list.cards) {
+        if (card.type === "normal") {
+          summary.cards += 1;
+          summary.normalCards += 1;
+          summary.wordHints += card.word_hints?.length ?? 0;
+          if (card.detailed_explanation || card.usage_notes || card.common_mistakes) summary.detailedCards += 1;
+        } else {
+          summary.layeredGroups += 1;
+          summary.cards += card.layers.length;
+          for (const layer of card.layers) {
+            summary.wordHints += layer.word_hints?.length ?? 0;
+            if (layer.detailed_explanation || layer.usage_notes || layer.common_mistakes) summary.detailedCards += 1;
+          }
+        }
+      }
+    }
+  }
+  return summary;
+}
+function withSmartDeclaredTotals(value) {
+  const summary = summarizeSmartImport(value);
+  return {
+    ...value,
+    declared_totals: {
+      folders: summary.folders,
+      lists: summary.lists,
+      cards: summary.cards,
+      glossary_entries: summary.glossaryEntries,
+      layered_groups: summary.layeredGroups
+    }
+  };
+}
+
+// src/features/smart-import/adapters.ts
+function recordOf2(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function optionalString(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function legacyWordHints(value) {
+  if (!Array.isArray(value)) return void 0;
+  const result = value.flatMap((item) => {
+    const hint = recordOf2(item);
+    const text = optionalString(hint?.text);
+    const translation = optionalString(hint?.translation);
+    if (!text || !translation) throw new Error("Hint inv\xE1lido: exporta\xE7\xE3o interrompida para evitar perda de dados.");
+    const rawOccurrence = hint?.occurrence;
+    const occurrence = typeof rawOccurrence === "number" ? rawOccurrence : "all";
+    const start = hint?.start_index ?? hint?.startIndex;
+    const end = hint?.end_index ?? hint?.endIndex;
+    return [smartWordHintSchema.parse({
+      text,
+      translation,
+      note: optionalString(hint?.note),
+      side: hint?.side === "B" ? "B" : "A",
+      occurrence,
+      start_index: typeof start === "number" ? start : void 0,
+      end_index: typeof end === "number" ? end : void 0,
+      ...hint?.scope === "global" || hint?.scope === "contextual" ? { scope: hint.scope } : {},
+      ...hint?.kind === "word" || hint?.kind === "expression" ? { kind: hint.kind } : {},
+      ...typeof hint?.expression === "string" ? { expression: hint.expression } : {},
+      ...Array.isArray(hint?.segments) ? { segments: hint.segments } : {}
+    })];
+  });
+  return result.length ? result : void 0;
+}
+function directionFromLegacyCard(card) {
+  const metadata = recordOf2(card?.metadata);
+  const front = optionalString(metadata?.front_language);
+  const back = optionalString(metadata?.back_language);
+  return front && back ? { front, back, metadata } : null;
+}
+function legacyPackageToSmartImport(value) {
+  const fallbackFront = value.package.source_language ?? "en";
+  const fallbackBack = value.package.target_language ?? "pt-BR";
+  return smartImportPackageSchema.parse({
+    schema: "app-piteco-super-import",
+    version: "2.0",
+    package: {
+      name: value.package.name,
+      source_language: value.package.source_language ?? null,
+      target_language: value.package.target_language ?? null,
+      level: value.package.level ?? null,
+      theme: value.package.theme ?? null,
+      folders: value.package.folders.map((folder) => ({
+        name: folder.name,
+        description: folder.description ?? null,
+        lists: folder.lists.map((list) => {
+          const direction = directionFromLegacyCard(list.cards[0]);
+          const metadata = direction?.metadata ?? recordOf2(list.cards[0]?.metadata);
+          return {
+            name: list.name,
+            description: list.description ?? null,
+            front_language: direction?.front ?? fallbackFront,
+            back_language: direction?.back ?? fallbackBack,
+            primary_side: metadata?.primary_side === "b" ? "b" : "a",
+            study_type: optionalString(metadata?.study_type) ?? "language",
+            label_a: optionalString(metadata?.label_a),
+            label_b: optionalString(metadata?.label_b),
+            tts_enabled: typeof metadata?.tts_enabled === "boolean" ? metadata.tts_enabled : true,
+            glossary: [],
+            cards: list.cards.map((card) => {
+              const cardMeta = recordOf2(card.metadata);
+              return {
+                type: "normal",
+                front: card.front,
+                back: card.back,
+                hint: card.hint ?? null,
+                example: card.example ?? null,
+                example_translation: card.example_translation ?? null,
+                detailed_explanation: optionalString(cardMeta?.detailed_explanation),
+                usage_notes: optionalString(cardMeta?.usage_notes),
+                common_mistakes: optionalString(cardMeta?.common_mistakes),
+                short_observation: optionalString(cardMeta?.short_observation),
+                context_tag: card.context_tag ?? optionalString(cardMeta?.context_tag),
+                tags: Array.isArray(card.tags) ? card.tags.filter((tag) => typeof tag === "string") : [],
+                word_hints: legacyWordHints(cardMeta?.word_hints)
+              };
+            })
+          };
+        })
+      }))
+    }
+  });
+}
+
+// src/features/smart-import/jsonNormalizer.ts
+init_define_import_meta_env();
+function recordOf3(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function stringList(value) {
+  if (!Array.isArray(value)) return null;
+  const items = value.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean);
+  return items.length === value.length ? items : null;
+}
+var SHARED_LAYER_FIELDS = [
+  "hint",
+  "short_observation",
+  "detailed_explanation",
+  "usage_notes",
+  "common_mistakes",
+  "example",
+  "example_translation",
+  "context_tag",
+  "tags",
+  "word_hints"
+];
+function hasMeaningfulValue(value) {
+  if (value === void 0 || value === null) return false;
+  if (typeof value === "string") return Boolean(value.trim());
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+function normalizeSmartImportJsonValue(value) {
+  const root = recordOf3(value);
+  if (root?.schema !== "app-piteco-super-import" || root.version !== "2.0") {
+    return { value, changed: false, notes: [] };
+  }
+  const packageValue = recordOf3(root.package);
+  const folders = Array.isArray(packageValue?.folders) ? packageValue.folders : [];
+  let primarySidesNormalized = 0;
+  let layeredGroupsNormalized = 0;
+  let usageNotesRepaired = 0;
+  let commonMistakesRepaired = 0;
+  const repairTextArrays = (card) => {
+    const usageNotes = stringList(card.usage_notes);
+    if (usageNotes) {
+      card.usage_notes = usageNotes.join("\n");
+      usageNotesRepaired += 1;
+    }
+    const commonMistakes = stringList(card.common_mistakes);
+    if (commonMistakes) {
+      card.common_mistakes = commonMistakes.join("\n");
+      commonMistakesRepaired += 1;
+    }
+  };
+  folders.forEach((folderValue) => {
+    const folder = recordOf3(folderValue);
+    const lists = Array.isArray(folder?.lists) ? folder.lists : [];
+    lists.forEach((listValue) => {
+      const list = recordOf3(listValue);
+      if (!list) return;
+      if (typeof list.primary_side === "string") {
+        const normalizedSide = list.primary_side.trim().toLocaleLowerCase();
+        if ((normalizedSide === "a" || normalizedSide === "b") && normalizedSide !== list.primary_side) {
+          list.primary_side = normalizedSide;
+          primarySidesNormalized += 1;
+        }
+      }
+      const cards = Array.isArray(list.cards) ? list.cards : [];
+      cards.forEach((cardValue) => {
+        const card = recordOf3(cardValue);
+        if (!card) return;
+        if (card.type !== "layered" || !Array.isArray(card.layers)) {
+          repairTextArrays(card);
+          return;
+        }
+        let groupChanged = false;
+        const layers = card.layers.map(recordOf3).filter((layer) => Boolean(layer));
+        for (const field of SHARED_LAYER_FIELDS) {
+          const sharedValue = card[field];
+          if (!hasMeaningfulValue(sharedValue)) continue;
+          layers.forEach((layer) => {
+            if (!hasMeaningfulValue(layer[field])) layer[field] = sharedValue;
+          });
+          delete card[field];
+          groupChanged = true;
+        }
+        layers.forEach(repairTextArrays);
+        if (groupChanged) layeredGroupsNormalized += 1;
+      });
+    });
+  });
+  const notes = [];
+  if (primarySidesNormalized) {
+    notes.push(`${primarySidesNormalized} primary_side em mai\xFAscula foi normalizado para \u201Ca\u201D ou \u201Cb\u201D.`);
+  }
+  if (layeredGroupsNormalized) {
+    notes.push(`${layeredGroupsNormalized} grupo(s) layered tiveram explica\xE7\xF5es compartilhadas distribu\xEDdas para suas camadas.`);
+  }
+  const textArrayRepairs = usageNotesRepaired + commonMistakesRepaired;
+  if (textArrayRepairs) {
+    notes.push(`${textArrayRepairs} campo(s) de observa\xE7\xE3o em formato de lista foram convertidos para texto.`);
+  }
+  return {
+    value,
+    changed: notes.length > 0,
+    notes
+  };
+}
+
+// src/features/smart-import/sourceParser.ts
+init_define_import_meta_env();
+
+// src/lib/bulkImport.ts
+init_define_import_meta_env();
+
+// src/lib/featureFlags.ts
+init_define_import_meta_env();
+
+// src/lib/safeMode.ts
+init_define_import_meta_env();
+import { useSyncExternalStore } from "npm:react@^18.3.1";
+var KEY = "ape_safe_mode";
+var listeners = /* @__PURE__ */ new Set();
+function emit() {
+  listeners.forEach((l) => {
+    try {
+      l();
+    } catch {
+    }
+  });
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === KEY) emit();
+  });
+}
+
+// src/lib/featureFlags.ts
+var FEATURE_FLAGS = {
+  // ─── Store & Economy ───────────────────────────────────
+  /** Store visibility — hides Store button & route when false */
+  store_visible: true,
+  /** Economy system — balance, inventory, PTS/XP when false */
+  economy_enabled: true,
+  /** Weekly PTS → PITECOIN conversion cron */
+  conversion_cron_enabled: false,
+  /** Admin skins catalog management */
+  admin_skins_enabled: true,
+  /** User directory / search */
+  directory_enabled: false,
+  /** Gifting system (Admin → Gifts) */
+  gifting_enabled: false,
+  /** Present Box visibility */
+  present_inbox_visible: true,
+  /** Currency header across all pages */
+  currency_header_enabled: true,
+  // ─── Journey & Realms ──────────────────────────────────
+  /** Journey system */
+  journey_enabled: false,
+  /** Reinos (Realms) — Modo Reino card + /reinos route */
+  reinos_enabled: true,
+  // ─── Classes & Communication ───────────────────────────
+  /** Classes/Student-Teacher linking system */
+  classes_enabled: true,
+  /** Class communications (chat, DM, comments) */
+  class_comms_enabled: true,
+  /** Meus Alunos (professor's student list) */
+  meus_alunos_enabled: true,
+  // ─── Study Engine (performance-sensitive) ──────────────
+  /**
+   * Word hints / interactive text in study views
+   * When false: renders plain text (no highlight, no tooltip)
+   */
+  word_hints_enabled: true,
+  /**
+   * List glossary (global translations per list)
+   * When false: skips glossary fetch & merge — manual word_hints still work if word_hints_enabled
+   */
+  glossary_enabled: true,
+  /**
+   * Card images in study views
+   * When false: hides ImageCard components — text-only cards
+   */
+  study_images_enabled: true,
+  /**
+   * Page transition animations
+   * When false: instant page changes, no fade/scale animation
+   */
+  page_transitions_enabled: true,
+  /**
+   * Offline mode (download lists for offline use)
+   * When false: hides download buttons, disables IndexedDB caching
+   */
+  offline_mode_enabled: false,
+  /**
+   * Activity heartbeat (updates last_active_at every 60s)
+   * When false: no periodic profile updates — reduces DB writes
+   */
+  heartbeat_enabled: true,
+  /**
+   * Swipe navigation on mobile
+   * When false: no swipe gesture handling
+   */
+  swipe_navigation_enabled: true,
+  // ─── Importer ──────────────────────────────────────────
+  /**
+   * Bulk Import 2.0 — tolerant separator detection (/, |, =>, —, –, -, tab)
+   * + editable review step in BulkImportDialog before persisting.
+   * When false: falls back to legacy " / "-only parser and read-only preview.
+   * Safe to toggle at runtime; affects only parse + preview UI, not persistence shape.
+   */
+  bulk_import_v2: true,
+  /**
+   * Layered cards — allow a single "main card" to contain multiple internal
+   * meaning layers (translations + examples). Off by default; when off, the
+   * import parser ignores indentation, the Merge UI is hidden and the study
+   * engine does not expand layers. Pure additive feature.
+   */
+  layered_cards: true,
+  /**
+   * Study Intelligence Engine — weighted scoring (new/misses/recency/red − mastery)
+   * for initial deck ordering + dynamic re-injection of failed cards ~5 slots ahead.
+   * When false: legacy ordering by incorrect_count only, no re-injection.
+   * Scope: useStudyEngine. Safe to toggle at runtime.
+   */
+  intelligent_study_engine: false,
+  /**
+   * Clara Master — new flashcard group status pipeline.
+   *
+   *   "off"    → legacy code path only (user_favorites / user_red_list).
+   *   "shadow" → legacy still owns the UI, but reads also fetch from the new
+   *              `user_flashcard_group_status` table and emit drift telemetry
+   *              via `statusTelemetry.reportDrift`. Zero behavioural change.
+   *   "on"     → new pipeline owns reads & writes for callers that pass a
+   *              `statusGroupUid`. Callers without a uid silently fall back
+   *              to legacy (back-compat).
+   *
+   * Default: "off". Promotion to "shadow" / "on" is a deliberate QA pass and
+   * MUST be backed by cold-mount evidence (Clara Master, Phase 5.b).
+   */
+  new_status_pipeline: "off"
+};
+
+// src/features/smart-import/simplePrompt.ts
+init_define_import_meta_env();
+
+// src/features/import-prompts/deliveryContract.ts
+init_define_import_meta_env();
+var JSON_FILE_DELIVERY_CONTRACT = [
+  "ENTREGA DO ARQUIVO",
+  "Entregue prioritariamente um arquivo .json para download.",
+  "Caso n\xE3o seja poss\xEDvel gerar um arquivo, devolva somente o JSON puro no chat, sem Markdown, explica\xE7\xF5es ou cercas de c\xF3digo.",
+  "N\xE3o entregue texto extra, mais de um objeto ou outro formato como sa\xEDda principal."
+].join("\n");
+function withJsonFileDeliveryContract(prompt) {
+  const trimmed2 = prompt.trim();
+  if (trimmed2.includes("Entregue prioritariamente um arquivo .json para download.")) return trimmed2;
+  return `${trimmed2}
+
+${JSON_FILE_DELIVERY_CONTRACT}`;
+}
+
+// src/features/smart-import/simplePrompt.ts
+var clean2 = (value, fallback) => value.trim() || fallback;
+function buildSimpleFlashcardPrompt(options) {
+  const listName = clean2(options.listName, "Lista atual");
+  const sideALabel = clean2(options.sideALabel, "Lado A");
+  const sideBLabel = clean2(options.sideBLabel, "Lado B");
+  return withJsonFileDeliveryContract([
+    "Voc\xEA \xE9 o gerador oficial de flashcards simples do App Piteco.",
+    "",
+    "OBJETIVO",
+    `Crie flashcards normais para a lista "${listName}".`,
+    `- Lado A: "${sideALabel}"`,
+    `- Lado B: "${sideBLabel}"`,
+    "",
+    "CONTRATO OBRIGAT\xD3RIO",
+    "- Gere schema app-piteco-super-import e version 2.0.",
+    "- Gere uma \xFAnica pasta e uma \xFAnica lista com glossary vazio.",
+    "- Cada card deve usar type normal, front e back.",
+    "- N\xE3o gere cards em camadas, gloss\xE1rio, IDs de banco ou campos desconhecidos.",
+    "- front e back nunca podem ficar vazios.",
+    "- N\xE3o repita cards nem use texto fora do JSON.",
+    "",
+    "EXEMPLO DE ESTRUTURA",
+    '{"schema":"app-piteco-super-import","version":"2.0","package":{"name":"Lista atual","folders":[{"name":"Lista atual","lists":[{"name":"Lista atual","front_language":"en","back_language":"pt-BR","primary_side":"a","study_type":"language","glossary":[],"cards":[{"type":"normal","front":"Hello","back":"Ol\xE1"}]}]}]}}',
+    "",
+    "DADOS QUE O USU\xC1RIO VAI INFORMAR",
+    "Tema, texto ou vocabul\xE1rio: [INFORME AQUI]",
+    "Quantidade aproximada: [INFORME AQUI]",
+    "N\xEDvel do aluno: [INFORME AQUI]",
+    "",
+    "Depois de receber os dados, gere diretamente o JSON final."
+  ].join("\n"));
+}
+
+// src/lib/bulkImport.ts
+function stripAIArtifacts(line) {
+  return line.replace(/^\d{1,3}[\.\)]\s+/, "").replace(/^\d{1,3}\s*[-–—]\s+/, "").replace(/^[-•]\s+/, "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1").trim();
+}
+function normalizeInputLines(input) {
+  const rawLines = input.split(/\r?\n/);
+  const mergedLines = [];
+  let currentBuffer = "";
+  let openBrackets = 0;
+  let openParens = 0;
+  for (const line of rawLines) {
+    const trimmed2 = line.trim();
+    if (!trimmed2) continue;
+    const bracketsDelta = (trimmed2.match(/\[/g) || []).length - (trimmed2.match(/\]/g) || []).length;
+    const parensDelta = (trimmed2.match(/\(/g) || []).length - (trimmed2.match(/\)/g) || []).length;
+    const isContinuation = openBrackets > 0 || openParens > 0 || trimmed2.startsWith("[") || trimmed2.startsWith("(");
+    if (isContinuation && currentBuffer) {
+      currentBuffer += "\n" + trimmed2;
+    } else {
+      if (currentBuffer) {
+        mergedLines.push(currentBuffer);
+      }
+      currentBuffer = trimmed2;
+    }
+    openBrackets += bracketsDelta;
+    openParens += parensDelta;
+  }
+  if (currentBuffer) {
+    mergedLines.push(currentBuffer);
+  }
+  return mergedLines;
+}
+function extractBrackets(text) {
+  const lastOpenBracket = text.lastIndexOf("[");
+  const lastCloseBracket = text.lastIndexOf("]");
+  if (lastOpenBracket !== -1 && lastCloseBracket > lastOpenBracket) {
+    const extracted = text.substring(lastOpenBracket + 1, lastCloseBracket).trim();
+    const remaining = (text.substring(0, lastOpenBracket) + text.substring(lastCloseBracket + 1)).trim();
+    return { extracted, remaining };
+  }
+  return { extracted: "", remaining: text };
+}
+function extractParentheses(text) {
+  const lastOpenParen = text.lastIndexOf("(");
+  const lastCloseParen = text.lastIndexOf(")");
+  if (lastOpenParen !== -1 && lastCloseParen > lastOpenParen) {
+    const extracted = text.substring(lastOpenParen + 1, lastCloseParen).trim();
+    const remaining = (text.substring(0, lastOpenParen) + text.substring(lastCloseParen + 1)).trim();
+    return { extracted, remaining };
+  }
+  return { extracted: "", remaining: text };
+}
+function findSeparatorIndex(line) {
+  const spacedIdx = line.indexOf(" / ");
+  if (spacedIdx > 0) return { index: spacedIdx, length: 3 };
+  const slashIdx = line.indexOf("/");
+  if (slashIdx > 0) {
+    const before = line.substring(0, slashIdx);
+    if (before.endsWith(":") || before.endsWith("/")) {
+      return { index: -1, length: 0 };
+    }
+    return { index: slashIdx, length: 1 };
+  }
+  return { index: -1, length: 0 };
+}
+var V2_SEPARATORS = [
+  { token: " / ", length: 3 },
+  { token: " | ", length: 3 },
+  { token: " => ", length: 4 },
+  { token: " \u2014 ", length: 3 },
+  // em-dash
+  { token: " \u2013 ", length: 3 },
+  // en-dash
+  { token: " - ", length: 3 },
+  { token: "	", length: 1 }
+];
+function findSeparatorIndexV2(line) {
+  for (const { token, length } of V2_SEPARATORS) {
+    const idx = line.indexOf(token);
+    if (idx > 0) return { index: idx, length };
+  }
+  return findSeparatorIndex(line);
+}
+function parsePastedFlashcards(input) {
+  const lines = normalizeInputLines(input);
+  const results = [];
+  const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
+  for (const rawLine of lines) {
+    if (!rawLine) continue;
+    const line = stripAIArtifacts(rawLine);
+    if (!line) continue;
+    const sep = detect(line);
+    if (sep.index > 0) {
+      const sideA = line.substring(0, sep.index).trim();
+      const rest = line.substring(sep.index + sep.length).trim();
+      const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
+      const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
+      results.push({
+        sideA,
+        sideB: sideB.trim() || void 0,
+        shortObservation: shortObservation || void 0,
+        detailedHint: detailedHint || void 0,
+        en: sideA,
+        pt: sideB.trim() || void 0
+      });
+    } else {
+      results.push({ sideA: line, en: line });
+    }
+  }
+  return results;
+}
+var GLOSSARY_MARKER = /^[=\-]{2,}\s*GLOSS[AÁaá]RIO\s+GLOBAL\s*[=\-]{2,}$/i;
+var CARDS_MARKER = /^[=\-]{2,}\s*CARDS\s*[=\-]{2,}$/i;
+function parseGlossaryAndCards(input) {
+  const lines = input.split(/\r?\n/);
+  let glossaryStart = -1;
+  let cardsStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed2 = lines[i].trim();
+    if (GLOSSARY_MARKER.test(trimmed2)) glossaryStart = i;
+    else if (CARDS_MARKER.test(trimmed2)) cardsStart = i;
+  }
+  if (glossaryStart === -1 && cardsStart === -1) {
+    return { glossaryLines: [], cards: parsePastedFlashcards(input) };
+  }
+  const glossaryLines = [];
+  if (glossaryStart !== -1) {
+    const end = cardsStart !== -1 ? cardsStart : lines.length;
+    const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
+    for (let i = glossaryStart + 1; i < end; i++) {
+      const raw = lines[i].trim();
+      if (!raw) continue;
+      const line = stripAIArtifacts(raw);
+      if (!line) continue;
+      const sep = detect(line);
+      if (sep.index <= 0) continue;
+      const original = line.substring(0, sep.index).trim();
+      const translated = line.substring(sep.index + sep.length).trim();
+      if (original && translated) {
+        glossaryLines.push({ original_text: original, translated_text: translated });
+      }
+    }
+  }
+  let cardsText = "";
+  if (cardsStart !== -1) {
+    cardsText = lines.slice(cardsStart + 1).join("\n");
+  }
+  return {
+    glossaryLines,
+    cards: cardsText.trim() ? parsePastedFlashcards(cardsText) : []
+  };
+}
+var LANG_NAMES = {
+  en: "Ingl\xEAs",
+  pt: "Portugu\xEAs",
+  fr: "Franc\xEAs",
+  es: "Espanhol",
+  de: "Alem\xE3o",
+  it: "Italiano",
+  ja: "Japon\xEAs",
+  ko: "Coreano",
+  zh: "Chin\xEAs",
+  ru: "Russo",
+  ar: "\xC1rabe",
+  nl: "Holand\xEAs"
+};
+function langName(code) {
+  if (!code) return "";
+  return LANG_NAMES[code.toLowerCase()] || code;
+}
+function buildAIHelperPrompt(langA, langB) {
+  return buildSimpleFlashcardPrompt({
+    listName: "Lista atual",
+    sideALabel: langName(langA) || "Lado A",
+    sideBLabel: langName(langB) || "Lado B"
+  });
+}
+var AI_HELPER_PROMPT = buildAIHelperPrompt();
+
+// src/features/cards/lib/layeredImport.ts
+init_define_import_meta_env();
+var INNER_SEPS = [" | ", " / ", "	"];
+function splitInner(line) {
+  for (const sep of INNER_SEPS) {
+    if (line.includes(sep)) {
+      return line.split(sep).map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [line.trim()];
+}
+function buildLayer(parts) {
+  const [translation, example, exampleTranslation] = parts;
+  if (!translation) return null;
+  return {
+    translation: translation.trim(),
+    example: example?.trim() || void 0,
+    exampleTranslation: exampleTranslation?.trim() || void 0
+  };
+}
+function extractCamadasBlock(input) {
+  const lines = input.split(/\r?\n/);
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*\[CAMADAS\]\s*$/i.test(lines[i])) {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) {
+    return {
+      cleanedInput: input,
+      groups: [],
+      sentenceWarnings: [],
+      singletonWarnings: [],
+      found: false
+    };
+  }
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (/^===.*===$/.test(t) || /^\[[^\]]+\]$/.test(t)) {
+      end = i;
+      break;
+    }
+  }
+  const blockLines = lines.slice(start + 1, end);
+  const hasHeaderLine = blockLines.some((l) => {
+    const t = l.trim();
+    if (!t) return false;
+    return splitInner(t).length < 2;
+  });
+  const before = lines.slice(0, start);
+  const after = lines.slice(end);
+  if (hasHeaderLine) {
+    const r = parseNewCamadasFormat(blockLines);
+    const cleanedInput2 = [...before, ...r.fallbackLines, ...after].join("\n");
+    return {
+      cleanedInput: cleanedInput2,
+      groups: r.groups,
+      sentenceWarnings: [],
+      singletonWarnings: r.singletonWarnings,
+      found: true
+    };
+  }
+  const map = /* @__PURE__ */ new Map();
+  const sentenceWarnings = [];
+  for (const raw of blockLines) {
+    const trimmed2 = raw.trim();
+    if (!trimmed2) continue;
+    const parts = splitInner(trimmed2);
+    if (parts.length < 2) continue;
+    const term = parts[0];
+    const layer = buildLayer(parts.slice(1));
+    if (!term || !layer) continue;
+    if (term.split(/\s+/).length >= 4) {
+      sentenceWarnings.push(trimmed2);
+    }
+    const key = term.toLowerCase();
+    const existing = map.get(key);
+    if (existing) {
+      existing.layers.push(layer);
+      existing.rawLines.push(trimmed2);
+    } else {
+      map.set(key, { term, layers: [layer], rawLines: [trimmed2] });
+    }
+  }
+  const groups = [];
+  const singletonWarnings = [];
+  const singletonLines = [];
+  for (const bucket of map.values()) {
+    if (bucket.layers.length >= 2) {
+      groups.push({ term: bucket.term, layers: bucket.layers });
+    } else {
+      singletonWarnings.push(bucket.term);
+      singletonLines.push(...bucket.rawLines);
+    }
+  }
+  const cleanedInput = [...before, ...singletonLines, ...after].join("\n");
+  return {
+    cleanedInput,
+    groups,
+    sentenceWarnings,
+    singletonWarnings,
+    found: true
+  };
+}
+function parseNewCamadasFormat(blockLines) {
+  const groups = [];
+  const fallbackLines = [];
+  const singletonWarnings = [];
+  let current = null;
+  const flush = () => {
+    if (!current) return;
+    if (current.layers.length >= 2) {
+      groups.push({ term: current.term, layers: current.layers });
+    } else {
+      singletonWarnings.push(current.term);
+      fallbackLines.push(...current.rawLines);
+    }
+    current = null;
+  };
+  for (const raw of blockLines) {
+    const trimmed2 = raw.trim();
+    if (!trimmed2) continue;
+    const parts = splitInner(trimmed2);
+    if (parts.length < 2) {
+      flush();
+      current = { term: trimmed2, layers: [], rawLines: [] };
+      continue;
+    }
+    const phrase = parts[0];
+    const translation = parts[1];
+    const example = parts[2];
+    if (!current) {
+      fallbackLines.push(trimmed2);
+      continue;
+    }
+    current.layers.push({
+      term: phrase,
+      translation,
+      example: example?.trim() || void 0
+    });
+    current.rawLines.push(trimmed2);
+  }
+  flush();
+  return { groups, fallbackLines, singletonWarnings };
+}
+
+// src/features/study/lib/glossaryTransfer.ts
+init_define_import_meta_env();
+var GLOSSARY_MARKER2 = /^[=\-]{2,}\s*GLOSS[AÁ]RIO(?:\s+GLOBAL)?(?:\s+V\d+)?\s*[=\-]{2,}$/i;
+var CARDS_MARKER2 = /^[=\-]{2,}\s*CARDS\s*[=\-]{2,}$/i;
+var TEXT_SEPARATORS = [" / ", "	", " => ", " | "];
+var normalizeGlossaryValue = (value) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+function glossaryEntryIdentity(entry) {
+  return [
+    entry.side,
+    normalizeGlossaryValue(entry.original_text),
+    normalizeGlossaryValue(entry.translated_text)
+  ].join("|");
+}
+function normalizeEntry(raw, defaultSide = "A") {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw;
+  const original = String(value.original_text ?? value.original ?? value.term ?? "").trim();
+  const translated = String(value.translated_text ?? value.translation ?? value.definition ?? "").trim();
+  if (!original || !translated) return null;
+  const rawSide = String(value.side ?? defaultSide).toUpperCase();
+  const side = rawSide === "B" ? "B" : "A";
+  const noteValue = value.note;
+  const note = typeof noteValue === "string" && noteValue.trim() ? noteValue.trim() : null;
+  const activeValue = value.is_active ?? value.active;
+  const isActive = activeValue === false || String(activeValue).toLowerCase() === "false" ? false : true;
+  return {
+    original_text: original,
+    translated_text: translated,
+    note,
+    side,
+    is_active: isActive
+  };
+}
+function parseJson(input, defaultSide) {
+  const trimmed2 = input.trim();
+  if (!trimmed2.startsWith("{") && !trimmed2.startsWith("[")) return null;
+  try {
+    const parsed = JSON.parse(trimmed2);
+    const rows = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" && Array.isArray(parsed.entries) ? parsed.entries : null;
+    if (!rows) return { entries: [], errors: ["JSON sem uma lista v\xE1lida de entradas."], format: "json" };
+    const entries = [];
+    const errors = [];
+    rows.forEach((row, index) => {
+      const entry = normalizeEntry(row, defaultSide);
+      if (entry) entries.push(entry);
+      else errors.push(`Entrada JSON ${index + 1} inv\xE1lida.`);
+    });
+    return { entries: deduplicateParsed(entries), errors, format: "json" };
+  } catch {
+    return { entries: [], errors: ["JSON inv\xE1lido."], format: "json" };
+  }
+}
+function splitNote(line) {
+  const marker = " || ";
+  const noteIndex = line.lastIndexOf(marker);
+  if (noteIndex < 0) return { body: line, note: null };
+  const note = line.slice(noteIndex + marker.length).trim();
+  return { body: line.slice(0, noteIndex).trim(), note: note || null };
+}
+function stripMetadataPrefix(line, defaultSide) {
+  let remaining = line.trim();
+  let side = defaultSide;
+  let isActive = true;
+  let consumed = true;
+  while (consumed) {
+    consumed = false;
+    const prefix = remaining.match(/^\[([^\]]+)\]\s*/u);
+    if (!prefix) break;
+    const token = prefix[1].trim().toUpperCase();
+    if (token === "A" || token === "B") {
+      side = token;
+      remaining = remaining.slice(prefix[0].length);
+      consumed = true;
+    } else if (["OFF", "INATIVO", "INACTIVE"].includes(token)) {
+      isActive = false;
+      remaining = remaining.slice(prefix[0].length);
+      consumed = true;
+    } else if (["ON", "ATIVO", "ACTIVE"].includes(token)) {
+      isActive = true;
+      remaining = remaining.slice(prefix[0].length);
+      consumed = true;
+    }
+  }
+  return { remaining, side, isActive };
+}
+function findSeparator(line) {
+  for (const separator of TEXT_SEPARATORS) {
+    const index = line.indexOf(separator);
+    if (index > 0) return { index, separator };
+  }
+  return null;
+}
+function deduplicateParsed(entries) {
+  const byIdentity = /* @__PURE__ */ new Map();
+  for (const entry of entries) byIdentity.set(glossaryEntryIdentity(entry), entry);
+  return Array.from(byIdentity.values());
+}
+function parseText(input, defaultSide) {
+  const lines = input.split(/\r?\n/u);
+  const glossaryIndex = lines.findIndex((line) => GLOSSARY_MARKER2.test(line.trim()));
+  const cardsIndex = lines.findIndex((line) => CARDS_MARKER2.test(line.trim()));
+  const start = glossaryIndex >= 0 ? glossaryIndex + 1 : 0;
+  const end = cardsIndex >= 0 && cardsIndex > start ? cardsIndex : lines.length;
+  const entries = [];
+  const errors = [];
+  for (let index = start; index < end; index += 1) {
+    const raw = lines[index].trim();
+    if (!raw || raw.startsWith("#") || GLOSSARY_MARKER2.test(raw)) continue;
+    const metadata = stripMetadataPrefix(raw, defaultSide);
+    const withNote = splitNote(metadata.remaining);
+    const separator = findSeparator(withNote.body);
+    if (!separator) {
+      errors.push(`Linha ${index + 1}: separador n\xE3o encontrado.`);
+      continue;
+    }
+    const original = withNote.body.slice(0, separator.index).trim();
+    const translated = withNote.body.slice(separator.index + separator.separator.length).trim();
+    if (!original || !translated) {
+      errors.push(`Linha ${index + 1}: termo ou tradu\xE7\xE3o vazios.`);
+      continue;
+    }
+    entries.push({
+      original_text: original,
+      translated_text: translated,
+      note: withNote.note,
+      side: metadata.side,
+      is_active: metadata.isActive
+    });
+  }
+  return { entries: deduplicateParsed(entries), errors, format: "text" };
+}
+function parseGlossaryTransfer(input, defaultSide = "A") {
+  if (!input.trim()) return { entries: [], errors: [], format: "empty" };
+  return parseJson(input, defaultSide) ?? parseText(input, defaultSide);
+}
+
+// src/features/smart-import/sourceParser.ts
+var normalizeHeader = (value) => value.trim().replace(/^\uFEFF/, "").toLocaleLowerCase();
+var normalizeKey = (value) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+function contextList(context, cards, glossary) {
+  return withSmartDeclaredTotals({
+    schema: SMART_IMPORT_SCHEMA,
+    version: SMART_IMPORT_VERSION,
+    package: {
+      name: context.packageName?.trim() || "Importa\xE7\xE3o inteligente",
+      source_language: context.frontLanguage || "en",
+      target_language: context.backLanguage || "pt-BR",
+      folders: [{
+        name: context.folderName?.trim() || "Destino atual",
+        lists: [{
+          name: context.listName?.trim() || "Lista atual",
+          front_language: context.frontLanguage || "en",
+          back_language: context.backLanguage || "pt-BR",
+          primary_side: context.primarySide || "a",
+          study_type: context.studyType || "language",
+          label_a: context.labelA || null,
+          label_b: context.labelB || null,
+          tts_enabled: context.ttsEnabled ?? true,
+          glossary,
+          cards
+        }]
+      }]
+    }
+  });
+}
+function parseCsvRows(input, delimiter) {
+  const source = input.replace(/^\uFEFF/, "");
+  const firstPhysicalLine = source.split(/\r?\n/, 1)[0] ?? "";
+  const chosenDelimiter = delimiter ?? (firstPhysicalLine.split("	").length > firstPhysicalLine.split(",").length ? "	" : firstPhysicalLine.split(";").length > firstPhysicalLine.split(",").length ? ";" : ",");
+  const rows = [];
+  let values = [];
+  let field = "";
+  let quoted = false;
+  let line = 1;
+  let rowStart = 1;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quoted) {
+      if (char === '"') {
+        if (source[index + 1] === '"') {
+          field += '"';
+          index += 1;
+        } else {
+          quoted = false;
+        }
+      } else {
+        field += char;
+        if (char === "\n") line += 1;
+      }
+      continue;
+    }
+    if (char === '"' && field.length === 0) {
+      quoted = true;
+    } else if (char === chosenDelimiter) {
+      values.push(field.trim());
+      field = "";
+    } else if (char === "\n" || char === "\r") {
+      if (char === "\r" && source[index + 1] === "\n") index += 1;
+      values.push(field.trim());
+      field = "";
+      if (values.some((value) => value.length > 0)) rows.push({ line: rowStart, values });
+      values = [];
+      line += 1;
+      rowStart = line;
+    } else {
+      field += char;
+    }
+  }
+  if (quoted) throw new Error(`CSV inv\xE1lido: aspas n\xE3o fechadas a partir da linha ${rowStart}.`);
+  values.push(field.trim());
+  if (values.some((value) => value.length > 0)) rows.push({ line: rowStart, values });
+  return rows;
+}
+function booleanCell(value, fallback = true) {
+  const normalized2 = value?.trim().toLocaleLowerCase() ?? "";
+  if (!normalized2) return fallback;
+  return !["0", "false", "off", "n\xE3o", "nao", "inactive", "inativo"].includes(normalized2);
+}
+function csvObject(headers, row) {
+  return Object.fromEntries(headers.map((header, index) => [header, row.values[index] ?? ""]));
+}
+function makeList(name, row, context) {
+  return {
+    name: name || context.listName || "Principal",
+    description: row.list_description || null,
+    front_language: row.front_language || context.frontLanguage || "en",
+    back_language: row.back_language || context.backLanguage || "pt-BR",
+    primary_side: row.primary_side === "b" ? "b" : context.primarySide || "a",
+    study_type: ["language", "general", "math", "visual"].includes(row.study_type) ? row.study_type : context.studyType || "language",
+    label_a: row.label_a || context.labelA || null,
+    label_b: row.label_b || context.labelB || null,
+    tts_enabled: booleanCell(row.tts_enabled, context.ttsEnabled ?? true),
+    glossary: [],
+    cards: []
+  };
+}
+function cardFromRow(row) {
+  return {
+    type: "normal",
+    key: row.record_key || row.card_key || null,
+    front: row.front,
+    back: row.back,
+    hint: row.hint || null,
+    short_observation: row.short_observation || null,
+    detailed_explanation: row.detailed_explanation || null,
+    usage_notes: row.usage_notes || null,
+    common_mistakes: row.common_mistakes || null,
+    example: row.example || null,
+    example_translation: row.example_translation || null,
+    context_tag: row.context_tag || null,
+    tags: row.tags ? row.tags.split(/[|;]/).map((tag) => tag.trim()).filter(Boolean) : void 0,
+    word_hints: []
+  };
+}
+function parseAdvancedCsv(input, context) {
+  const rows = parseCsvRows(input);
+  if (rows.length < 2) throw new Error("O CSV precisa conter cabe\xE7alho e pelo menos uma linha.");
+  const headers = rows[0].values.map(normalizeHeader);
+  const required = ["record_type", "folder_name", "list_name"];
+  const missing = required.filter((header) => !headers.includes(header));
+  if (missing.length > 0) throw new Error(`CSV inteligente sem coluna(s): ${missing.join(", ")}.`);
+  const folderMap = /* @__PURE__ */ new Map();
+  const listMap = /* @__PURE__ */ new Map();
+  const cardMap = /* @__PURE__ */ new Map();
+  const groupMap = /* @__PURE__ */ new Map();
+  const pendingHints = [];
+  const warnings = [];
+  const getList2 = (record) => {
+    const folderName = record.folder_name || context.folderName || "Importado";
+    const listName = record.list_name || context.listName || "Principal";
+    const folderKey = normalizeKey(folderName);
+    const listKey = `${folderKey}\0${normalizeKey(listName)}`;
+    let folder = folderMap.get(folderKey);
+    if (!folder) {
+      folder = { name: folderName, description: record.folder_description || null, lists: [] };
+      folderMap.set(folderKey, folder);
+    }
+    let list = listMap.get(listKey);
+    if (!list) {
+      list = makeList(listName, record, context);
+      listMap.set(listKey, list);
+      folder.lists.push(list);
+    }
+    return { list, listKey };
+  };
+  for (const row of rows.slice(1)) {
+    const record = csvObject(headers, row);
+    const recordType = normalizeKey(record.record_type ?? "");
+    const { list, listKey } = getList2(record);
+    const recordKey = record.record_key || record.card_key;
+    if (recordType === "card" || recordType === "normal") {
+      if (!record.front || !record.back) {
+        warnings.push(`Linha ${row.line}: card ignorado porque front ou back est\xE1 vazio.`);
+        continue;
+      }
+      const card = cardFromRow(record);
+      list.cards.push(card);
+      if (recordKey) cardMap.set(`${listKey}\0${recordKey}`, card);
+      continue;
+    }
+    if (recordType === "glossary" || recordType === "gloss\xE1rio" || recordType === "glossario") {
+      const term = record.term || record.front;
+      const translation = record.translation || record.back;
+      if (!term || !translation) {
+        warnings.push(`Linha ${row.line}: gloss\xE1rio ignorado porque term/front ou translation/back est\xE1 vazio.`);
+        continue;
+      }
+      list.glossary.push({
+        term,
+        translation,
+        side: record.side?.toUpperCase() === "B" ? "B" : "A",
+        note: record.note || null,
+        active: booleanCell(record.active, true)
+      });
+      continue;
+    }
+    if (recordType === "layer_group" || recordType === "group" || recordType === "grupo") {
+      const key = recordKey || record.group_key;
+      const title = record.group_title || record.front;
+      if (!key || !title) {
+        warnings.push(`Linha ${row.line}: grupo ignorado porque record_key e group_title s\xE3o obrigat\xF3rios.`);
+        continue;
+      }
+      const group = { type: "layered", key, group_title: title, layers: [] };
+      groupMap.set(`${listKey}\0${key}`, group);
+      list.cards.push(group);
+      continue;
+    }
+    if (recordType === "layer" || recordType === "camada") {
+      const parent = record.parent_key || record.group_key;
+      const group = groupMap.get(`${listKey}\0${parent}`);
+      if (!group) {
+        warnings.push(`Linha ${row.line}: camada sem grupo pai \u201C${parent}\u201D.`);
+        continue;
+      }
+      if (!record.front || !record.back) {
+        warnings.push(`Linha ${row.line}: camada ignorada porque front ou back est\xE1 vazio.`);
+        continue;
+      }
+      const layer = { ...cardFromRow(record) };
+      delete layer.type;
+      group.layers.push(layer);
+      if (recordKey) cardMap.set(`${listKey}\0${recordKey}`, layer);
+      continue;
+    }
+    if (recordType === "word_hint" || recordType === "context_glossary" || recordType === "palavra") {
+      const parent = record.parent_key || record.card_key;
+      const text = record.term || record.front;
+      const translation = record.translation || record.back;
+      if (!parent || !text || !translation) {
+        warnings.push(`Linha ${row.line}: gloss\xE1rio contextual exige parent_key, term/front e translation/back.`);
+        continue;
+      }
+      pendingHints.push({
+        parent: `${listKey}\0${parent}`,
+        line: row.line,
+        hint: {
+          side: record.side?.toUpperCase() === "B" ? "B" : "A",
+          text,
+          translation,
+          note: record.note || null,
+          occurrence: record.occurrence && record.occurrence !== "all" ? Number(record.occurrence) : "all",
+          start_index: record.start_index ? Number(record.start_index) : void 0,
+          end_index: record.end_index ? Number(record.end_index) : void 0
+        }
+      });
+      continue;
+    }
+    warnings.push(`Linha ${row.line}: record_type \u201C${record.record_type}\u201D n\xE3o reconhecido.`);
+  }
+  pendingHints.forEach(({ parent, hint, line }) => {
+    const card = cardMap.get(parent);
+    if (!card) {
+      warnings.push(`Linha ${line}: parent_key n\xE3o encontrou um card ou camada.`);
+      return;
+    }
+    card.word_hints = [...card.word_hints ?? [], hint];
+  });
+  for (const group of groupMap.values()) {
+    if (group.layers.length < 2) warnings.push(`Grupo \u201C${group.group_title}\u201D possui menos de duas camadas.`);
+  }
+  const packageValue = withSmartDeclaredTotals({
+    schema: SMART_IMPORT_SCHEMA,
+    version: SMART_IMPORT_VERSION,
+    package: {
+      name: context.packageName || "Pacote CSV inteligente",
+      source_language: context.frontLanguage || void 0,
+      target_language: context.backLanguage || void 0,
+      folders: Array.from(folderMap.values())
+    }
+  });
+  return { packageValue: smartImportPackageSchema.parse(packageValue), format: "csv-v2", notes: [`CSV inteligente reconhecido com ${rows.length - 1} registro(s).`], warnings };
+}
+function parseSimpleCsv(input, context) {
+  const rows = parseCsvRows(input);
+  if (rows.length === 0) throw new Error("O CSV est\xE1 vazio.");
+  const headers = rows[0].values.map(normalizeHeader);
+  const hasGlobalHeader = headers.includes("folder_name") && headers.includes("list_name") && headers.includes("front") && headers.includes("back");
+  const hasSimpleHeader = headers.some((header) => ["front", "lado a", "english", "ingl\xEAs", "ingles"].includes(header));
+  const contentRows = hasGlobalHeader || hasSimpleHeader ? rows.slice(1) : rows;
+  const incompleteRows = contentRows.flatMap((row, index) => {
+    const record = hasGlobalHeader ? csvObject(headers, row) : null;
+    const valid = record ? record.front?.trim() && record.back?.trim() : row.values[0]?.trim() && row.values[1]?.trim();
+    return valid ? [] : [index + (hasGlobalHeader || hasSimpleHeader ? 2 : 1)];
+  });
+  if (incompleteRows.length) {
+    throw new Error(`CSV com linhas incompletas: ${incompleteRows.join(", ")}. Preencha os dois lados antes de importar; nenhuma linha foi descartada.`);
+  }
+  if (hasGlobalHeader) {
+    const folders = /* @__PURE__ */ new Map();
+    const lists = /* @__PURE__ */ new Map();
+    contentRows.forEach((row) => {
+      const record = csvObject(headers, row);
+      if (!record.front || !record.back) return;
+      const folderName = record.folder_name || context.folderName || "Importado";
+      const listName = record.list_name || context.listName || "Principal";
+      const folderKey = normalizeKey(folderName);
+      const listKey = `${folderKey}\0${normalizeKey(listName)}`;
+      let folder = folders.get(folderKey);
+      if (!folder) {
+        folder = { name: folderName, lists: [] };
+        folders.set(folderKey, folder);
+      }
+      let list = lists.get(listKey);
+      if (!list) {
+        list = makeList(listName, record, context);
+        lists.set(listKey, list);
+        folder.lists.push(list);
+      }
+      list.cards.push(cardFromRow(record));
+    });
+    const packageValue2 = withSmartDeclaredTotals({
+      schema: SMART_IMPORT_SCHEMA,
+      version: SMART_IMPORT_VERSION,
+      package: { name: context.packageName || "Pacote CSV", folders: Array.from(folders.values()) }
+    });
+    return { packageValue: smartImportPackageSchema.parse(packageValue2), format: "csv-simple", notes: ["CSV global de quatro colunas reconhecido."], warnings: [] };
+  }
+  const cards = contentRows.filter((row) => row.values[0]?.trim() && row.values[1]?.trim()).map((row, index) => ({ type: "normal", key: `csv-${index + 1}`, front: row.values[0].trim(), back: row.values[1].trim(), word_hints: [] }));
+  const packageValue = contextList(context, cards, []);
+  return { packageValue: smartImportPackageSchema.parse(packageValue), format: "csv-simple", notes: [`CSV simples reconhecido com ${cards.length} card(s).`], warnings: [] };
+}
+function removeGlossarySection(input) {
+  const lines = input.split(/\r?\n/);
+  const glossaryStart = lines.findIndex((line) => /^[=\-]{2,}\s*GLOSS[AÁ]RIO(?:\s+GLOBAL)?\s*[=\-]{2,}$/i.test(line.trim()));
+  if (glossaryStart < 0) return input;
+  const nextSection = lines.findIndex((line, index) => index > glossaryStart && /^([=\-]{2,}.*[=\-]{2,}|\[[^\]]+\])$/i.test(line.trim()));
+  return [...lines.slice(0, glossaryStart), ...nextSection >= 0 ? lines.slice(nextSection) : []].join("\n");
+}
+function parseText2(input, context) {
+  const glossaryResult = parseGlossaryTransfer(input, "A");
+  const camadas = extractCamadasBlock(removeGlossarySection(input));
+  const flatSource = camadas.cleanedInput;
+  const { cards } = parseGlossaryAndCards(flatSource);
+  const normalCards = cards.filter((pair) => (pair.sideA || pair.en) && (pair.sideB || pair.pt)).map((pair, index) => ({
+    type: "normal",
+    key: `text-${index + 1}`,
+    front: pair.sideA || pair.en || "",
+    back: pair.sideB || pair.pt || "",
+    short_observation: pair.shortObservation || null,
+    hint: pair.detailedHint || null,
+    word_hints: []
+  }));
+  const layeredCards = camadas.groups.map((group, groupIndex) => ({
+    type: "layered",
+    key: `group-${groupIndex + 1}`,
+    group_title: group.term,
+    layers: group.layers.map((layer, layerIndex) => ({
+      key: `group-${groupIndex + 1}-layer-${layerIndex + 1}`,
+      front: layer.term || group.term,
+      back: layer.translation,
+      example: layer.example || null,
+      example_translation: layer.exampleTranslation || null,
+      context_tag: layer.contextTag || group.term,
+      hint: layer.shortExplanation || null,
+      word_hints: []
+    }))
+  }));
+  const glossary = glossaryResult.entries.map((entry) => ({
+    term: entry.original_text,
+    translation: entry.translated_text,
+    side: entry.side,
+    note: entry.note ?? null,
+    active: entry.is_active
+  }));
+  const packageValue = contextList(context, [...normalCards, ...layeredCards], glossary);
+  const warnings = [
+    ...glossaryResult.errors,
+    ...camadas.sentenceWarnings.map((value) => `Poss\xEDvel t\xEDtulo de grupo muito longo: ${value}`),
+    ...camadas.singletonWarnings.map((value) => `Grupo \u201C${value}\u201D foi tratado como card normal porque possui menos de duas frases.`)
+  ];
+  return {
+    packageValue: smartImportPackageSchema.parse(packageValue),
+    format: "text",
+    notes: [`Texto reconhecido: ${normalCards.length} card(s), ${layeredCards.length} grupo(s) e ${glossary.length} entrada(s) de gloss\xE1rio.`],
+    warnings
+  };
+}
+function looksLikeAdvancedSmartCsv(input) {
+  const firstLine = input.trim().replace(/^```(?:csv)?\s*/i, "").split(/\r?\n/, 1)[0]?.toLocaleLowerCase() ?? "";
+  return firstLine.includes("record_type") && firstLine.includes("folder_name") && firstLine.includes("list_name");
+}
+function looksLikeAnyCsv(input) {
+  const trimmed2 = input.trim();
+  if (!trimmed2 || trimmed2.startsWith("{") || trimmed2.startsWith("[")) return false;
+  const firstLine = trimmed2.split(/\r?\n/, 1)[0] ?? "";
+  return /[,;\t]/.test(firstLine) && !/^===/.test(firstLine);
+}
+function parseSmartImportSource(input, context = {}) {
+  const trimmed2 = input.replace(/^\uFEFF/, "").trim().replace(/^```(?:json|csv|txt)?\s*/i, "").replace(/\s*```$/i, "");
+  if (!trimmed2) throw new Error("O conte\xFAdo est\xE1 vazio.");
+  if (trimmed2.startsWith("{")) {
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmed2);
+    } catch {
+      throw new Error("O JSON est\xE1 inv\xE1lido ou incompleto.");
+    }
+    const result = smartImportPackageSchema.safeParse(parsed);
+    if (!result.success) {
+      const first = result.error.issues[0];
+      throw new Error(`${first.path.join(".") || "$"}: ${first.message}`);
+    }
+    return { packageValue: result.data, format: "json-v2", notes: ["Contrato app-piteco-super-import 2.0 reconhecido."], warnings: [] };
+  }
+  if (looksLikeAdvancedSmartCsv(trimmed2)) return parseAdvancedCsv(trimmed2, context);
+  if (looksLikeAnyCsv(trimmed2)) return parseSimpleCsv(trimmed2, context);
+  return parseText2(trimmed2, context);
+}
+
+// src/features/smart-import/parseAnySource.ts
+function normalizedJsonText(value) {
+  const normalized2 = value.replace(/^\uFEFF/, "").trim().replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+  if (!normalized2.startsWith("{") && !normalized2.startsWith("[")) {
+    return { text: value, notes: [] };
+  }
+  const parsed = JSON.parse(normalized2);
+  const repaired = normalizeSmartImportJsonValue(parsed);
+  return {
+    text: repaired.changed ? JSON.stringify(repaired.value) : normalized2,
+    notes: repaired.notes
+  };
+}
+function parseJson2(value) {
+  const normalized2 = value.replace(/^\uFEFF/, "").trim().replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+  if (!normalized2.startsWith("{") && !normalized2.startsWith("[")) return null;
+  return JSON.parse(normalized2);
+}
+function parseAnySmartImportSource(input, context = {}) {
+  let repairNotes = [];
+  let effectiveInput = input;
+  try {
+    const repaired = normalizedJsonText(input);
+    effectiveInput = repaired.text;
+    repairNotes = repaired.notes;
+  } catch {
+  }
+  try {
+    const parsed = parseSmartImportSource(effectiveInput, context);
+    return repairNotes.length ? { ...parsed, notes: [...repairNotes, ...parsed.notes] } : parsed;
+  } catch (primaryError) {
+    let parsed;
+    try {
+      parsed = parseJson2(effectiveInput);
+    } catch {
+      throw primaryError;
+    }
+    if (!parsed) throw primaryError;
+    const normalized2 = normalizeGlobalImportValue(parsed);
+    if (!normalized2.success) throw primaryError;
+    return {
+      packageValue: legacyPackageToSmartImport(normalized2.data.packageValue),
+      format: "json-v2",
+      notes: [
+        ...repairNotes,
+        normalized2.data.sourceFormat === "official" ? "Contrato app-piteco-super-import 1.0 normalizado para o motor 2.0." : `Formato ${normalized2.data.sourceFormat} normalizado para o motor 2.0.`
+      ],
+      warnings: normalized2.data.warnings
+    };
+  }
+}
+
+// src/features/global-import/destination.ts
+init_define_import_meta_env();
+
+// src/features/study/lib/resolveStudySides.ts
+init_define_import_meta_env();
+
+// src/features/study/lib/languages.ts
+init_define_import_meta_env();
+var SUPPORTED_LANGUAGES = [
+  { code: "en", bcp47: "en-US", label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
+  { code: "pt", bcp47: "pt-BR", label: "Portugu\xEAs", flag: "\u{1F1E7}\u{1F1F7}" },
+  { code: "es", bcp47: "es-ES", label: "Espa\xF1ol", flag: "\u{1F1EA}\u{1F1F8}" },
+  { code: "fr", bcp47: "fr-FR", label: "Fran\xE7ais", flag: "\u{1F1EB}\u{1F1F7}" },
+  { code: "de", bcp47: "de-DE", label: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
+  { code: "it", bcp47: "it-IT", label: "Italiano", flag: "\u{1F1EE}\u{1F1F9}" },
+  { code: "ja", bcp47: "ja-JP", label: "\u65E5\u672C\u8A9E", flag: "\u{1F1EF}\u{1F1F5}" },
+  { code: "zh", bcp47: "zh-CN", label: "\u4E2D\u6587", flag: "\u{1F1E8}\u{1F1F3}" },
+  { code: "ko", bcp47: "ko-KR", label: "\uD55C\uAD6D\uC5B4", flag: "\u{1F1F0}\u{1F1F7}" },
+  { code: "ru", bcp47: "ru-RU", label: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439", flag: "\u{1F1F7}\u{1F1FA}" },
+  { code: "ar", bcp47: "ar-SA", label: "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", flag: "\u{1F1F8}\u{1F1E6}" },
+  { code: "hi", bcp47: "hi-IN", label: "\u0939\u093F\u0928\u094D\u0926\u0940", flag: "\u{1F1EE}\u{1F1F3}" }
+];
+var BY_SHORT = Object.fromEntries(
+  SUPPORTED_LANGUAGES.map((l) => [l.code, l])
+);
+var BY_BCP47 = Object.fromEntries(
+  SUPPORTED_LANGUAGES.map((l) => [l.bcp47.toLowerCase(), l])
+);
+var BCP47_RE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,4})?$/i;
+function normalizeLangCode(code) {
+  if (!code) return "en";
+  const raw = String(code).trim();
+  if (!raw) return "en";
+  if (BY_SHORT[raw.toLowerCase()]) return raw.toLowerCase();
+  if (BCP47_RE.test(raw)) {
+    const [lang, region] = raw.split("-");
+    return region ? `${lang.toLowerCase()}-${region.toUpperCase()}` : lang.toLowerCase();
+  }
+  return raw.toLowerCase();
+}
+function getLangLabel(code) {
+  if (!code) return "";
+  const norm = normalizeLangCode(code);
+  if (BY_SHORT[norm]) return BY_SHORT[norm].label;
+  const lower = norm.toLowerCase();
+  if (BY_BCP47[lower]) return BY_BCP47[lower].label;
+  const base = lower.split("-")[0];
+  if (BY_SHORT[base]) return BY_SHORT[base].label;
+  return norm.toUpperCase();
+}
+
+// src/features/study/lib/resolveStudySides.ts
+function resolveEffectiveListSettings(list, folder) {
+  const BARE_DEFAULTS = { lang_a: "en", lang_b: "pt" };
+  const listLangA = list?.lang_a || null;
+  const listLangB = list?.lang_b || null;
+  const folderLangA = folder?.lang_a || null;
+  const folderLangB = folder?.lang_b || null;
+  const isSystemCollection = list?.system_kind === "reinforcement" || list?.system_kind === "attention_points";
+  const listHasExplicitOverride = isSystemCollection || listLangA !== null && listLangB !== null && !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB);
+  const folderHasConfig = !!(folderLangA && folderLangB);
+  const listMatchesBareDefaults = (listLangA === BARE_DEFAULTS.lang_a || !listLangA) && (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
+  const useFolderFallback = !isSystemCollection && (!listHasExplicitOverride || listMatchesBareDefaults && folderHasConfig);
+  const src = useFolderFallback && folder ? {
+    study_type: list?.study_type || folder.study_type,
+    lang_a: folderLangA,
+    lang_b: folderLangB,
+    labels_a: folder.labels_a,
+    labels_b: folder.labels_b,
+    tts_enabled: list?.tts_enabled ?? folder.tts_enabled
+  } : list || {};
+  const studyType = src.study_type || "language";
+  const langA = src.lang_a || "en";
+  const langB = src.lang_b || "pt";
+  const defaultLabelA = studyType === "general" ? "Frente" : getLangLabel(langA);
+  const defaultLabelB = studyType === "general" ? "Verso" : getLangLabel(langB);
+  return {
+    studyType,
+    langA,
+    langB,
+    labelsA: src.labels_a || defaultLabelA,
+    labelsB: src.labels_b || defaultLabelB,
+    ttsEnabled: src.tts_enabled ?? studyType === "language",
+    isListOverride: isSystemCollection || listHasExplicitOverride && !useFolderFallback
+  };
+}
+
+// src/features/global-import/destination.ts
+function normalize2(value) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+function normalizeLanguage(value) {
+  const normalized2 = value.trim().toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, "-");
+  const aliases = {
+    english: "en",
+    ingles: "en",
+    portuguese: "pt",
+    portugues: "pt",
+    spanish: "es",
+    espanhol: "es",
+    french: "fr",
+    frances: "fr",
+    german: "de",
+    alemao: "de",
+    italian: "it",
+    italiano: "it"
+  };
+  return aliases[normalized2] ?? normalized2.split("-")[0];
+}
+function listDirection(list, packageValue) {
+  const metadata = list.cards[0]?.metadata;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const front2 = metadata.front_language;
+    const back2 = metadata.back_language;
+    if (typeof front2 === "string" && typeof back2 === "string") return { front: front2, back: back2 };
+  }
+  const front = packageValue.package.source_language;
+  const back = packageValue.package.target_language;
+  return front && back ? { front, back } : null;
+}
+function buildDefaultDestinationPlan(packageValue, catalog) {
+  const folderByName = new Map(catalog.folders.map((folder) => [normalize2(folder.title), folder]));
+  const listsByFolder = /* @__PURE__ */ new Map();
+  for (const list of catalog.lists) {
+    const current = listsByFolder.get(list.folder_id) ?? [];
+    current.push(list);
+    listsByFolder.set(list.folder_id, current);
+  }
+  const folders = {};
+  packageValue.package.folders.forEach((incomingFolder, folderIndex) => {
+    const exactFolder = folderByName.get(normalize2(incomingFolder.name));
+    const folderTarget = exactFolder ? { mode: "existing", folderId: exactFolder.id } : { mode: "create", name: incomingFolder.name };
+    const lists = {};
+    incomingFolder.lists.forEach((incomingList, listIndex) => {
+      if (!exactFolder) {
+        lists[listIndex] = { mode: "create", name: incomingList.name };
+        return;
+      }
+      const exactList = (listsByFolder.get(exactFolder.id) ?? []).find((list) => normalize2(list.title) === normalize2(incomingList.name));
+      lists[listIndex] = exactList ? { mode: "existing", listId: exactList.id } : { mode: "create", name: incomingList.name };
+    });
+    folders[folderIndex] = { folder: folderTarget, lists };
+  });
+  return { folders };
+}
+function validateDestinationPlan(packageValue, catalog, plan) {
+  const errors = [];
+  const folderIds = new Set(catalog.folders.map((folder) => folder.id));
+  const folderById = new Map(catalog.folders.map((folder) => [folder.id, folder]));
+  const listById = new Map(catalog.lists.map((list) => [list.id, list]));
+  const targetedExistingLists = /* @__PURE__ */ new Map();
+  let importableLists = 0;
+  packageValue.package.folders.forEach((folder, folderIndex) => {
+    const folderPlan = plan.folders[folderIndex];
+    if (!folderPlan) {
+      errors.push(`package.folders[${folderIndex}]: destino da pasta n\xE3o definido.`);
+      return;
+    }
+    if (folderPlan.folder.mode === "existing" && !folderIds.has(folderPlan.folder.folderId)) {
+      errors.push(`package.folders[${folderIndex}]: pasta existente inv\xE1lida.`);
+    }
+    if (folderPlan.folder.mode === "create" && !folderPlan.folder.name.trim()) {
+      errors.push(`package.folders[${folderIndex}]: nome da nova pasta vazio.`);
+    }
+    folder.lists.forEach((incomingList, listIndex) => {
+      const listPlan = folderPlan.lists[listIndex];
+      if (!listPlan) {
+        errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: destino da lista n\xE3o definido.`);
+        return;
+      }
+      if (listPlan.mode === "skip") return;
+      importableLists += 1;
+      if (listPlan.mode === "create" && !listPlan.name.trim()) {
+        errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: nome da nova lista vazio.`);
+      }
+      if (listPlan.mode === "existing") {
+        if (listPlan.strategy !== void 0 && listPlan.strategy !== "append" && listPlan.strategy !== "replace") {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a\xE7\xE3o da lista existente inv\xE1lida.`);
+        }
+        const list = listById.get(listPlan.listId);
+        if (!list) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: lista existente inv\xE1lida.`);
+        } else if (folderPlan.folder.mode === "create") {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: n\xE3o \xE9 poss\xEDvel usar lista existente dentro de uma pasta que ainda ser\xE1 criada.`);
+        } else if (list.folder_id !== folderPlan.folder.folderId) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a lista n\xE3o pertence \xE0 pasta selecionada.`);
+        }
+        const previousConsolidated = targetedExistingLists.get(listPlan.listId);
+        if (previousConsolidated !== void 0 && !(previousConsolidated && listPlan.consolidate)) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente n\xE3o pode receber duas listas importadas sem o modo de consolida\xE7\xE3o.`);
+        }
+        targetedExistingLists.set(listPlan.listId, Boolean(listPlan.consolidate));
+        if (list && listPlan.consolidate) {
+          const direction = listDirection(incomingList, packageValue);
+          if (direction) {
+            const targetFolder = folderById.get(list.folder_id);
+            const effective = resolveEffectiveListSettings(list, targetFolder);
+            const incompatible = normalizeLanguage(direction.front) !== normalizeLanguage(effective.langA) || normalizeLanguage(direction.back) !== normalizeLanguage(effective.langB);
+            if (incompatible) {
+              errors.push("Os lados do pacote n\xE3o correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+            }
+          }
+        }
+      }
+    });
+  });
+  if (importableLists === 0) errors.push("Escolha pelo menos uma lista para importar.");
+  return Array.from(new Set(errors));
+}
+
+// src/lib/mcp/domain/importers.ts
+var importSelectorSchema = z26.object({
+  id: z26.string().uuid().optional(),
+  // Reuses the canonical helper so the accepted spelling and the resolved
+  // spelling can never drift apart (the pattern is case-insensitive).
+  reference_id: z26.string().trim().refine((value) => referenceIdKind(value) !== null, "Refer\xEAncia humana inv\xE1lida.").optional(),
+  name: z26.string().trim().min(1).max(160).optional()
+}).strict().refine(
+  (value) => [value.id, value.reference_id, value.name].filter((item) => item !== void 0).length === 1,
+  "Informe exatamente um id, reference_id ou name."
+);
+var folderDestinationSchema = z26.union([
+  z26.object({ mode: z26.literal("create"), name: z26.string().trim().min(1).max(160) }).strict(),
+  z26.object({ mode: z26.literal("existing"), folderId: z26.string().uuid() }).strict()
+]);
+var listDestinationSchema = z26.union([
+  z26.object({ mode: z26.literal("create"), name: z26.string().trim().min(1).max(160) }).strict(),
+  z26.object({ mode: z26.literal("existing"), listId: z26.string().uuid(), strategy: z26.enum(["append", "replace"]).optional(), consolidate: z26.boolean().optional() }).strict(),
+  z26.object({ mode: z26.literal("skip") }).strict()
+]);
+var destinationPlanSchema = z26.object({
+  folders: z26.record(z26.string(), z26.object({
+    folder: folderDestinationSchema,
+    lists: z26.record(z26.string(), listDestinationSchema)
+  }).strict())
+}).strict();
+var destinationSelectorSchema = z26.object({
+  folder: importSelectorSchema,
+  list: importSelectorSchema
+}).strict();
+var contentBaseSchema = {
+  package: smartImportPackageSchema.optional(),
+  source: z26.string().trim().min(1).max(SMART_IMPORT_LIMITS.maxTextLength).optional(),
+  source_context: z26.object({
+    packageName: z26.string().trim().max(160).optional(),
+    folderName: z26.string().trim().max(160).optional(),
+    listName: z26.string().trim().max(160).optional(),
+    frontLanguage: z26.string().trim().max(160).optional(),
+    backLanguage: z26.string().trim().max(160).optional()
+  }).strict().optional(),
+  destination: destinationSelectorSchema.optional(),
+  destination_plan: destinationPlanSchema.optional(),
+  card_conflict: z26.enum(["skip", "replace", "copy", "error"])
+};
+var previewContentImportSchema = z26.object(contentBaseSchema).strict();
+var executeContentImportSchema = z26.object({
+  ...contentBaseSchema,
+  request_id: z26.string().uuid(),
+  confirm: z26.literal(true)
+}).strict();
+var glossaryEntrySchema = z26.object({
+  term: z26.string().trim().min(1).max(SMART_IMPORT_LIMITS.maxTextLength),
+  translation: z26.string().trim().min(1).max(SMART_IMPORT_LIMITS.maxTextLength),
+  alternatives: z26.array(z26.string().trim().min(1).max(SMART_IMPORT_LIMITS.maxTextLength)).max(20).optional(),
+  note: z26.string().trim().max(SMART_IMPORT_LIMITS.maxTextLength).nullable().optional(),
+  side: z26.enum(["A", "B"]).optional(),
+  source_language: z26.string().trim().max(160).nullable().optional(),
+  target_language: z26.string().trim().max(160).nullable().optional(),
+  active: z26.boolean().optional()
+}).strict();
+var glossaryBaseSchema = {
+  folder: importSelectorSchema,
+  entries: z26.array(glossaryEntrySchema).min(1).max(SMART_IMPORT_LIMITS.maxGlossaryEntries),
+  mode: z26.enum(["merge", "replace"])
+};
+var previewGlossaryImportSchema = z26.object(glossaryBaseSchema).strict();
+var executeGlossaryImportSchema = z26.object({
+  ...glossaryBaseSchema,
+  confirm: z26.literal(true)
+}).strict();
+function recordOf4(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function normalized(value) {
+  return value.trim().toLocaleLowerCase();
+}
+function referenceValue(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function stringOrNull(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+function describeDestination(target) {
+  return target.reference_id ? `${target.title} (${target.reference_id})` : `${target.title} (${target.id})`;
+}
+function parsePackage(input) {
+  if (input.package !== void 0) {
+    const parsed = smartImportPackageSchema.safeParse(input.package);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new McpDomainError("invalid_input", `${issue.path.join(".") || "$"}: ${issue.message}`);
+    }
+    return { value: parsed.data, format: "json-v2", notes: ["Contrato app-piteco-super-import 2.0 validado."], warnings: [] };
+  }
+  if (!input.source) throw new McpDomainError("invalid_input", "Informe package ou source para a importa\xE7\xE3o.");
+  try {
+    const result = parseAnySmartImportSource(input.source, input.source_context);
+    return { value: result.packageValue, format: result.format, notes: result.notes, warnings: result.warnings };
+  } catch (error) {
+    throw new McpDomainError("invalid_input", error instanceof Error ? error.message : "A fonte da importa\xE7\xE3o \xE9 inv\xE1lida.", { cause: error });
+  }
+}
+function queryScope(query, db, includeInstitutionFilter = true) {
+  const scoped = query.eq("owner_id", db.userId).eq("system_kind", "user").is("class_id", null).is("deleted_at", null);
+  return includeInstitutionFilter ? scoped.is("institution_id", null) : scoped;
+}
+function queryListScope(query, db) {
+  return query.eq("owner_id", db.userId).eq("system_kind", "user").is("class_id", null).is("institution_id", null).is("deleted_at", null);
+}
+async function loadPersonalCatalog(db) {
+  const foldersResponse = await queryScope(
+    db.client.from("folders").select("id,title,reference_id,lang_a,lang_b,labels_a,labels_b,study_type,tts_enabled"),
+    db
+  ).order("title", { ascending: true });
+  if (foldersResponse.error) throw toMcpDomainError(foldersResponse.error, "N\xE3o foi poss\xEDvel listar os destinos pessoais.");
+  const folders = (Array.isArray(foldersResponse.data) ? foldersResponse.data : []).filter((row) => Boolean(recordOf4(row))).map((row) => ({
+    id: String(row.id ?? ""),
+    title: String(row.title ?? ""),
+    reference_id: referenceValue(row.reference_id),
+    lang_a: stringOrNull(row.lang_a),
+    lang_b: stringOrNull(row.lang_b),
+    labels_a: stringOrNull(row.labels_a),
+    labels_b: stringOrNull(row.labels_b),
+    study_type: stringOrNull(row.study_type),
+    tts_enabled: typeof row.tts_enabled === "boolean" ? row.tts_enabled : null,
+    institution_id: null,
+    class_id: null
+  }));
+  if (!folders.length) return { folders, lists: [] };
+  const folderIds = folders.map((folder) => folder.id);
+  const listsResponse = await queryListScope(
+    db.client.from("lists").select("id,title,folder_id,reference_id,lang_a,lang_b,labels_a,labels_b,study_type,tts_enabled"),
+    db
+  ).in("folder_id", folderIds).order("title", { ascending: true });
+  if (listsResponse.error) throw toMcpDomainError(listsResponse.error, "N\xE3o foi poss\xEDvel listar as listas pessoais.");
+  const lists = (Array.isArray(listsResponse.data) ? listsResponse.data : []).filter((row) => Boolean(recordOf4(row))).map((row) => ({
+    id: String(row.id ?? ""),
+    title: String(row.title ?? ""),
+    folder_id: String(row.folder_id ?? ""),
+    reference_id: referenceValue(row.reference_id),
+    lang_a: stringOrNull(row.lang_a),
+    lang_b: stringOrNull(row.lang_b),
+    labels_a: stringOrNull(row.labels_a),
+    labels_b: stringOrNull(row.labels_b),
+    study_type: stringOrNull(row.study_type),
+    tts_enabled: typeof row.tts_enabled === "boolean" ? row.tts_enabled : null,
+    class_id: null
+  }));
+  return { folders, lists };
+}
+function selectorKind(selector2) {
+  if (selector2.id) return "id";
+  if (selector2.reference_id) return "reference_id";
+  return "name";
+}
+function matchesSelector(target, selector2) {
+  const kind = selectorKind(selector2);
+  if (kind === "id") return target.id.toLowerCase() === (selector2.id ?? "").toLowerCase();
+  if (kind === "reference_id") {
+    return (target.reference_id ?? "").trim().toUpperCase() === (selector2.reference_id ?? "").trim().toUpperCase();
+  }
+  return normalized(target.title) === normalized(selector2.name ?? "");
+}
+async function resolveOwnedFolder(db, selector2) {
+  const catalog = await loadPersonalCatalog(db);
+  return resolveCatalogFolder(catalog, selector2);
+}
+function resolveCatalogFolder(catalog, selector2) {
+  const matches = catalog.folders.filter((folder) => matchesSelector(folder, selector2));
+  if (!matches.length) {
+    throw new McpDomainError("not_found", "Pasta n\xE3o encontrada na biblioteca pessoal desta conta.", {
+      hint: "Use list_folders para descobrir o id ou a refer\xEAncia correta antes de repetir."
+    });
+  }
+  if (matches.length > 1) {
+    throw new McpDomainError("ambiguous", `Mais de uma pasta corresponde ao seletor: ${matches.map(describeDestination).join(" | ")}. Use id ou reference_id.`);
+  }
+  return matches[0];
+}
+function findListInFolder(catalog, folderId, selector2) {
+  const matches = catalog.lists.filter((list) => list.folder_id === folderId && matchesSelector(list, selector2));
+  if (!matches.length) {
+    throw new McpDomainError("not_found", "Lista n\xE3o encontrada dentro da pasta selecionada.", {
+      hint: "Confirme a pasta e use list_lists para descobrir o id ou a refer\xEAncia da lista."
+    });
+  }
+  if (matches.length > 1) {
+    throw new McpDomainError("ambiguous", `Mais de uma lista corresponde ao seletor: ${matches.map(describeDestination).join(" | ")}. Use id ou reference_id.`);
+  }
+  return matches[0];
+}
+async function resolvePlan(db, packageValue, destination, requestedPlan) {
+  const catalog = await loadPersonalCatalog(db);
+  if (requestedPlan) return { plan: requestedPlan, catalog };
+  if (!destination) {
+    const plan = buildDefaultDestinationPlan(packageValue, catalog);
+    return { plan, catalog };
+  }
+  if (packageValue.package.folders.length !== 1 || packageValue.package.folders[0].lists.length !== 1) {
+    throw new McpDomainError("invalid_input", "destination folder/list s\xF3 pode ser usado com um pacote de uma pasta e uma lista; use destination_plan para lotes maiores.");
+  }
+  const folder = resolveCatalogFolder(catalog, destination.folder);
+  const list = findListInFolder(catalog, folder.id, destination.list);
+  return {
+    catalog,
+    plan: {
+      folders: {
+        0: {
+          folder: { mode: "existing", folderId: folder.id },
+          lists: { 0: { mode: "existing", listId: list.id } }
+        }
+      }
+    }
+  };
+}
+function assertUnambiguousDefaults(packageValue, catalog) {
+  packageValue.package.folders.forEach((incomingFolder, folderIndex) => {
+    const folderMatches = catalog.folders.filter(
+      (folder) => normalized(folder.title) === normalized(incomingFolder.name)
+    );
+    if (folderMatches.length > 1) {
+      throw new McpDomainError(
+        "ambiguous",
+        `package.folders[${folderIndex}]: o nome "${incomingFolder.name}" corresponde a ${folderMatches.length} pastas (${folderMatches.map(describeDestination).join(" | ")}). Informe destination ou destination_plan.`
+      );
+    }
+    if (folderMatches.length !== 1) return;
+    const targetFolder = folderMatches[0];
+    incomingFolder.lists.forEach((incomingList, listIndex) => {
+      const listMatches = catalog.lists.filter(
+        (list) => list.folder_id === targetFolder.id && normalized(list.title) === normalized(incomingList.name)
+      );
+      if (listMatches.length > 1) {
+        throw new McpDomainError(
+          "ambiguous",
+          `package.folders[${folderIndex}].lists[${listIndex}]: o nome "${incomingList.name}" corresponde a ${listMatches.length} listas em "${targetFolder.title}" (${listMatches.map(describeDestination).join(" | ")}). Informe destination ou destination_plan.`
+        );
+      }
+    });
+  });
+}
+async function prepareContent(db, input) {
+  const parsed = parsePackage(input);
+  const summary = summarizeSmartImport(parsed.value);
+  if (input.card_conflict === "replace" && summary.layeredGroups > 0) {
+    throw new McpDomainError("invalid_input", "E_LAYERED_REPLACE_UNSUPPORTED|Pacotes com camadas n\xE3o aceitam card_conflict=replace. Use skip, copy ou error.");
+  }
+  const { plan, catalog } = await resolvePlan(db, parsed.value, input.destination, input.destination_plan);
+  const errors = validateDestinationPlan(parsed.value, catalog, plan);
+  if (errors.length) throw new McpDomainError("invalid_input", errors.join(" "));
+  if (!input.destination && !input.destination_plan) assertUnambiguousDefaults(parsed.value, catalog);
+  return { ...parsed, plan, catalog, summary };
+}
+async function previewContentImport(db, input) {
+  const prepared = await prepareContent(db, input);
+  return {
+    importer: "smart_import_2.0",
+    format: prepared.format,
+    notes: prepared.notes,
+    warnings: prepared.warnings,
+    summary: prepared.summary,
+    destination_plan: prepared.plan,
+    validation: { status: "valid", mode: "local" },
+    transaction: {
+      preview_is_transaction: false,
+      executor: "import_app_piteco_super_package_current",
+      note: "Este preview valida e planeja localmente; a transa\xE7\xE3o s\xF3 ocorre no execute_content_import."
+    }
+  };
+}
+async function executeContentImport(db, input) {
+  if (input.confirm !== true) throw new McpDomainError("confirmation_required", "execute_content_import exige confirm=true.");
+  const prepared = await prepareContent(db, input);
+  const response = await db.client.rpc("import_app_piteco_super_package_current", {
+    _institution_id: null,
+    _payload: prepared.value,
+    _destination_plan: prepared.plan,
+    _card_conflict: input.card_conflict,
+    _request_id: input.request_id
+  });
+  if (response.error) {
+    if (String(response.error.code ?? "").toUpperCase() === "PGRST202") {
+      throw new McpDomainError("unavailable", "O importador oficial Smart Import 2.0 n\xE3o est\xE1 dispon\xEDvel no backend conectado.");
+    }
+    throw toMcpDomainError(response.error, "O importador oficial de conte\xFAdo falhou.");
+  }
+  const report = recordOf4(response.data);
+  if (!report) throw new McpDomainError("unavailable", "O importador oficial n\xE3o devolveu um relat\xF3rio v\xE1lido.");
+  return {
+    importer: "smart_import_2.0",
+    rpc: "import_app_piteco_super_package_current",
+    request_id: input.request_id,
+    destination_plan: prepared.plan,
+    report
+  };
+}
+function glossaryEntries(input) {
+  return input.entries.map((entry) => ({ ...entry }));
+}
+async function prepareGlossary(db, input) {
+  const folder = await resolveOwnedFolder(db, input.folder);
+  return { folder, entries: glossaryEntries(input) };
+}
+async function runGlossaryRpc(db, input, dryRun) {
+  const prepared = await prepareGlossary(db, input);
+  const response = await db.client.rpc("import_folder_glossary_v2", {
+    _folder_id: prepared.folder.id,
+    _entries: prepared.entries,
+    _mode: input.mode,
+    _dry_run: dryRun
+  });
+  if (response.error) {
+    if (String(response.error.code ?? "").toUpperCase() === "PGRST202") {
+      throw new McpDomainError("unavailable", "O importador oficial de gloss\xE1rio v2 n\xE3o est\xE1 dispon\xEDvel no backend conectado.");
+    }
+    throw toMcpDomainError(response.error, "O importador oficial de gloss\xE1rio falhou.");
+  }
+  const report = recordOf4(response.data);
+  if (!report) throw new McpDomainError("unavailable", "O importador oficial de gloss\xE1rio n\xE3o devolveu um relat\xF3rio v\xE1lido.");
+  return { folder: prepared.folder, report };
+}
+async function previewGlossaryImport(db, input) {
+  const result = await runGlossaryRpc(db, input, true);
+  return {
+    importer: "folder_glossary_v2",
+    folder_id: result.folder.id,
+    mode: input.mode,
+    report: result.report,
+    transaction: { preview_is_transaction: true, dry_run: true, note: "O RPC oficial executou dry-run sem persistir altera\xE7\xF5es." }
+  };
+}
+async function executeGlossaryImport(db, input) {
+  if (input.confirm !== true) throw new McpDomainError("confirmation_required", "execute_glossary_import exige confirm=true.");
+  const result = await runGlossaryRpc(db, input, false);
+  return {
+    importer: "folder_glossary_v2",
+    folder_id: result.folder.id,
+    mode: input.mode,
+    report: result.report
+  };
+}
+
+// src/lib/mcp/tools/previewContentImport.ts
+var previewContentImport_default = defineTool26({
+  name: "preview_content_import",
+  title: "Preview official content import",
+  description: "Validates Smart Import 2.0 content, resolves personal folder/list destinations by current UUID, reference_id or unique name, and returns the real index-based destination plan, counts and warnings. This is a local validation/planning preview, not a database transaction; use execute_content_import only after reviewing it. Classroom and lossy v1 fallback are not supported.",
+  inputSchema: previewContentImportSchema.shape,
+  annotations: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const input = previewContentImportSchema.parse(args);
+      return toolSuccess(await previewContentImport(db, input));
+    } catch (error) {
+      return toolErrorResult(error, "preview_content_import");
+    }
+  }
+});
+
+// src/lib/mcp/tools/executeContentImport.ts
+init_define_import_meta_env();
+import { defineTool as defineTool27 } from "npm:@lovable.dev/mcp-js@0.20.1";
+var executeContentImport_default = defineTool27({
+  name: "execute_content_import",
+  title: "Execute official content import",
+  description: "Executes the authenticated personal Smart Import 2.0 package through import_app_piteco_super_package_current with the app's index-based destination plan, stable request_id, and explicit card_conflict policy. confirm=true is mandatory. The official RPC is the only bulk content route: no direct table writes, classroom route or lossy v1 fallback is used.",
+  inputSchema: executeContentImportSchema.shape,
+  annotations: { readOnlyHint: false, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const input = executeContentImportSchema.parse(args);
+      return toolSuccess(await executeContentImport(db, input));
+    } catch (error) {
+      return toolErrorResult(error, "execute_content_import");
+    }
+  }
+});
+
+// src/lib/mcp/tools/previewGlossaryImport.ts
+init_define_import_meta_env();
+import { defineTool as defineTool28 } from "npm:@lovable.dev/mcp-js@0.20.1";
+var previewGlossaryImport_default = defineTool28({
+  name: "preview_glossary_import",
+  title: "Preview official folder glossary import",
+  description: "Resolves an authenticated owner's personal folder by UUID, reference_id or unique name and calls the official import_folder_glossary_v2 RPC in dry-run mode. It returns the backend's merge/replace counts; no v1 fallback, direct table write, classroom target or silent folder choice is allowed.",
+  inputSchema: previewGlossaryImportSchema.shape,
+  annotations: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const input = previewGlossaryImportSchema.parse(args);
+      return toolSuccess(await previewGlossaryImport(db, input));
+    } catch (error) {
+      return toolErrorResult(error, "preview_glossary_import");
+    }
+  }
+});
+
+// src/lib/mcp/tools/executeGlossaryImport.ts
+init_define_import_meta_env();
+import { defineTool as defineTool29 } from "npm:@lovable.dev/mcp-js@0.20.1";
+var executeGlossaryImport_default = defineTool29({
+  name: "execute_glossary_import",
+  title: "Execute official folder glossary import",
+  description: "Executes the authenticated owner's folder glossary import through import_folder_glossary_v2 with explicit merge or replace mode and confirm=true. Folder ownership is resolved through the OAuth-scoped client; no direct table writes, v1 fallback or classroom destination is exposed.",
+  inputSchema: executeGlossaryImportSchema.shape,
+  annotations: { readOnlyHint: false, idempotentHint: true, destructiveHint: false, openWorldHint: true },
+  handler: async (args, ctx) => {
+    try {
+      const db = createUserScopedDb(ctx);
+      const input = executeGlossaryImportSchema.parse(args);
+      return toolSuccess(await executeGlossaryImport(db, input));
+    } catch (error) {
+      return toolErrorResult(error, "execute_glossary_import");
+    }
+  }
+});
+
 // src/lib/mcp/domain/audit.ts
+init_define_import_meta_env();
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
@@ -4957,7 +8047,9 @@ var auditedToolNames = /* @__PURE__ */ new Set([
   "preview_delete_folder",
   "confirm_delete_folder",
   "restore_from_trash",
-  "create_study_material"
+  "create_study_material",
+  "execute_content_import",
+  "execute_glossary_import"
 ]);
 function publishedTool(tool) {
   const annotations = {
@@ -4966,8 +8058,8 @@ function publishedTool(tool) {
     destructiveHint: tool.annotations?.destructiveHint ?? false,
     openWorldHint: tool.annotations?.openWorldHint ?? true
   };
-  const normalized = { ...tool, annotations };
-  return auditedToolNames.has(tool.name) ? withAudit(normalized) : normalized;
+  const normalized2 = { ...tool, annotations };
+  return auditedToolNames.has(tool.name) ? withAudit(normalized2) : normalized2;
 }
 var projectRef = define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID ?? "ymahldldyxvwjeruaxpr";
 var instructions = [
@@ -4979,7 +8071,10 @@ var instructions = [
   "Write in batches: add_flashcards inserts many cards in one call and update_flashcards accepts many cards per call, instead of one call per card.",
   "Deletion is always two-step and recoverable: preview_delete_list/preview_delete_folder (and remove_flashcards with dry_run=true when many cards are involved) return the real consequences plus a short-lived confirmation_token; only confirm_delete_* applies it. Never read a vague request such as organize this as authorization to delete.",
   "Every removal is a soft delete that stays 7 days in the product trash and can be undone with restore_from_trash; automatic collections (Reforco / Pontos de atencao) and classroom content are out of reach and fail safely.",
-  "create_study_material resolves folder/list by current name or id, supports dry_run/preview, and inserts cards in one batch; it is not the analysis tool and must never be used to satisfy an analysis-only request."
+  "create_study_material resolves folder/list by current name or id, supports dry_run/preview, and inserts cards in one batch; it is not the analysis tool and must never be used to satisfy an analysis-only request.",
+  "get_piteco_capabilities is the read-only preflight for the real backend. It reports unknown when get_import_capabilities_v1 is unavailable; never infer rich support from a missing RPC.",
+  "For bulk content use preview_content_import then execute_content_import with a stable request_id, the app-compatible index-based destination_plan, an explicit card_conflict and confirm=true. The personal official gateway preserves Smart Import 2.0 fields and layers; classroom is not exposed.",
+  "For bulk folder glossaries use preview_glossary_import (official import_folder_glossary_v2 dry-run) then execute_glossary_import with merge or replace and confirm=true. Use granular card/list tools for small edits; importers never write tables directly."
 ].join(" ");
 var registeredTools = [
   echo_default,
@@ -5005,7 +8100,12 @@ var registeredTools = [
   previewDeleteFolder_default,
   confirmDeleteFolder_default,
   restoreFromTrash_default,
-  createStudyMaterial_default
+  createStudyMaterial_default,
+  getPitecoCapabilities_default,
+  previewContentImport_default,
+  executeContentImport_default,
+  previewGlossaryImport_default,
+  executeGlossaryImport_default
 ].map(publishedTool);
 var mcp_default = defineMcp({
   name: "ape-piteco-mcp",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { FOLDER_DESCRIPTION_MAX, FOLDER_TITLE_MAX, FOLDER_VISIBILITIES, updateFolder } from "../domain/folderWrites";
+import { folderIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "update_folder",
@@ -12,7 +13,7 @@ export default defineTool({
     "Send institution_id with a hub id to move the folder into that institution, or null to return it to the personal library. " +
     "Only the fields you send change; repeating the same call is safe (idempotent).",
   inputSchema: {
-    folder_id: z.string().uuid().describe("Folder uuid discovered with list_folders."),
+    folder_id: folderIdentifierSchema.describe("Folder UUID or F-XXXXXX reference discovered with list_folders."),
     title: z.string().min(1).max(FOLDER_TITLE_MAX).optional().describe("New folder title."),
     description: z.string().max(FOLDER_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
     visibility: z.enum(FOLDER_VISIBILITIES).optional().describe("private or class."),

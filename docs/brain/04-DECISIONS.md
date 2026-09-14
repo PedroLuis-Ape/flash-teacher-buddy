@@ -36,3 +36,13 @@ Commits lógicos e reversíveis. Não fazer merge, push ou publicação sem o ga
 - [DECISAO VIGENTE] A personalização usa sincronização na nuvem quando `folders.emoji` estiver disponível e fallback local enquanto a migration não for aplicada. A UI deve continuar honesta sobre esse estado.
 
 Related: [[areas/visual-polish]] · [[01-CURRENT-STATE]] · [[08-RISKS]]
+
+## Importação MCP — autoridade de destino e pré-checagem — 2026-09-14
+
+- [DECISAO VIGENTE] Destino de importação (pasta e lista) é resolvido pelo catálogo que espelha o contrato do RPC oficial — dono, `system_kind = 'user'`, sem turma e sem lixeira. O caminho de leitura mantém autoridade por pasta; as duas autoridades não se misturam mais dentro do mesmo fluxo.
+- [DECISAO VIGENTE] Plano default nunca escolhe em silêncio: nome duplicado responde `ambiguous` com candidatos e exige `destination`/`destination_plan` explícito.
+- [DECISAO VIGENTE] Preview e execute replicam a pré-checagem do gateway: `card_conflict = 'replace'` com pacote em camadas falha com `E_LAYERED_REPLACE_UNSUPPORTED` antes de tocar o backend.
+- [DECISAO VIGENTE] A RPC de capability é aditiva: `get_import_capabilities_v2` acrescenta o diagnóstico real do glossário oficial e a v1 permanece como fallback honesto, com glossário `unknown` em vez de suposto.
+- [DECISAO VIGENTE] `build` antes de `mcp:bundle`: o plugin Vite reescreve o wrapper Deno com caminho absoluto do Windows e só a regeneração posterior deixa o artefato válido.
+
+Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] · [[01-CURRENT-STATE]] · [[08-RISKS]]

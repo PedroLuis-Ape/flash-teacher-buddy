@@ -4,6 +4,7 @@ import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { listLists } from "../domain/lists";
 import { PERSONAL_SCOPE } from "../domain/scope";
+import { folderIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "list_lists",
@@ -15,9 +16,10 @@ export default defineTool({
   inputSchema: {
     folder_id: z
       .string()
-      .uuid()
+      .min(1)
+      .refine((value) => folderIdentifierSchema.safeParse(value).success, "Use um UUID ou uma referência F-XXXXXX.")
       .optional()
-      .describe("Restrict the result to this folder (uuid from list_folders)."),
+      .describe("Restrict the result to this folder (UUID or F-XXXXXX from list_folders)."),
     search: z
       .string()
       .min(1)

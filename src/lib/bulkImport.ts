@@ -1,8 +1,8 @@
 // Bulk import utilities for flashcards - Language Agnostic
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
-import { buildSimpleFlashcardPrompt } from "@/features/smart-import/simplePrompt";
+import { FEATURE_FLAGS } from "./featureFlags";
+import { buildSimpleFlashcardPrompt } from "../features/smart-import/simplePrompt";
 
 /**
  * Strip common AI formatting artifacts from a line:

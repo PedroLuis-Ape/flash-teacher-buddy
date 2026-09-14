@@ -6,6 +6,7 @@ import { createFolder } from "./folderWrites";
 import { createList } from "./listWrites";
 import { asRow, asRows, str } from "./query";
 import { assertScopeAccessible, requireUuid, scopeName, type LibraryScope } from "./scope";
+import { referenceSelector } from "./referenceIds";
 import { ACCESSIBLE_LIST_SELECT } from "./access";
 import { requireText } from "./validation";
 
@@ -29,16 +30,18 @@ function normalizedName(value: string): string {
 }
 
 function selector(selector: NameOrIdSelector, field: string): { id?: string; name?: string } {
-  const id = selector?.id === undefined || selector.id === null ? undefined : requireUuid(selector.id, `${field}.id`);
+  const parsedId = selector?.id === undefined || selector.id === null ? undefined : referenceSelector(selector.id);
   const name = selector?.name === undefined || selector.name === null
     ? undefined
     : requireText(selector.name, `${field}.name`, 120);
-  if ((id && name) || (!id && !name)) {
+  if ((parsedId && name) || (!parsedId && !name)) {
     throw new McpDomainError("invalid_input", `Informe exatamente um id ou name em "${field}".`, {
       hint: `Use list_folders/list_lists para descobrir o ${field} atual antes de criar material.`,
     });
   }
-  return id ? { id } : { name };
+  return parsedId
+    ? { id: parsedId.kind === "uuid" ? parsedId.id : parsedId.referenceId }
+    : { name };
 }
 
 function resolveScope(rawScope: unknown, rawInstitutionId: unknown): LibraryScope {
@@ -82,7 +85,12 @@ async function resolveFolder(
     .is("deleted_at", null)
     .is("class_id", null);
   const scoped = scope.kind === "personal" ? base.is("institution_id", null) : base.eq("institution_id", scope.institutionId);
-  const query = requested.id ? scoped.eq("id", requested.id) : scoped.ilike("title", requested.name as string);
+  const requestedId = requested.id ? referenceSelector(requested.id) : undefined;
+  const query = requestedId
+    ? (requestedId.kind === "uuid"
+      ? scoped.eq("id", requestedId.id)
+      : scoped.eq("reference_id", requestedId.referenceId))
+    : scoped.ilike("title", requested.name as string);
   const { data, error } = await query.order("title", { ascending: true }).order("id", { ascending: true });
   if (error) throw toMcpDomainError(error, "Não foi possível resolver a pasta do material.");
   const rows = asRows(data).map(asRow).filter((row): row is Record<string, unknown> => Boolean(row));

@@ -111,8 +111,8 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Restrict the result to this folder (uuid from list_folders)."
+              "minLength": 1,
+              "description": "Restrict the result to this folder (UUID or F-XXXXXX from list_folders)."
             },
             "search": {
               "type": "string",
@@ -152,8 +152,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List uuid, discovered via list_lists or search_my_content."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX reference, discovered via list_lists or search_my_content."
             },
             "include_cards": {
               "type": "boolean",
@@ -194,8 +194,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List uuid discovered via list_lists or search_my_content."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX reference discovered via list_lists or search_my_content."
             },
             "limit": {
               "type": "integer",
@@ -256,8 +256,8 @@
             },
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Optional list uuid to confine the search to one list's cards."
+              "minLength": 1,
+              "description": "Optional list UUID or L-XXXXXX reference to confine the search to one list's cards."
             }
           },
           "required": [
@@ -323,19 +323,19 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "format": "uuid"
+                "minLength": 1
               },
               "maxItems": 200,
-              "description": "Restrict the comparison to these folders (max 200 ids)."
+              "description": "Restrict the comparison to these folders by UUID or F- reference (max 200 ids)."
             },
             "list_ids": {
               "type": "array",
               "items": {
                 "type": "string",
-                "format": "uuid"
+                "minLength": 1
               },
               "maxItems": 200,
-              "description": "Restrict the comparison to these lists (max 200 ids)."
+              "description": "Restrict the comparison to these lists by UUID or L- reference (max 200 ids)."
             },
             "ignore_basic_function_words": {
               "type": "boolean",
@@ -411,8 +411,8 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Folder uuid discovered with list_folders."
+              "minLength": 1,
+              "description": "Folder UUID or F-XXXXXX reference discovered with list_folders."
             },
             "title": {
               "type": "string",
@@ -476,8 +476,8 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Destination folder uuid (from list_folders)."
+              "minLength": 1,
+              "description": "Destination folder UUID or F-XXXXXX reference (from list_folders)."
             },
             "title": {
               "type": "string",
@@ -555,8 +555,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List uuid discovered with list_lists or get_list."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX reference discovered with list_lists or get_list."
             },
             "title": {
               "type": "string",
@@ -640,13 +640,13 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List uuid to move."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX reference to move."
             },
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Destination folder uuid (owned by the same account)."
+              "minLength": 1,
+              "description": "Destination folder UUID or F-XXXXXX reference (owned by the same account)."
             }
           },
           "required": [
@@ -673,18 +673,18 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Folder whose lists are being ordered."
+              "minLength": 1,
+              "description": "Folder UUID or F-XXXXXX whose lists are being ordered."
             },
             "list_ids": {
               "type": "array",
               "items": {
                 "type": "string",
-                "format": "uuid"
+                "minLength": 1
               },
               "minItems": 1,
               "maxItems": 200,
-              "description": "List uuids in the exact desired order (first = position 0)."
+              "description": "List UUIDs or L-XXXXXX references in the exact desired order (first = position 0)."
             }
           },
           "required": [
@@ -711,8 +711,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Source list uuid to copy."
+              "minLength": 1,
+              "description": "Source list UUID or L-XXXXXX reference to copy."
             },
             "title": {
               "type": "string",
@@ -722,8 +722,8 @@
             },
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Destination folder uuid. Default: the source list's own folder."
+              "minLength": 1,
+              "description": "Destination folder UUID or F-XXXXXX reference. Default: the source list's own folder."
             }
           },
           "required": [
@@ -749,8 +749,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Destination list uuid (from list_lists or get_list)."
+              "minLength": 1,
+              "description": "Destination list UUID or L-XXXXXX reference (from list_lists or get_list)."
             },
             "cards": {
               "type": "array",
@@ -867,8 +867,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List that owns the cards."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX that owns the cards."
             },
             "card_ids": {
               "type": "array",
@@ -1073,8 +1073,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List that owns the cards."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX that owns the cards."
             },
             "card_ids": {
               "type": "array",
@@ -1120,8 +1120,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "List uuid to be deleted."
+              "minLength": 1,
+              "description": "List UUID or L-XXXXXX to be deleted."
             }
           },
           "required": [
@@ -1147,8 +1147,8 @@
           "properties": {
             "list_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Same list uuid used in the preview."
+              "minLength": 1,
+              "description": "Same list UUID or L-XXXXXX used in the preview."
             },
             "confirmation_token": {
               "type": "string",
@@ -1180,8 +1180,8 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Folder uuid to be deleted."
+              "minLength": 1,
+              "description": "Folder UUID or F-XXXXXX to be deleted."
             }
           },
           "required": [
@@ -1207,8 +1207,8 @@
           "properties": {
             "folder_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Same folder uuid used in the preview."
+              "minLength": 1,
+              "description": "Same folder UUID or F-XXXXXX used in the preview."
             },
             "confirmation_token": {
               "type": "string",
@@ -1248,8 +1248,8 @@
             },
             "id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Uuid of the trashed list or folder."
+              "minLength": 1,
+              "description": "UUID, F-XXXXXX or L-XXXXXX of the trashed list or folder."
             }
           },
           "required": [
@@ -1292,8 +1292,8 @@
               "properties": {
                 "id": {
                   "type": "string",
-                  "format": "uuid",
-                  "description": "Current object uuid discovered from a list tool."
+                  "minLength": 1,
+                  "description": "Current object UUID or F-/L- reference discovered from a list tool."
                 },
                 "name": {
                   "type": "string",
@@ -1396,6 +1396,2216 @@
             "folder",
             "list",
             "cards"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_piteco_capabilities",
+        "title": "Get Piteco capabilities",
+        "description": "Returns a compact, authenticated capability map for the real Piteco backend: basic and enriched fields, layered cards, glossary status, owner-only personal/institution destinations, importador oficial and other official routes, limits, and bulk versus granular routing. It calls get_import_capabilities_v1 and reports an unavailable RPC as unknown; it never invents support or uses a compatibility fallback.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preview_content_import",
+        "title": "Preview official content import",
+        "description": "Validates Smart Import 2.0 content, resolves personal folder/list destinations by current UUID, reference_id or unique name, and returns the real index-based destination plan, counts and warnings. This is a local validation/planning preview, not a database transaction; use execute_content_import only after reviewing it. Classroom and lossy v1 fallback are not supported.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "package": {
+              "type": "object",
+              "properties": {
+                "schema": {
+                  "type": "string",
+                  "const": "app-piteco-super-import"
+                },
+                "version": {
+                  "type": "string",
+                  "const": "2.0"
+                },
+                "declared_totals": {
+                  "type": "object",
+                  "properties": {
+                    "folders": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "lists": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "cards": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "glossary_entries": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "layered_groups": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    }
+                  },
+                  "required": [
+                    "folders",
+                    "lists",
+                    "cards"
+                  ],
+                  "additionalProperties": false
+                },
+                "package": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source_language": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target_language": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "theme": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "folders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "not": {}
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lists": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "front_language": {
+                                  "type": "string"
+                                },
+                                "back_language": {
+                                  "type": "string"
+                                },
+                                "primary_side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "a",
+                                    "b"
+                                  ],
+                                  "default": "a"
+                                },
+                                "study_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "language",
+                                    "general",
+                                    "math",
+                                    "visual"
+                                  ],
+                                  "default": "language"
+                                },
+                                "label_a": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "label_b": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "tts_enabled": {
+                                  "type": "boolean",
+                                  "default": true
+                                },
+                                "glossary": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "term": {
+                                        "type": "string"
+                                      },
+                                      "translation": {
+                                        "type": "string"
+                                      },
+                                      "side": {
+                                        "type": "string",
+                                        "enum": [
+                                          "A",
+                                          "B"
+                                        ],
+                                        "default": "A"
+                                      },
+                                      "note": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "not": {}
+                                              },
+                                              {
+                                                "type": "string"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "active": {
+                                        "type": "boolean",
+                                        "default": true
+                                      }
+                                    },
+                                    "required": [
+                                      "term",
+                                      "translation"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 20000,
+                                  "default": []
+                                },
+                                "cards": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "const": "normal",
+                                            "default": "normal"
+                                          },
+                                          "front": {
+                                            "type": "string",
+                                            "maxLength": 250000
+                                          },
+                                          "back": {
+                                            "type": "string",
+                                            "maxLength": 250000
+                                          },
+                                          "key": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "hint": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "short_observation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "detailed_explanation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "usage_notes": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "common_mistakes": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "example": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "example_translation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "context_tag": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "tags": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "maxItems": 50
+                                          },
+                                          "word_hints": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "side": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "A",
+                                                    "B"
+                                                  ],
+                                                  "default": "A"
+                                                },
+                                                "text": {
+                                                  "type": "string"
+                                                },
+                                                "translation": {
+                                                  "type": "string"
+                                                },
+                                                "note": {
+                                                  "anyOf": [
+                                                    {
+                                                      "anyOf": [
+                                                        {
+                                                          "not": {}
+                                                        },
+                                                        {
+                                                          "type": "string"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "occurrence": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "const": "all"
+                                                    },
+                                                    {
+                                                      "type": "integer",
+                                                      "minimum": 0
+                                                    }
+                                                  ],
+                                                  "default": "all"
+                                                },
+                                                "start_index": {
+                                                  "type": "integer",
+                                                  "minimum": 0
+                                                },
+                                                "end_index": {
+                                                  "type": "integer",
+                                                  "exclusiveMinimum": 0
+                                                },
+                                                "scope": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "global",
+                                                    "contextual"
+                                                  ]
+                                                },
+                                                "kind": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "word",
+                                                    "expression"
+                                                  ]
+                                                },
+                                                "expression": {
+                                                  "anyOf": [
+                                                    {
+                                                      "anyOf": [
+                                                        {
+                                                          "not": {}
+                                                        },
+                                                        {
+                                                          "type": "string"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "segments": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "text": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                      },
+                                                      "startIndex": {
+                                                        "type": "integer",
+                                                        "minimum": 0
+                                                      },
+                                                      "endIndex": {
+                                                        "type": "integer",
+                                                        "exclusiveMinimum": 0
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "text",
+                                                      "startIndex",
+                                                      "endIndex"
+                                                    ],
+                                                    "additionalProperties": false
+                                                  },
+                                                  "minItems": 2,
+                                                  "maxItems": 20
+                                                }
+                                              },
+                                              "required": [
+                                                "text",
+                                                "translation"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "maxItems": 200
+                                          }
+                                        },
+                                        "required": [
+                                          "front",
+                                          "back"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "const": "layered"
+                                          },
+                                          "key": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "group_title": {
+                                            "type": "string"
+                                          },
+                                          "layers": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "front": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/front"
+                                                },
+                                                "back": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/back"
+                                                },
+                                                "key": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/key"
+                                                },
+                                                "hint": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/hint"
+                                                },
+                                                "short_observation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/short_observation"
+                                                },
+                                                "detailed_explanation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/detailed_explanation"
+                                                },
+                                                "usage_notes": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/usage_notes"
+                                                },
+                                                "common_mistakes": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/common_mistakes"
+                                                },
+                                                "example": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/example"
+                                                },
+                                                "example_translation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/example_translation"
+                                                },
+                                                "context_tag": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/context_tag"
+                                                },
+                                                "tags": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/tags"
+                                                },
+                                                "word_hints": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/word_hints"
+                                                }
+                                              },
+                                              "required": [
+                                                "front",
+                                                "back"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "minItems": 2,
+                                            "maxItems": 500
+                                          }
+                                        },
+                                        "required": [
+                                          "type",
+                                          "group_title",
+                                          "layers"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "front_language",
+                                "back_language"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 1000
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "lists"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1,
+                      "maxItems": 200
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "folders"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "schema",
+                "version",
+                "package"
+              ],
+              "additionalProperties": false
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 250000
+            },
+            "source_context": {
+              "type": "object",
+              "properties": {
+                "packageName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "folderName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "listName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "frontLanguage": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "backLanguage": {
+                  "type": "string",
+                  "maxLength": 160
+                }
+              },
+              "additionalProperties": false
+            },
+            "destination": {
+              "type": "object",
+              "properties": {
+                "folder": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "reference_id": {
+                      "type": "string",
+                      "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "list": {
+                  "$ref": "#/properties/destination/properties/folder"
+                }
+              },
+              "required": [
+                "folder",
+                "list"
+              ],
+              "additionalProperties": false
+            },
+            "destination_plan": {
+              "type": "object",
+              "properties": {
+                "folders": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "folder": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 160
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "existing"
+                              },
+                              "folderId": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "folderId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "lists": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 160
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "existing"
+                                },
+                                "listId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "strategy": {
+                                  "type": "string",
+                                  "enum": [
+                                    "append",
+                                    "replace"
+                                  ]
+                                },
+                                "consolidate": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "listId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "skip"
+                                }
+                              },
+                              "required": [
+                                "mode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "folder",
+                      "lists"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "folders"
+              ],
+              "additionalProperties": false
+            },
+            "card_conflict": {
+              "type": "string",
+              "enum": [
+                "skip",
+                "replace",
+                "copy",
+                "error"
+              ]
+            }
+          },
+          "required": [
+            "card_conflict"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "execute_content_import",
+        "title": "Execute official content import",
+        "description": "Executes the authenticated personal Smart Import 2.0 package through import_app_piteco_super_package_current with the app's index-based destination plan, stable request_id, and explicit card_conflict policy. confirm=true is mandatory. The official RPC is the only bulk content route: no direct table writes, classroom route or lossy v1 fallback is used.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "package": {
+              "type": "object",
+              "properties": {
+                "schema": {
+                  "type": "string",
+                  "const": "app-piteco-super-import"
+                },
+                "version": {
+                  "type": "string",
+                  "const": "2.0"
+                },
+                "declared_totals": {
+                  "type": "object",
+                  "properties": {
+                    "folders": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "lists": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "cards": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "glossary_entries": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "layered_groups": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    }
+                  },
+                  "required": [
+                    "folders",
+                    "lists",
+                    "cards"
+                  ],
+                  "additionalProperties": false
+                },
+                "package": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source_language": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target_language": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "level": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "theme": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "folders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "not": {}
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lists": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "front_language": {
+                                  "type": "string"
+                                },
+                                "back_language": {
+                                  "type": "string"
+                                },
+                                "primary_side": {
+                                  "type": "string",
+                                  "enum": [
+                                    "a",
+                                    "b"
+                                  ],
+                                  "default": "a"
+                                },
+                                "study_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "language",
+                                    "general",
+                                    "math",
+                                    "visual"
+                                  ],
+                                  "default": "language"
+                                },
+                                "label_a": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "label_b": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "not": {}
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "tts_enabled": {
+                                  "type": "boolean",
+                                  "default": true
+                                },
+                                "glossary": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "term": {
+                                        "type": "string"
+                                      },
+                                      "translation": {
+                                        "type": "string"
+                                      },
+                                      "side": {
+                                        "type": "string",
+                                        "enum": [
+                                          "A",
+                                          "B"
+                                        ],
+                                        "default": "A"
+                                      },
+                                      "note": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "not": {}
+                                              },
+                                              {
+                                                "type": "string"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "active": {
+                                        "type": "boolean",
+                                        "default": true
+                                      }
+                                    },
+                                    "required": [
+                                      "term",
+                                      "translation"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 20000,
+                                  "default": []
+                                },
+                                "cards": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "const": "normal",
+                                            "default": "normal"
+                                          },
+                                          "front": {
+                                            "type": "string",
+                                            "maxLength": 250000
+                                          },
+                                          "back": {
+                                            "type": "string",
+                                            "maxLength": 250000
+                                          },
+                                          "key": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "hint": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "short_observation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "detailed_explanation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "usage_notes": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "common_mistakes": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "example": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "example_translation": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "context_tag": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "tags": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "maxItems": 50
+                                          },
+                                          "word_hints": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "side": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "A",
+                                                    "B"
+                                                  ],
+                                                  "default": "A"
+                                                },
+                                                "text": {
+                                                  "type": "string"
+                                                },
+                                                "translation": {
+                                                  "type": "string"
+                                                },
+                                                "note": {
+                                                  "anyOf": [
+                                                    {
+                                                      "anyOf": [
+                                                        {
+                                                          "not": {}
+                                                        },
+                                                        {
+                                                          "type": "string"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "occurrence": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "const": "all"
+                                                    },
+                                                    {
+                                                      "type": "integer",
+                                                      "minimum": 0
+                                                    }
+                                                  ],
+                                                  "default": "all"
+                                                },
+                                                "start_index": {
+                                                  "type": "integer",
+                                                  "minimum": 0
+                                                },
+                                                "end_index": {
+                                                  "type": "integer",
+                                                  "exclusiveMinimum": 0
+                                                },
+                                                "scope": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "global",
+                                                    "contextual"
+                                                  ]
+                                                },
+                                                "kind": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "word",
+                                                    "expression"
+                                                  ]
+                                                },
+                                                "expression": {
+                                                  "anyOf": [
+                                                    {
+                                                      "anyOf": [
+                                                        {
+                                                          "not": {}
+                                                        },
+                                                        {
+                                                          "type": "string"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "segments": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "text": {
+                                                        "type": "string",
+                                                        "minLength": 1
+                                                      },
+                                                      "startIndex": {
+                                                        "type": "integer",
+                                                        "minimum": 0
+                                                      },
+                                                      "endIndex": {
+                                                        "type": "integer",
+                                                        "exclusiveMinimum": 0
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "text",
+                                                      "startIndex",
+                                                      "endIndex"
+                                                    ],
+                                                    "additionalProperties": false
+                                                  },
+                                                  "minItems": 2,
+                                                  "maxItems": 20
+                                                }
+                                              },
+                                              "required": [
+                                                "text",
+                                                "translation"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "maxItems": 200
+                                          }
+                                        },
+                                        "required": [
+                                          "front",
+                                          "back"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "const": "layered"
+                                          },
+                                          "key": {
+                                            "anyOf": [
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "not": {}
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "group_title": {
+                                            "type": "string"
+                                          },
+                                          "layers": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "front": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/front"
+                                                },
+                                                "back": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/back"
+                                                },
+                                                "key": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/key"
+                                                },
+                                                "hint": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/hint"
+                                                },
+                                                "short_observation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/short_observation"
+                                                },
+                                                "detailed_explanation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/detailed_explanation"
+                                                },
+                                                "usage_notes": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/usage_notes"
+                                                },
+                                                "common_mistakes": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/common_mistakes"
+                                                },
+                                                "example": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/example"
+                                                },
+                                                "example_translation": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/example_translation"
+                                                },
+                                                "context_tag": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/context_tag"
+                                                },
+                                                "tags": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/tags"
+                                                },
+                                                "word_hints": {
+                                                  "$ref": "#/properties/package/properties/package/properties/folders/items/properties/lists/items/properties/cards/items/anyOf/0/properties/word_hints"
+                                                }
+                                              },
+                                              "required": [
+                                                "front",
+                                                "back"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "minItems": 2,
+                                            "maxItems": 500
+                                          }
+                                        },
+                                        "required": [
+                                          "type",
+                                          "group_title",
+                                          "layers"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "front_language",
+                                "back_language"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 1000
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "lists"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1,
+                      "maxItems": 200
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "folders"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "schema",
+                "version",
+                "package"
+              ],
+              "additionalProperties": false
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 250000
+            },
+            "source_context": {
+              "type": "object",
+              "properties": {
+                "packageName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "folderName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "listName": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "frontLanguage": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "backLanguage": {
+                  "type": "string",
+                  "maxLength": 160
+                }
+              },
+              "additionalProperties": false
+            },
+            "destination": {
+              "type": "object",
+              "properties": {
+                "folder": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "reference_id": {
+                      "type": "string",
+                      "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "list": {
+                  "$ref": "#/properties/destination/properties/folder"
+                }
+              },
+              "required": [
+                "folder",
+                "list"
+              ],
+              "additionalProperties": false
+            },
+            "destination_plan": {
+              "type": "object",
+              "properties": {
+                "folders": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "folder": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "create"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 160
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "const": "existing"
+                              },
+                              "folderId": {
+                                "type": "string",
+                                "format": "uuid"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "folderId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "lists": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "create"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 160
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "existing"
+                                },
+                                "listId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "strategy": {
+                                  "type": "string",
+                                  "enum": [
+                                    "append",
+                                    "replace"
+                                  ]
+                                },
+                                "consolidate": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "mode",
+                                "listId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "mode": {
+                                  "type": "string",
+                                  "const": "skip"
+                                }
+                              },
+                              "required": [
+                                "mode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "folder",
+                      "lists"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "folders"
+              ],
+              "additionalProperties": false
+            },
+            "card_conflict": {
+              "type": "string",
+              "enum": [
+                "skip",
+                "replace",
+                "copy",
+                "error"
+              ]
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "confirm": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "card_conflict",
+            "request_id",
+            "confirm"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preview_glossary_import",
+        "title": "Preview official folder glossary import",
+        "description": "Resolves an authenticated owner's personal folder by UUID, reference_id or unique name and calls the official import_folder_glossary_v2 RPC in dry-run mode. It returns the backend's merge/replace counts; no v1 fallback, direct table write, classroom target or silent folder choice is allowed.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "folder": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reference_id": {
+                  "type": "string",
+                  "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "additionalProperties": false
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "term": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 250000
+                  },
+                  "translation": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 250000
+                  },
+                  "alternatives": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 250000
+                    },
+                    "maxItems": 20
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 250000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "side": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B"
+                    ]
+                  },
+                  "source_language": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 160
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "target_language": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 160
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "term",
+                  "translation"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 20000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "merge",
+                "replace"
+              ]
+            }
+          },
+          "required": [
+            "folder",
+            "entries",
+            "mode"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "execute_glossary_import",
+        "title": "Execute official folder glossary import",
+        "description": "Executes the authenticated owner's folder glossary import through import_folder_glossary_v2 with explicit merge or replace mode and confirm=true. Folder ownership is resolved through the OAuth-scoped client; no direct table writes, v1 fallback or classroom destination is exposed.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "folder": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reference_id": {
+                  "type": "string",
+                  "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "additionalProperties": false
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "term": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 250000
+                  },
+                  "translation": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 250000
+                  },
+                  "alternatives": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 250000
+                    },
+                    "maxItems": 20
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 250000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "side": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B"
+                    ]
+                  },
+                  "source_language": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 160
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "target_language": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 160
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "term",
+                  "translation"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 20000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "merge",
+                "replace"
+              ]
+            },
+            "confirm": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "folder",
+            "entries",
+            "mode",
+            "confirm"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"

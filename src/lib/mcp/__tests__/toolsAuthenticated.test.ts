@@ -97,7 +97,7 @@ describe("MCP read tools through the authenticated tool boundary", () => {
 
     const detail = await invoke("get_list", { list_id: LIST_A });
     expect(detail.payload.list).toMatchObject({ id: LIST_A, title: "Phrasal Verbs" });
-    expect(detail.payload.folder).toEqual({ id: FOLDER_A, title: "Inglês B1" });
+    expect(detail.payload.folder).toMatchObject({ id: FOLDER_A, title: "Inglês B1" });
     expect(detail.payload.card_count).toBe(2);
   });
 

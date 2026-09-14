@@ -4,6 +4,7 @@ import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { getFlashcards } from "../domain/flashcards";
 import { PERSONAL_SCOPE } from "../domain/scope";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "get_flashcards",
@@ -13,7 +14,7 @@ export default defineTool({
     "Responses are always paginated: read returned/total_count/has_more and continue with offset when the user really asked for more. " +
     "Never use this to dump a whole library into the conversation; for vocabulary analysis prefer search_my_content and narrow queries.",
   inputSchema: {
-    list_id: z.string().uuid().describe("List uuid discovered via list_lists or search_my_content."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference discovered via list_lists or search_my_content."),
     limit: z
       .number()
       .int()

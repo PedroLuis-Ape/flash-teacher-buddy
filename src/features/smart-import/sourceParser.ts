@@ -1,6 +1,6 @@
-import { parseGlossaryAndCards } from "@/lib/bulkImport";
-import { extractCamadasBlock } from "@/features/cards/lib/layeredImport";
-import { parseGlossaryTransfer } from "@/features/study/lib/glossaryTransfer";
+import { parseGlossaryAndCards } from "../../lib/bulkImport";
+import { extractCamadasBlock } from "../cards/lib/layeredImport";
+import { parseGlossaryTransfer } from "../study/lib/glossaryTransfer";
 import {
   SMART_IMPORT_SCHEMA,
   SMART_IMPORT_VERSION,

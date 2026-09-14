@@ -6,7 +6,6 @@ import { McpDomainError, toMcpDomainError } from "./errors";
 import { countListCards } from "./flashcards";
 import { invalidateScopeInventory, listInstitutionId } from "./inventoryInvalidation";
 import { asRow, asRows, str } from "./query";
-import { requireUuid } from "./scope";
 import { requireEnum } from "./validation";
 
 export const TRASH_TARGETS = ["list", "folder"] as const;
@@ -169,8 +168,8 @@ export async function confirmListDeletion(
   input: ConfirmDeleteInput,
   key: ConfirmationKey,
 ): Promise<Record<string, unknown>> {
-  const listId = requireUuid(input.list_id, "list_id");
-  const existing = await findOwnedList(db, listId, { includeDeleted: true });
+  const existing = await findOwnedList(db, input.list_id, { includeDeleted: true });
+  const listId = String(existing.id);
   if (str(existing, "deleted_at")) {
     return { deleted: false, already_deleted: true, list_id: listId, cards_removed: 0 };
   }
@@ -244,8 +243,8 @@ export async function confirmFolderDeletion(
   input: ConfirmDeleteInput,
   key: ConfirmationKey,
 ): Promise<Record<string, unknown>> {
-  const folderId = requireUuid(input.folder_id, "folder_id");
-  const existing = await findOwnedFolder(db, folderId, { includeDeleted: true });
+  const existing = await findOwnedFolder(db, input.folder_id, { includeDeleted: true });
+  const folderId = String(existing.id);
   if (str(existing, "deleted_at")) {
     return { deleted: false, already_deleted: true, folder_id: folderId, lists_removed: 0, cards_removed: 0 };
   }
@@ -290,10 +289,9 @@ export async function restoreFromTrash(
   input: RestoreInput,
 ): Promise<Record<string, unknown>> {
   const target = requireEnum(input.target, "target", TRASH_TARGETS);
-  const id = requireUuid(input.id, "id");
-
   if (target === "list") {
-    const existing = await findOwnedList(db, id, { includeDeleted: true });
+    const existing = await findOwnedList(db, input.id, { includeDeleted: true });
+    const id = String(existing.id);
     if (!str(existing, "deleted_at")) {
       return { restored: false, already_active: true, target, id };
     }
@@ -313,7 +311,8 @@ export async function restoreFromTrash(
     };
   }
 
-  const existing = await findOwnedFolder(db, id, { includeDeleted: true });
+  const existing = await findOwnedFolder(db, input.id, { includeDeleted: true });
+  const id = String(existing.id);
   if (!str(existing, "deleted_at")) {
     return { restored: false, already_active: true, target, id };
   }

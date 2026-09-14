@@ -40,9 +40,11 @@ import {
   type LibraryViewMode,
 } from "@/features/library/viewPreferences";
 import { getFolderListGamesPath } from "./folderNavigation";
+import { ReferenceIdControl } from "@/components/ape/ReferenceIdControl";
 
 interface ListType {
   id: string;
+  reference_id?: string | null;
   title: string;
   description: string | null;
   card_count?: number;
@@ -51,6 +53,7 @@ interface ListType {
 
 interface FolderType {
   id: string;
+  reference_id?: string | null;
   title: string;
   description: string | null;
   owner_id: string;
@@ -736,6 +739,7 @@ const Folder = () => {
             ) : (
               <>
                 <h1 className="text-3xl font-bold">{folder.title}</h1>
+                <ReferenceIdControl entityLabel="pasta" referenceId={folder.reference_id} />
                 {canEdit && (
                   <Button
                     variant="ghost"
@@ -1129,6 +1133,7 @@ const Folder = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-semibold leading-tight">{list.title}</p>
+                          {list.reference_id && <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">{list.reference_id}</p>}
                           <p className={`mt-2 text-xs ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
                             {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                           </p>
@@ -1242,6 +1247,7 @@ const Folder = () => {
                             <p className={`text-xs leading-tight mt-0.5 ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
                               {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                             </p>
+                            {list.reference_id && <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">{list.reference_id}</p>}
                           </div>
 
                           {/* Play button removed - entire row now navigates to games */}

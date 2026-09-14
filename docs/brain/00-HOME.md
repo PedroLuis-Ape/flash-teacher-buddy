@@ -40,6 +40,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[areas/adaptive-learning]]
 - [[areas/supabase-runtime]] — mapa canônico de dados, runtime e preflight.
 - [[areas/motion-system]] — escopo proposto de motion e microinterações.
+- [[areas/mcp-reference-ids-and-importers]] — Reference IDs, mapa de
+  capacidades e caminhos oficiais de importação do MCP.
 
 ## Navegação por contexto
 
@@ -52,6 +54,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 
 - [[sessions/interruption-checkpoint-001]]
 - [[sessions/checkpoint-2026-09-13-mcp-pause]] — parada com checkpoint completo do MCP (2026-09-13).
+- [[sessions/checkpoint-2026-09-14-mcp-reference-importers]] — estado exato
+  para retomar Reference IDs/importadores sem assumir que está pronto.
 
 ## Regra de retomada
 

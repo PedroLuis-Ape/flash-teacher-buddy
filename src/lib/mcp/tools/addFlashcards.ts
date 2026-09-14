@@ -3,6 +3,7 @@ import { z } from "zod";
 import { addCards, CARD_CONTEXT_TAG_MAX, CARD_TEXT_MAX, MAX_BATCH_CARDS } from "../domain/cardWrites";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 const cardSchema = z.object({
   term: z.string().min(1).max(CARD_TEXT_MAX).describe("Front of the card (the term, word or question)."),
@@ -33,7 +34,7 @@ export default defineTool({
     "Default on_duplicate=skip makes retries safe: a card whose term+translation already exists in that list is reported in skipped_existing instead of being inserted again. " +
     "Use on_duplicate=insert only when the user explicitly wants repeated terms (same word, different meaning). Max " + MAX_BATCH_CARDS + " cards per call.",
   inputSchema: {
-    list_id: z.string().uuid().describe("Destination list uuid (from list_lists or get_list)."),
+    list_id: listIdentifierSchema.describe("Destination list UUID or L-XXXXXX reference (from list_lists or get_list)."),
     cards: z.array(cardSchema).min(1).max(MAX_BATCH_CARDS).describe("Cards to insert, in the order they should appear."),
     on_duplicate: z
       .enum(["skip", "insert"])

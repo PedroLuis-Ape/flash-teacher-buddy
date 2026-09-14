@@ -4,10 +4,11 @@ import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { MAX_BATCH_CARDS, CARD_CONTEXT_TAG_MAX, CARD_TEXT_MAX } from "../domain/cardWrites";
 import { createStudyMaterial } from "../domain/studyMaterialWrites";
+import { anyResourceIdentifierSchema } from "./identifierSchemas";
 
 const selectorSchema = z
   .object({
-    id: z.string().uuid().optional().describe("Current object uuid discovered from a list tool."),
+    id: anyResourceIdentifierSchema.optional().describe("Current object UUID or F-/L- reference discovered from a list tool."),
     name: z.string().min(1).max(120).optional().describe("Exact object name; ambiguity returns current candidates."),
   })
   .strict()

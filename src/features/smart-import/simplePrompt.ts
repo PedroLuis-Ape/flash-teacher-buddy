@@ -1,4 +1,4 @@
-import { withJsonFileDeliveryContract } from "@/features/import-prompts/deliveryContract";
+import { withJsonFileDeliveryContract } from "../import-prompts/deliveryContract";
 
 export interface SimpleFlashcardPromptOptions {
   listName: string;

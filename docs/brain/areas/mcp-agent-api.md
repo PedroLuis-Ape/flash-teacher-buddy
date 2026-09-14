@@ -206,9 +206,27 @@ para a FASE 3 reutilizando esta camada. Ver
 - [LIMITE] A invalidação é por processo (Map em memória do isolate); o TTL de
   60 s é o limite de obsolescência nos demais isolates. Ver [[08-RISKS]].
 
+## FASE 8 — Reference IDs, mapa de capacidades e importadores (2026-09-14)
+
+- [FATO CONFIRMADO] Pastas/listas passam a retornar UUID canônico e
+  `reference_id` humano; as tools aceitam ambos, sem tratar referência como
+  autorização. A resolução continua subordinada à posse e ao escopo.
+- [FATO CONFIRMADO] A superfície tem 29 tools, com uma capability map
+  read-only e quatro tools de alto nível para preview/execução dos dois
+  importadores oficiais.
+- [DECISÃO VIGENTE] O MCP orienta `bulk → importador oficial` e
+  `small/punctual → tools granulares`. O Smart Import 2.0 preserva campos
+  enriquecidos, glossário e camadas; o gateway oficial é responsável pela
+  persistência, deduplicação e relatório.
+- [LIMITE] O lote MCP desta fase só aceita biblioteca pessoal do proprietário;
+  instituição/turma ficam para uma fase posterior. A migration de referências
+  ainda não foi aplicada e o smoke real de RLS/MCP continua pendente.
+- Ver [[areas/mcp-reference-ids-and-importers]].
+
 ## Bundle Deno (contrato de publicação)
 
 - `supabase/functions/mcp/index.ts` é artefato GERADO. Nunca editar à mão.
 - No Windows, o plugin Vite gera import inválido; use `npm run mcp:bundle` (gerador próprio, entrada relativa) e `npm run mcp:bundle:check` como gate.
-- O bundle commitado é a versão válida com as 24 tools; um build Linux pode regerá-lo por cima sem conflito (mesmo banner).
+- O bundle gerado nesta etapa contém 29 tools e passou no gate local; um build
+  Linux/Lovable pode regenerá-lo por cima sem conflito (mesmo banner).
 
