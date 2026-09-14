@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sdk_version": "0.20.1",
+  "sdk_version": "0.20.0",
   "path": "/functions/v1/mcp",
   "auth": {
     "type": "oauth",
@@ -1405,7 +1405,7 @@
       {
         "name": "get_piteco_capabilities",
         "title": "Get Piteco capabilities",
-        "description": "Returns a compact, authenticated capability map for the real Piteco backend: basic and enriched fields, layered cards, glossary status, owner-only personal/institution destinations, importador oficial and other official routes, limits, and bulk versus granular routing. It calls get_import_capabilities_v1 and reports an unavailable RPC as unknown; it never invents support or uses a compatibility fallback.",
+        "description": "Returns a compact, authenticated capability map for the real Piteco backend: basic and enriched fields, layered cards, glossary status, owner-only personal/institution destinations, importador oficial and other official routes, limits, and bulk versus granular routing. It reads get_import_capabilities_v2 and falls back to get_import_capabilities_v1, reporting the contract that answered in capability_rpc; an unavailable or unusable RPC is reported as unknown and it never invents support.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -2212,8 +2212,7 @@
                       "format": "uuid"
                     },
                     "reference_id": {
-                      "type": "string",
-                      "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                      "type": "string"
                     },
                     "name": {
                       "type": "string",
@@ -3174,8 +3173,7 @@
                       "format": "uuid"
                     },
                     "reference_id": {
-                      "type": "string",
-                      "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                      "type": "string"
                     },
                     "name": {
                       "type": "string",
@@ -3374,8 +3372,7 @@
                   "format": "uuid"
                 },
                 "reference_id": {
-                  "type": "string",
-                  "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -3501,8 +3498,7 @@
                   "format": "uuid"
                 },
                 "reference_id": {
-                  "type": "string",
-                  "pattern": "^[FL]-[A-HJ-NP-Za-km-z2-9]{6}$"
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",

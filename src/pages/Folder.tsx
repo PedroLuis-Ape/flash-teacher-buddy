@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search, List, LayoutGrid, MoreHorizontal, Star } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search, List, LayoutGrid, MoreHorizontal, Star, Layers } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -41,6 +41,11 @@ import {
 } from "@/features/library/viewPreferences";
 import { getFolderListGamesPath } from "./folderNavigation";
 import { ReferenceIdControl } from "@/components/ape/ReferenceIdControl";
+import {
+  EmbeddedListCreateDialog,
+  EmbeddedListManageDialog,
+} from "@/features/library/EmbeddedListDialogs";
+
 
 interface ListType {
   id: string;
@@ -48,8 +53,11 @@ interface ListType {
   title: string;
   description: string | null;
   card_count?: number;
+  is_embedded?: boolean;
+  source_count?: number;
   system_kind?: "user" | "attention_points" | "reinforcement";
 }
+
 
 interface FolderType {
   id: string;
@@ -81,6 +89,10 @@ const Folder = () => {
   const [canEdit, setCanEdit] = useState(false); // True if owner OR turma owner
   const [isClassContext, setIsClassContext] = useState(false); // True if folder is linked to a class
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Listas combinadas (cards incorporados por referência)
+  const [embeddedCreateOpen, setEmbeddedCreateOpen] = useState(false);
+  const [managingEmbeddedList, setManagingEmbeddedList] = useState<ListType | null>(null);
+
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
   const [newList, setNewList] = useState({ title: "", description: "" });
@@ -783,6 +795,51 @@ const Folder = () => {
                   <Settings className="mr-1.5 h-4 w-4" />
                   Idiomas
                 </Button>
+
+                {isOwner && !isSystemFolder && id && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      data-testid="embedded-list-create-trigger"
+                      onClick={() => setEmbeddedCreateOpen(true)}
+                    >
+                      <Layers className="mr-1.5 h-4 w-4" />
+                      Lista combinada
+                    </Button>
+                    <EmbeddedListCreateDialog
+                      folderId={id}
+                      sourceLists={lists.map((list) => ({
+                        id: list.id,
+                        title: list.title,
+                        card_count: list.card_count,
+                        is_embedded: list.is_embedded,
+                      }))}
+                      open={embeddedCreateOpen}
+                      onOpenChange={setEmbeddedCreateOpen}
+                      onCreated={() => loadLists()}
+                    />
+                    {managingEmbeddedList && (
+                      <EmbeddedListManageDialog
+                        listId={managingEmbeddedList.id}
+                        listTitle={managingEmbeddedList.title}
+                        folderLists={lists.map((list) => ({
+                          id: list.id,
+                          title: list.title,
+                          card_count: list.card_count,
+                          is_embedded: list.is_embedded,
+                        }))}
+                        open={Boolean(managingEmbeddedList)}
+                        onOpenChange={(next) => {
+                          if (!next) setManagingEmbeddedList(null);
+                        }}
+                        onChanged={() => loadLists()}
+                      />
+                    )}
+                  </>
+                )}
+
+
                 
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
@@ -1061,9 +1118,15 @@ const Folder = () => {
                               <span className={`text-xs ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
                                 {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                               </span>
+                              {list.is_embedded && (
+                                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                  🔗 Combinada{list.source_count ? ` • ${list.source_count} ${list.source_count === 1 ? "fonte" : "fontes"}` : ""}
+                                </span>
+                              )}
                               {list.reference_id && <span className="truncate font-mono text-[11px] text-muted-foreground/80">{list.reference_id}</span>}
                               {isFavorite && <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">Favorita</span>}
                               {isAttention && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">Revisar</span>}
+
                             </div>
                           </div>
 

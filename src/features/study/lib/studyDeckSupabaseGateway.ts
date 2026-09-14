@@ -1,5 +1,6 @@
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveListEmbeddedState } from "@/features/library/embeddedLists";
 import {
   classifyStudyDeckVerificationError,
   type StudyDeckAvailabilityProbe,
@@ -9,6 +10,7 @@ import type {
   StudyDeckResourceKind,
   StudyDeckSource,
 } from "./studyDeckLoader";
+
 
 interface StudyDeckGatewayContext {
   resourceId: string;
@@ -31,6 +33,11 @@ function asRows<T>(data: unknown): T[] | null {
   return Array.isArray(data) ? data as T[] : null;
 }
 
+/** Listas combinadas existem apenas no espaço privado do dono. */
+function isPrivateListRead(context: StudyDeckGatewayContext): boolean {
+  return context.source === "private-rest" && context.resourceKind === "list";
+}
+
 /** One canonical Supabase read boundary for Study and MixedStudy. */
 export async function fetchStudyDeckPage<T>(
   context: StudyDeckPageContext,
@@ -47,6 +54,21 @@ export async function fetchStudyDeckPage<T>(
     throwIfAborted(context.signal);
     return { data: asRows<T>(result.data), error: result.error };
   }
+
+  // Lista combinada: devolve as linhas ORIGINAIS de flashcards referenciadas,
+  // preservando ids, camadas, progresso, glossário e edições posteriores.
+  if (isPrivateListRead(context)
+    && await resolveListEmbeddedState(context.resourceId, context.signal) === "embedded") {
+    const result = await (supabase.rpc as any)("get_embedded_list_flashcards", {
+      _list_id: context.resourceId,
+    })
+      .abortSignal(context.signal)
+      .range(context.from, context.to);
+    throwIfAborted(context.signal);
+    return { data: asRows<T>(result.data), error: result.error };
+  }
+
+
 
   const client = context.source === "portal-collection-rest" ? publicSupabase : supabase;
   const scopedQuery = context.resourceKind === "list"
@@ -140,7 +162,41 @@ export async function probeStudyDeckAvailability(
     };
   }
 
+  if (isPrivateListRead(context)) {
+    // Classificação incerta (ex.: recurso ainda não migrado) mantém o caminho
+    // privado padrão, que devolve o erro real em vez de inventar zero.
+    const state = await resolveListEmbeddedState(context.resourceId, context.signal);
+    if (state === "embedded") {
+
+      const result = await (supabase.rpc as any)("get_embedded_list_card_count", {
+        _list_id: context.resourceId,
+      })
+        .abortSignal(context.signal)
+        .maybeSingle();
+      throwIfAborted(context.signal);
+      if (result.error) {
+        return {
+          status: "unconfirmed",
+          reason: classifyStudyDeckVerificationError(result.error),
+        };
+      }
+      if (!result.data) return { status: "unconfirmed", reason: "unknown" };
+      const embeddedRow = result.data as {
+        resource_exists: boolean;
+        raw_count: number;
+        playable_count: number;
+      };
+      return {
+        status: "verified",
+        resourceExists: embeddedRow.resource_exists,
+        rawCount: Number(embeddedRow.raw_count),
+        playableCount: Number(embeddedRow.playable_count),
+      };
+    }
+  }
+
   const resource = await verifyResourceExists(context);
+
   if (resource.error) {
     return {
       status: "unconfirmed",
