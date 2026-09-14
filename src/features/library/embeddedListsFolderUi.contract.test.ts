@@ -22,6 +22,20 @@ describe("folder UI contract — listas combinadas", () => {
     expect(FOLDER).toContain("list.is_embedded && isOwner");
   });
 
+  it("exposes management in the default list view too", () => {
+    expect(FOLDER).toContain("embedded-list-manage-action-row");
+    expect(FOLDER).toContain("Gerenciar cards incorporados de ${list.title}");
+    expect(FOLDER.match(/setManagingEmbeddedList\(list\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps v1 owner-private: creation hidden in class context and sharing skips embedded lists", () => {
+    expect(FOLDER).toContain("isOwner && !isSystemFolder && !isClassContext");
+    expect(FOLDER).toContain("lists.filter((list) => !list.is_embedded).map((list) => list.id)");
+    expect(FOLDER).toContain("if (normalListIds.length > 0)");
+    expect(FOLDER).toContain('.in("id", normalListIds)');
+  });
+
+
   it("marks embedded lists and keeps reference ids and normal counts", () => {
     expect(FOLDER).toContain("🔗 Combinada");
     expect(FOLDER).toContain("list.reference_id");
