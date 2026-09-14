@@ -20,6 +20,47 @@ related:
 
 # Current State
 
+## FECHAMENTOS — leia este bloco primeiro
+
+> **Padrão obrigatório de fechamento de sessão.** Toda sessão relevante adiciona
+> uma entrada aqui, no topo, neste formato exato:
+>
+> `### FECHAMENTO <AAAA-MM-DD>` · **Finalizado** (o que ficou pronto) ·
+> **Pronto até** (o ponto exato: commit, gate, ambiente) · **Não entrou** (o que
+> ficou fora de propósito) · **Depende de** (o que trava e de quem).
+>
+> Regra de ouro: **agente novo lê este bloco antes de abrir qualquer outra nota.**
+> Ele existe para não reler o vault inteiro a cada tarefa. Histórico e detalhe
+> ficam nas notas de sessão linkadas; aqui fica só o estado datado.
+
+### FECHAMENTO 2026-09-14
+
+- **Finalizado:** MCP com as 3 migrations aplicadas e verificadas em produção
+  (`ymahldldyxvwjeruaxpr`) e o defeito real do guard de coleções automáticas
+  corrigido; workflow `mcp-deploy.yml` no `main` (confere o bundle, publica com
+  `--no-verify-jwt` e faz smoke); auditoria de continuidade com as 23 PRs
+  abertas classificadas e resolvidas; grade de pastas/listas compacta e
+  retangular; Configurações da Sessão com Foco Vermelho efetivo
+  (`sequential` + `continuous`), restauração ao desligar e persistência por
+  patch semântico; roteador único de teclado da sessão (P0) com escopos
+  explícitos; Segundo Cérebro alimentado com o resumo de outra IA (verificado) e
+  com a lição `browser-first-tts` resgatada.
+- **Pronto até:** código no `main` (`28251383`) com `tsc` exit 0, **2014 testes
+  passando**, `eslint` 0 erros, `vite build` ✓ e bundle MCP regenerado
+  (29 tools). Nada publicado em produção.
+- **Não entrou:** TTS Runtime (P0), gestos/swipe (P0), Study Runtime único,
+  StudyViewportShell, unificação Study/Mixed, limpeza de hacks/CSS legado, e a
+  parte fina do prompt de Configurações (política de mudança de fila durante a
+  sessão e validação cruzada Study × MixedStudy).
+- **Em espera por decisão (não é bloqueio técnico):** o MCP foi deixado DE LADO
+  a pedido do Pedro em 2026-09-14. Tudo do MCP está pronto e versionado
+  (migrations aplicadas em produção, bundle com 29 tools, workflow no `main`); o
+  que falta é só o secret `SUPABASE_ACCESS_TOKEN` e a execução de `tools/list` +
+  smoke — retomar quando ele quiser, sem refazer nada. Ver
+  [[sessions/2026-09-14-publicacao-mcp-producao]].
+- **Depende de:** decisão do Pedro sobre aplicar `import_folder_glossary_v2` e
+  `folders.emoji` em produção (lacunas reais do banco, não do código).
+
 ## 2026-09-14 — Reference IDs, capability map e importadores MCP (worktree dedicado)
 
 - [FATO CONFIRMADO] O trabalho vive no worktree
