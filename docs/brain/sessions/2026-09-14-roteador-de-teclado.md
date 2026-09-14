@@ -32,7 +32,11 @@ related:
 - [VERIFIED-TEST] `keyboardCommandRouter.contract.test.ts` (7 casos): `text-entry` barra `Q A W D R F E S` e espaço; `Enter` só passa com exceção explícita; `feedback` libera; prioridade entre donos; modal bloqueia e `ignoreModal` permite o handler do próprio modal.
 - [VERIFIED-TEST] Suíte completa: **2014 testes passando** em 318 arquivos; `tsc` exit 0; `eslint` 0 erros; `vite build` ✓.
 
-## Fila do plano de reforma (ordem acordada)
+## Fila do plano de reforma — sugestão da auditoria, alinhar antes de iniciar
+
+> Estes itens estão **pendentes e não iniciados**. A ordem abaixo veio da
+> auditoria visual como sugestão; não é compromisso de execução. Retomar cada um
+> só depois de alinhar com o Pedro, e um de cada vez.
 
 - [PENDENTE] 1. Keyboard/Input Command Router — **feito nesta rodada**.
 - [PENDENTE] 2. TTS Runtime (P0).
