@@ -4,15 +4,23 @@
  *
  * Regra: nenhum campo pode existir apenas no preset ou apenas na sessão. O
  * preset da lista/modo e o `settings_snapshot` da sessão usam este mesmo
- * formato, e a migração de snapshots v1 é explícita.
+ * formato, e a migração de snapshots v1/v2 é explícita.
+ *
+ * V3 (2026-09-14) — AUTORIDADE ÚNICA DE LADOS:
+ * `direction` é a ÚNICA autoridade sobre qual lado é pergunta e qual é resposta.
+ * Áudio/exibição não escolhe mais idioma físico A/B: o campo semântico é
+ * `playTarget` (`both | prompt | answer`), sempre resolvido em cima do
+ * prompt/answer que o resolver canônico produziu para o card. Os campos v2
+ * `playMode`/`playSide` foram REMOVIDOS do contrato e migram automaticamente
+ * (ver `legacyPlayToTarget`).
  */
 import {
   DEFAULT_STUDY_PRESET,
   STUDY_PRESET_DIRECTIONS,
   STUDY_PRESET_FLOW_MODES,
   STUDY_PRESET_ORDERS,
-  STUDY_PRESET_PLAY_MODES,
-  STUDY_PRESET_PLAY_SIDES,
+  STUDY_PRESET_PLAY_TARGETS,
+  legacyPlayToTarget,
   STUDY_PRESET_SCOPES,
   STUDY_PRESET_WRITE_ACTIVITY_MODES,
   STUDY_PRESET_WRITE_CORRECTION_MODES,
@@ -20,8 +28,7 @@ import {
   type StudyDirectionPreset,
   type StudyFlowModePreset,
   type StudyOrderPreset,
-  type StudyPlayModePreset,
-  type StudyPlaySidePreset,
+  type StudyPlayTargetPreset,
   type StudyPreset,
   type StudyPresetOverride,
   type StudyScopePreset,
@@ -34,17 +41,17 @@ import {
   rewriteSideToDirection,
 } from "@/features/study/lib/writeActivityMode";
 
-export const STUDY_SETTINGS_SNAPSHOT_VERSION = 2 as const;
+export const STUDY_SETTINGS_SNAPSHOT_VERSION = 3 as const;
 
 export interface StudySettingsSnapshotV2 {
-  version: 2;
+  version: 3;
   direction: StudyDirectionPreset;
   order: StudyOrderPreset;
   scope: StudyScopePreset;
   redFocus: boolean;
   fastMode: boolean;
-  playMode: StudyPlayModePreset;
-  playSide: StudyPlaySidePreset;
+  /** Semântico: o que o Play fala/mostra — nunca um lado físico A/B. */
+  playTarget: StudyPlayTargetPreset;
   studyFlowMode: StudyFlowModePreset;
   writeActivityMode: StudyWriteActivityModePreset;
   writeRewriteSide: StudyWriteRewriteSidePreset;
@@ -60,8 +67,7 @@ export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV2 = Object.f
   scope: DEFAULT_STUDY_PRESET.scope,
   redFocus: false,
   fastMode: DEFAULT_STUDY_PRESET.fastMode,
-  playMode: DEFAULT_STUDY_PRESET.playMode,
-  playSide: DEFAULT_STUDY_PRESET.playSide,
+  playTarget: DEFAULT_STUDY_PRESET.playTarget,
   studyFlowMode: DEFAULT_STUDY_PRESET.studyFlowMode,
   writeActivityMode: DEFAULT_STUDY_PRESET.writeActivityMode,
   writeRewriteSide: DEFAULT_STUDY_PRESET.writeRewriteSide,
@@ -96,8 +102,7 @@ export function normalizeStudySettingsSnapshotV2(
     scope: pick(STUDY_PRESET_SCOPES, scopeValue, fallback.scope),
     redFocus: bool(raw.redFocus, fallback.redFocus),
     fastMode: bool(raw.fastMode, fallback.fastMode),
-    playMode: pick(STUDY_PRESET_PLAY_MODES, raw.playMode, fallback.playMode),
-    playSide: pick(STUDY_PRESET_PLAY_SIDES, raw.playSide, fallback.playSide),
+    playTarget,
     studyFlowMode: pick(STUDY_PRESET_FLOW_MODES, raw.studyFlowMode, fallback.studyFlowMode),
     writeActivityMode: pick(
       STUDY_PRESET_WRITE_ACTIVITY_MODES,
@@ -212,6 +217,9 @@ export function studySettingsSemanticOverride(
   if (next.redFocus) {
     RED_FOCUS_CONSTRAINED_SETTINGS.forEach((key) => interested.delete(key));
   }
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)) {
+    MASTERY_ROUNDS_CONSTRAINED_SETTINGS.forEach((key) => interested.delete(key));
+  }
 
   const override: Record<string, unknown> = {};
   interested.forEach((key) => {
@@ -229,8 +237,7 @@ export function studySettingsToPresetOverride(
     order: snapshot.order,
     scope: snapshot.scope,
     fastMode: snapshot.fastMode,
-    playMode: snapshot.playMode,
-    playSide: snapshot.playSide,
+    playTarget: snapshot.playTarget,
     studyFlowMode: snapshot.studyFlowMode,
     writeActivityMode: snapshot.writeActivityMode,
     writeRewriteSide: snapshot.writeRewriteSide,
@@ -276,7 +283,8 @@ export function applyStudySettingsPatch(
     current,
     { syncRewriteDirection: false },
   );
-  // Foco Vermelho usa fila única e sequencial, no formato extenso.
+  // Foco Vermelho usa fila única e sequencial, no formato extenso; o Modo
+  // gamificado força direção automática.
   return applyStudySettingsConstraints(merged);
 }
 
