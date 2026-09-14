@@ -5,8 +5,8 @@
   "byte_basis": "utf8-bytes-lf-normalized",
   "note_count": 101,
   "historical_note_count": 38,
-  "total_bytes": 379673,
-  "brain_version": "fc69746dfe13737082f1235ff807252d4f5d2b82b16a6ea9373380529deadda4",
+  "total_bytes": 379923,
+  "brain_version": "bde5a65b27a27dd7993e7bed5ac86ebfa268f85ff268af58e35b03f1e96aa141",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -219,7 +219,7 @@
     },
     "release": {
       "notes": 1,
-      "bytes": 12574,
+      "bytes": 12824,
       "historical_notes": 0,
       "canonical_document": "08-RISKS.md",
       "canonical_confidence": "declared"
@@ -419,8 +419,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 12574,
-      "sha256": "437c2736be4762cac7beaa039ca9ee3b408203fa589d981ab0d50e1cbe4a848f"
+      "bytes": 12824,
+      "sha256": "a4feef386ce2772de272421bb6f4d5bea757007569ed36f5d5fba5ba5beb23cc"
     },
     {
       "path": "09-ASTRA-HANDOFF.md",

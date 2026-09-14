@@ -187,3 +187,6 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27
 - [VERIFIED-GATE] Bundle gerado: 202108 bytes, 24 tools, imports `npm:@lovable.dev/mcp-js@0.20.1` / `npm:zod@^3.23.8`, zero `npm:C:`; paridade exata com `.lovable/mcp/manifest.json`.
 - [REVALIDATE] Execução sob Deno e deploy real continuam não verificados (Deno ausente na máquina; deploy depende de decisão humana).
 
+
+- [MITIGADO] `verify_jwt` do function `mcp` declarado explicitamente como `false` em `supabase/config.toml`, seguindo a convenção do repo (handler valida auth) e o comportamento já observado em produção (401 do SDK com `x-deno-execution-id`).
+

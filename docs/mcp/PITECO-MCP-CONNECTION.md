@@ -530,3 +530,20 @@ O banner gerado é idêntico ao do plugin, então um build no Linux pode regerar
 
 Não verificado localmente: execução do bundle sob Deno (Deno não está instalado nesta máquina).
 
+
+## `verify_jwt` do function `mcp` (2026-09-13)
+
+O MCP é um **OAuth resource server**: lê o header `Authorization` cru e valida o token delegado
+(issuer/JWKS) pelo SDK. O check legado do gateway derruba a requisição antes do handler rodar
+(401 **sem** `x-deno-execution-id`), então o function foi declarado explicitamente em
+`supabase/config.toml`:
+
+```toml
+[functions.mcp]
+verify_jwt = false
+```
+
+Isso **documenta** o comportamento que já está em produção (os probes mostram `x-deno-execution-id`
+nos 401, prova de que o código executa) e evita que um deploy futuro aplique o default do gateway.
+A autenticação continua obrigatória e é feita pelo SDK — o endpoint sem token responde 401.
+
