@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { ListSequenceDialog } from "@/components/ListSequenceDialog";
 import { FolderExportDialog } from "@/features/export/FolderExportDialog";
+import { FolderEmbeddedListsPanel } from "@/features/embedded-lists/FolderEmbeddedListsPanel";
 import { FolderGlossaryCard } from "@/features/study/components/FolderGlossaryCard";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import Folder from "./Folder";
@@ -48,6 +49,7 @@ export default function FolderWorkspace() {
                 />
               </div>
             </div>
+            <FolderEmbeddedListsPanel folderId={id} />
             <FolderGlossaryCard folderId={id} />
           </section>
         </div>
