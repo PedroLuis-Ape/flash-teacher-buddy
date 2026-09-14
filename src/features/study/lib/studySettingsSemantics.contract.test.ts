@@ -88,7 +88,7 @@ describe("Persistência por patch semântico", () => {
   });
 
   it("direção e lado da reescrita são uma decisão só e persistem juntos", () => {
-    const rewrite = applyStudySettingsPatch(snapshot({ writeActivityMode: "rewrite", direction: "a-b" }), {
+    const rewrite = applyStudySettingsPatch(snapshot({ writeActivityMode: "rewrite", direction: "a-b", studyFlowMode: "continuous" }), {
       writeRewriteSide: "b",
     });
     const override = studySettingsSemanticOverride(rewrite, { writeRewriteSide: "b" });

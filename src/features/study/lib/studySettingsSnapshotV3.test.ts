@@ -111,17 +111,18 @@ describe("contrato único de configurações v3", () => {
   });
 
   it("herda o lado ao entrar no modo Reescrever e repara snapshots dessincronizados", () => {
-    const translate = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, direction: "b-a" as const };
+    const translate = { ...BASE_CONTINUOUS, direction: "b-a" as const };
     expect(applyStudySettingsPatch(translate, { writeActivityMode: "rewrite" }))
       .toMatchObject({ writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "b-a" });
 
     expect(normalizeStudySettingsSnapshotV3({
-      version: 2, writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "a-b",
+      version: 2, studyFlowMode: "continuous", writeActivityMode: "rewrite",
+      writeRewriteSide: "a", direction: "a-b",
     })).toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
   });
 
   it("não sincroniza direção no modo Traduzir", () => {
-    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { direction: "b-a" }))
-      .toMatchObject({ direction: "b-a", writeRewriteSide: DEFAULT_STUDY_SETTINGS_SNAPSHOT.writeRewriteSide });
+    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { direction: "b-a" }))
+      .toMatchObject({ direction: "b-a", writeRewriteSide: BASE_CONTINUOUS.writeRewriteSide });
   });
 });
