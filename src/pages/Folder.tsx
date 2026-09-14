@@ -1007,7 +1007,7 @@ const Folder = () => {
                 </CardHeader>
               </Card>
             ) : listViewMode === "grid" ? (
-              <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
+              <div className={`grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
                 {sortedLists.map((list) => {
                   const isSelected = selectedLists.has(list.id);
                   const isFavorite = listFavorites.includes(list.id);
@@ -1034,8 +1034,7 @@ const Folder = () => {
                       }}
                       className={`group relative min-w-0 cursor-pointer transition-all duration-200 active:scale-[0.98] ${isSelected ? 'ring-2 ring-primary' : ''} ${isAttention ? 'border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15' : 'md:hover:border-primary/30 md:hover:bg-primary/5'}`}
                     >
-                      <CardContent className="flex min-h-[12rem] flex-col gap-3 p-3">
-                        <div className="flex items-start justify-between gap-2">
+                      <CardContent className="flex items-center gap-3 p-3">
                           {selectionMode ? (
                             <Button
                               type="button"
@@ -1055,6 +1054,20 @@ const Folder = () => {
                               <FileText className={`h-5 w-5 ${isAttention ? 'text-red-500' : 'text-secondary-foreground'}`} />
                             </div>
                           )}
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold leading-tight">{list.title}</p>
+                            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                              <span className={`text-xs ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
+                                {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
+                              </span>
+                              {list.reference_id && <span className="truncate font-mono text-[11px] text-muted-foreground/80">{list.reference_id}</span>}
+                              {isFavorite && <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">Favorita</span>}
+                              {isAttention && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">Revisar</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1">
                           {listOrdering && !selectionMode && (
                             <div className="flex shrink-0 items-center gap-1" aria-label={`Ordenar lista ${list.title}`}>
                               <Button
@@ -1130,18 +1143,7 @@ const Folder = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-semibold leading-tight">{list.title}</p>
-                          {list.reference_id && <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">{list.reference_id}</p>}
-                          <p className={`mt-2 text-xs ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
-                            {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
-                          </p>
-                        </div>
-                        <div className="flex min-h-5 flex-wrap items-center gap-1.5">
-                          {isFavorite && <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">Favorita</span>}
-                          {isAttention && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">Revisar</span>}
-                        </div>
+                          </div>
                       </CardContent>
                     </Card>
                   );
