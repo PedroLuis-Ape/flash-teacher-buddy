@@ -585,3 +585,32 @@ Related: [[areas/browser-extension]] · [[sessions/2026-09-13-extensao-salvar-na
   diff (ver [[sessions/2026-09-13-convite-extensao-landing-publica]]).
 
 Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] · [[07-TESTS]]
+
+## MCP — FASE 1 (dominio) + FASE 2 (tools read-only) — 2026-09-13
+
+- [FATO CONFIRMADO] A camada operacional do MCP existe agora em
+  `src/lib/mcp/domain/` (erros controlados, client scoped ao token do usuario,
+  paginacao, escopo pessoal/institucional, pastas, listas, cards, perfil e
+  busca) e seis tools read-only registradas: `get_my_profile`, `list_folders`,
+  `list_lists`, `get_list`, `get_flashcards` e `search_my_content`.
+- [DECISAO VIGENTE] Identidade vem so do OAuth verificado; nenhuma tool aceita
+  `user_id`. Toda leitura estreita por `owner_id = auth.uid()`,
+  `system_kind = 'user'`, `deleted_at is null`, `class_id is null` e escopo —
+  mesmo onde a RLS permitiria ler conteudo publico de outra conta. Sem service
+  role e sem escrita nesta fase.
+- [FATO CONFIRMADO] Instituicoes no produto sao owner-only (sem membership);
+  membership e roles existem em TURMA (`turma_membros`). O dominio ja suporta
+  escopo institucional com um unico ponto de evolucao (`assertScopeAccessible`).
+- [VERIFIED-GATE] typecheck 0 (app e node) · 8 arquivos / 51 testes focados
+  PASS · eslint 0 nos arquivos do MCP · `npm run build` exit 0 com SEO
+  100/100 · `brain-check` BRAIN_CHECK_PASS.
+- [NAO VERIFICADO] Nenhuma chamada real ao Supabase/MCP: o GATE_READ esta
+  provado em nivel de dominio com fake PostgREST e mock de supabase-js.
+- [FATO CONFIRMADO] O build local no Windows regenera
+  `supabase/functions/mcp/index.ts` com import invalido (`npm:C:...`); o
+  artefato commitado foi restaurado e o achado esta em [[08-RISKS]].
+- [NEXT] Smoke autenticado real e, depois, FASE 3 (create/update) reutilizando
+  a mesma camada. Ver [[areas/mcp-agent-api]] e
+  [[sessions/2026-09-13-mcp-fase1-2-read]].
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]] · [[08-RISKS]]

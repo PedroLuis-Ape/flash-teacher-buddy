@@ -133,3 +133,18 @@ revisão dedicada.
 - [FOLLOW-UP] A duplicidade de direção em `gameCore.ts`, o recálculo dos wrappers e o `PronunciationStudyView` fixado em `sideB` permanecem fora deste lote.
 
 Related: [[sessions/2026-09-13-ab-language-orientation]] · [[06-BUGS]] · [[07-TESTS]]
+
+## R-2026-09-13-03 — bundle auto-gerado do MCP depende do pipeline Linux
+
+- [FATO CONFIRMADO] `@lovable.dev/mcp-js` 0.20.x no Windows externaliza o
+  entry absoluto como `npm:C:\\Users\\...\\src\\lib\\mcp\\index.ts`, o que e
+  invalido para Deno. O plugin so bundla de fato quando o caminho resolvido
+  comeca com `/` (comportamento do pipeline oficial Linux/Lovable).
+- [MITIGACAO] `npm run build` local sobrescreve esse artefato; nesta rodada o
+  arquivo commitado foi restaurado com `git restore`. Antes de commitar,
+  conferir `git diff -- supabase/functions/mcp/index.ts`: nao deve conter
+  `npm:C:`.
+- [CONSEQUENCIA] O bundle publicado precisa ser regenerado pelo pipeline
+  oficial para incluir as tools novas; validar tools/list apos a regeneracao.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]]
