@@ -2,7 +2,10 @@ import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { McpDomainError, toolErrorResult, toolSuccess } from "../domain/errors";
+import { findAccessibleFolder, findAccessibleList } from "../domain/access";
 import { inventoryCacheKey } from "../domain/inventoryInvalidation";
+import { folderIdentifierSchema, listIdentifierSchema } from "./identifierSchemas";
+import { referenceSelector } from "../domain/referenceIds";
 import { PERSONAL_SCOPE, requireUuid, scopeName, type LibraryScope } from "../domain/scope";
 import { MAX_FILTER_IDS, MAX_TEXT_CHARS, MAX_TEXT_TOKENS, analyzeTextAgainstLibrary } from "../learning/analyze";
 import { createSupabaseVocabularySource } from "../learning/supabaseSource";
@@ -26,6 +29,43 @@ function resolveScope(raw: z.infer<typeof scopeSchema> | undefined): LibraryScop
     });
   }
   return { kind: "institution", institutionId: requireUuid(raw.institution_id, "institution_id") };
+}
+
+const NO_MATCH_ID = "00000000-0000-4000-8000-000000000000";
+
+async function resolveScopedIdentifiers(
+  db: ReturnType<typeof createUserScopedDb>,
+  scope: LibraryScope,
+  values: string[] | undefined,
+  kind: "folder" | "list",
+): Promise<string[] | undefined> {
+  if (!values?.length) return values;
+
+  const resolved: string[] = [];
+  for (const value of values) {
+    const selector = referenceSelector(value);
+    if (selector.kind === "uuid") {
+      resolved.push(selector.id);
+      continue;
+    }
+
+    try {
+      const row = kind === "folder"
+        ? await findAccessibleFolder(db, value, scope)
+        : await findAccessibleList(db, value, scope);
+      const id = typeof row.id === "string" ? row.id : null;
+      if (id) resolved.push(id);
+    } catch (error) {
+      // Preserve the analyzer's existing "missing filter" behavior without
+      // ever widening a reference-only filter into the whole library.
+      if (error instanceof McpDomainError && error.code === "not_found") {
+        resolved.push(NO_MATCH_ID);
+        continue;
+      }
+      throw error;
+    }
+  }
+  return resolved;
 }
 
 export default defineTool({
@@ -57,15 +97,15 @@ export default defineTool({
       .describe('Language of the text. Omit to let the engine detect it (the result reports analyzed_language and confidence).'),
     scope: scopeSchema.optional().describe("Library scope to compare against. Default: personal library."),
     folder_ids: z
-      .array(z.string().uuid())
+      .array(folderIdentifierSchema)
       .max(MAX_FILTER_IDS)
       .optional()
-      .describe("Restrict the comparison to these folders (max " + MAX_FILTER_IDS + " ids)."),
+      .describe("Restrict the comparison to these folders by UUID or F- reference (max " + MAX_FILTER_IDS + " ids)."),
     list_ids: z
-      .array(z.string().uuid())
+      .array(listIdentifierSchema)
       .max(MAX_FILTER_IDS)
       .optional()
-      .describe("Restrict the comparison to these lists (max " + MAX_FILTER_IDS + " ids)."),
+      .describe("Restrict the comparison to these lists by UUID or L- reference (max " + MAX_FILTER_IDS + " ids)."),
     ignore_basic_function_words: z
       .boolean()
       .optional()
@@ -76,11 +116,15 @@ export default defineTool({
     try {
       const db = createUserScopedDb(ctx);
       const scope = resolveScope(args.scope);
+      const [folderIds, listIds] = await Promise.all([
+        resolveScopedIdentifiers(db, scope, args.folder_ids, "folder"),
+        resolveScopedIdentifiers(db, scope, args.list_ids, "list"),
+      ]);
       const result = await analyzeTextAgainstLibrary({
         text: args.text,
         language: args.language,
         source: createSupabaseVocabularySource(db, scope),
-        filters: { folderIds: args.folder_ids, listIds: args.list_ids },
+        filters: { folderIds, listIds },
         ignoreBasicFunctionWords: args.ignore_basic_function_words,
         cacheKey: inventoryCacheKey(db.userId, scope.kind === "institution" ? scope.institutionId : null),
         cacheMode: "use",

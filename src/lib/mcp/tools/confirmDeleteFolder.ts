@@ -2,6 +2,7 @@ import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createToolIdentity } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
+import { folderIdentifierSchema } from "./identifierSchemas";
 import { confirmFolderDeletion } from "../domain/trash";
 
 export default defineTool({
@@ -12,7 +13,7 @@ export default defineTool({
     "The token is bound to the authenticated account and to the list count the preview showed, so a changed folder or a stale/expired token fails safely. " +
     "Deletion is a soft delete through the product's own trash RPC (folder + its lists + their cards, never hard delete).",
   inputSchema: {
-    folder_id: z.string().uuid().describe("Same folder uuid used in the preview."),
+    folder_id: folderIdentifierSchema.describe("Same folder UUID or F-XXXXXX used in the preview."),
     confirmation_token: z.string().min(8).describe("Token returned by preview_delete_folder."),
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },

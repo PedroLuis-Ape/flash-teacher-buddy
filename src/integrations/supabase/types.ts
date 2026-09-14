@@ -1023,6 +1023,7 @@ export type Database = {
           lang_a: string | null
           lang_b: string | null
           owner_id: string
+          reference_id: string
           study_type: string
           system_kind: string
           title: string
@@ -1042,6 +1043,7 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id: string
+          reference_id?: string
           study_type?: string
           system_kind?: string
           title: string
@@ -1061,6 +1063,7 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id?: string
+          reference_id?: string
           study_type?: string
           system_kind?: string
           title?: string
@@ -1476,6 +1479,7 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
+          reference_id: string
           primary_side: string
           study_type: string
           system_kind: string
@@ -1499,6 +1503,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id: string
+          reference_id?: string
           primary_side?: string
           study_type?: string
           system_kind?: string
@@ -1522,6 +1527,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id?: string
+          reference_id?: string
           primary_side?: string
           study_type?: string
           system_kind?: string
@@ -3563,6 +3569,7 @@ export type Database = {
           last_activity: string
           order_index: number
           owner_id: string
+          reference_id: string
           title: string
           updated_at: string
           visibility: string

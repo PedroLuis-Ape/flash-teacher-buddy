@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MAX_BATCH_CARDS, MAX_REMOVAL_WITHOUT_CONFIRMATION, removeCards } from "../domain/cardWrites";
 import { createToolIdentity } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "remove_flashcards",
@@ -13,7 +14,7 @@ export default defineTool({
     "Removals of " + MAX_REMOVAL_WITHOUT_CONFIRMATION + " or more rows are material: they need the two-step flow, so call with dry_run=true first, show the " +
     "preview to the user and then repeat with the returned confirmation_token. Repeating a removal is safe (already removed cards are reported, not an error).",
   inputSchema: {
-    list_id: z.string().uuid().describe("List that owns the cards."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX that owns the cards."),
     card_ids: z
       .array(z.string().uuid())
       .min(1)

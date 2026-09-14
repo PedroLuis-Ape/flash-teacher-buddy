@@ -20,7 +20,7 @@ import { assertScopeAccessible, scopeName, type LibraryScope } from "./scope";
  * uses, so the counts agree with the product).
  */
 export const FOLDER_SELECT =
-  "id,title,description,visibility,lang_a,lang_b,tts_enabled,updated_at,lists(id,deleted_at,system_kind)";
+  "id,reference_id,title,description,visibility,lang_a,lang_b,tts_enabled,updated_at,lists(id,deleted_at,system_kind)";
 
 export interface ListFoldersInput {
   scope: LibraryScope;
@@ -31,6 +31,7 @@ export interface ListFoldersInput {
 
 export interface CompactFolder {
   id: string;
+  reference_id: string;
   title: string;
   description?: string;
   visibility?: string;
@@ -63,6 +64,7 @@ export function countUserLists(embedded: unknown): number {
 export function compactFolder(row: Record<string, unknown>): CompactFolder {
   return {
     id: str(row, "id") ?? "",
+    reference_id: str(row, "reference_id") ?? "",
     title: str(row, "title") ?? "",
     description: truncatedStr(row, "description", 160),
     visibility: str(row, "visibility"),

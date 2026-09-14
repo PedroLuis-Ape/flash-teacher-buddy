@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { createList, LIST_DESCRIPTION_MAX, LIST_LABEL_MAX, LIST_TITLE_MAX, PRIMARY_SIDES, STUDY_TYPES } from "../domain/listWrites";
+import { folderIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "create_list",
@@ -12,7 +13,7 @@ export default defineTool({
     "Study settings default to the product's language mode (en/pt, TTS on, side A primary). " +
     "Not idempotent: resolve the folder first with list_folders and check the list does not already exist.",
   inputSchema: {
-    folder_id: z.string().uuid().describe("Destination folder uuid (from list_folders)."),
+    folder_id: folderIdentifierSchema.describe("Destination folder UUID or F-XXXXXX reference (from list_folders)."),
     title: z.string().min(1).max(LIST_TITLE_MAX).describe("List title as the user said it."),
     description: z.string().max(LIST_DESCRIPTION_MAX).optional().describe("Optional description."),
     study_type: z.enum(STUDY_TYPES).optional().describe('language (default) or general. The database CHECK rejects anything else.'),

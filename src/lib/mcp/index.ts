@@ -23,6 +23,11 @@ import updateFlashcardsTool from "./tools/updateFlashcards";
 import updateFolderTool from "./tools/updateFolder";
 import updateListTool from "./tools/updateList";
 import createStudyMaterialTool from "./tools/createStudyMaterial";
+import getPitecoCapabilitiesTool from "./tools/getPitecoCapabilities";
+import previewContentImportTool from "./tools/previewContentImport";
+import executeContentImportTool from "./tools/executeContentImport";
+import previewGlossaryImportTool from "./tools/previewGlossaryImport";
+import executeGlossaryImportTool from "./tools/executeGlossaryImport";
 import { withAudit } from "./domain/audit";
 
 const auditedToolNames = new Set([
@@ -42,6 +47,8 @@ const auditedToolNames = new Set([
   "confirm_delete_folder",
   "restore_from_trash",
   "create_study_material",
+  "execute_content_import",
+  "execute_glossary_import",
 ]);
 
 function publishedTool(tool: typeof echoTool) {
@@ -72,6 +79,9 @@ const instructions = [
   "Deletion is always two-step and recoverable: preview_delete_list/preview_delete_folder (and remove_flashcards with dry_run=true when many cards are involved) return the real consequences plus a short-lived confirmation_token; only confirm_delete_* applies it. Never read a vague request such as organize this as authorization to delete.",
   "Every removal is a soft delete that stays 7 days in the product trash and can be undone with restore_from_trash; automatic collections (Reforco / Pontos de atencao) and classroom content are out of reach and fail safely.",
   "create_study_material resolves folder/list by current name or id, supports dry_run/preview, and inserts cards in one batch; it is not the analysis tool and must never be used to satisfy an analysis-only request.",
+  "get_piteco_capabilities is the read-only preflight for the real backend. It reports unknown when get_import_capabilities_v1 is unavailable; never infer rich support from a missing RPC.",
+  "For bulk content use preview_content_import then execute_content_import with a stable request_id, the app-compatible index-based destination_plan, an explicit card_conflict and confirm=true. The personal official gateway preserves Smart Import 2.0 fields and layers; classroom is not exposed.",
+  "For bulk folder glossaries use preview_glossary_import (official import_folder_glossary_v2 dry-run) then execute_glossary_import with merge or replace and confirm=true. Use granular card/list tools for small edits; importers never write tables directly.",
 ].join(" ");
 
 const registeredTools = [
@@ -99,6 +109,11 @@ const registeredTools = [
   confirmDeleteFolderTool,
   restoreFromTrashTool,
   createStudyMaterialTool,
+  getPitecoCapabilitiesTool,
+  previewContentImportTool,
+  executeContentImportTool,
+  previewGlossaryImportTool,
+  executeGlossaryImportTool,
 ].map(publishedTool);
 
 export default defineMcp({

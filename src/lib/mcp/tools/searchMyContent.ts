@@ -4,6 +4,7 @@ import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { SEARCH_TYPES, searchMyContent } from "../domain/search";
 import { PERSONAL_SCOPE } from "../domain/scope";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "search_my_content",
@@ -31,9 +32,10 @@ export default defineTool({
       .describe('Restrict to any of "folders", "lists", "flashcards". Default: all three.'),
     list_id: z
       .string()
-      .uuid()
+      .min(1)
+      .refine((value) => listIdentifierSchema.safeParse(value).success, "Use um UUID ou uma referência L-XXXXXX.")
       .optional()
-      .describe("Optional list uuid to confine the search to one list's cards."),
+      .describe("Optional list UUID or L-XXXXXX reference to confine the search to one list's cards."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {

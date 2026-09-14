@@ -1,4 +1,4 @@
-import type { GlobalImportCard, GlobalImportList, GlobalImportPackage } from "@/features/global-import/schema";
+import type { GlobalImportCard, GlobalImportList, GlobalImportPackage } from "../global-import/schema";
 import {
   smartImportPackageSchema,
   smartWordHintSchema,

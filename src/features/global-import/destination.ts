@@ -1,9 +1,10 @@
-import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import { resolveEffectiveListSettings } from "../study/lib/resolveStudySides";
 import type { GlobalImportList, GlobalImportPackage } from "./schema";
 
 export interface ExistingImportFolder {
   id: string;
   title: string;
+  reference_id?: string | null;
   institution_id?: string | null;
   class_id?: string | null;
   lang_a?: string | null;
@@ -18,6 +19,7 @@ export interface ExistingImportList {
   id: string;
   title: string;
   folder_id: string;
+  reference_id?: string | null;
   class_id?: string | null;
   lang_a?: string | null;
   lang_b?: string | null;

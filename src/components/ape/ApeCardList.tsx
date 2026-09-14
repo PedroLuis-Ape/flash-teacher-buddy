@@ -8,6 +8,7 @@ import { prefetchListRouteChunks, prefetchStudyRouteChunks } from "@/lib/routeCh
 
 interface ApeCardListProps {
   title: string;
+  referenceId?: string | null;
   subtitle?: string;
   cardCount?: number;
   language?: string;
@@ -21,6 +22,7 @@ interface ApeCardListProps {
 
 export function ApeCardList({
   title,
+  referenceId,
   subtitle,
   cardCount,
   language,
@@ -78,6 +80,7 @@ export function ApeCardList({
             </Badge>
           )}
         </div>
+        {referenceId && <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/80">{referenceId}</span>}
         {(subtitle || cardCount !== undefined || language || badge) && (
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {[

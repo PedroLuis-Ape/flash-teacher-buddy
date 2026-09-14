@@ -4,6 +4,7 @@ import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { getList } from "../domain/lists";
 import { PERSONAL_SCOPE } from "../domain/scope";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "get_list",
@@ -13,7 +14,7 @@ export default defineTool({
     "Cards are returned only when include_cards is true, and then as one bounded page (cards_limit, cards_offset). " +
     "Calling it with an id that is not in this account returns a controlled not_found — do not retry the same id, resolve it with list_lists or search_my_content instead.",
   inputSchema: {
-    list_id: z.string().uuid().describe("List uuid, discovered via list_lists or search_my_content."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference, discovered via list_lists or search_my_content."),
     include_cards: z
       .boolean()
       .optional()

@@ -6,6 +6,7 @@ import { prefetchFolderRouteChunks } from "@/lib/routeChunkPrefetch";
 
 interface ApeCardFolderProps {
   title: string;
+  referenceId?: string | null;
   listCount?: number;
   cardCount?: number;
   emoji?: string | null;
@@ -17,6 +18,7 @@ interface ApeCardFolderProps {
 
 export function ApeCardFolder({
   title,
+  referenceId,
   listCount,
   cardCount,
   emoji,
@@ -59,6 +61,7 @@ export function ApeCardFolder({
 
       <div className="flex-1 min-w-0">
         <ScrollingTitle text={title} className="ape-card-title" />
+        {referenceId && <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/80">{referenceId}</span>}
         {(listCount !== undefined || cardCount !== undefined) && (
           <p className="text-xs text-muted-foreground leading-tight mt-1 truncate">
             {[

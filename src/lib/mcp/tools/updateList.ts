@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
 import { LIST_DESCRIPTION_MAX, LIST_LABEL_MAX, LIST_TITLE_MAX, PRIMARY_SIDES, STUDY_TYPES, updateList } from "../domain/listWrites";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 export default defineTool({
   name: "update_list",
@@ -11,7 +12,7 @@ export default defineTool({
     "Renames an owned list and/or changes its study settings (study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side). " +
     "Only the fields you send change; repeating the same call is safe (idempotent). Card content is not touched by this tool.",
   inputSchema: {
-    list_id: z.string().uuid().describe("List uuid discovered with list_lists or get_list."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX reference discovered with list_lists or get_list."),
     title: z.string().min(1).max(LIST_TITLE_MAX).optional().describe("New list title."),
     description: z.string().max(LIST_DESCRIPTION_MAX).nullable().optional().describe("New description; null clears it."),
     study_type: z.enum(STUDY_TYPES).optional().describe("language or general."),

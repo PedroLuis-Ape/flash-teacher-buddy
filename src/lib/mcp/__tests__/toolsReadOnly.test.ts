@@ -33,9 +33,17 @@ const WRITE_TOOLS = [
   "create_study_material",
 ];
 
-const AUTHENTICATED_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
+const NEW_TOOLS = [
+  "get_piteco_capabilities",
+  "preview_content_import",
+  "execute_content_import",
+  "preview_glossary_import",
+  "execute_glossary_import",
+];
+
+const AUTHENTICATED_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS, ...NEW_TOOLS];
 /** Previews read the library and mint a token, but change nothing. */
-const READ_ONLY_TOOLS = [...READ_TOOLS, "preview_delete_list", "preview_delete_folder"];
+const READ_ONLY_TOOLS = [...READ_TOOLS, "preview_delete_list", "preview_delete_folder", "get_piteco_capabilities", "preview_content_import", "preview_glossary_import"];
 const DESTRUCTIVE_TOOLS = ["remove_flashcards", "confirm_delete_list", "confirm_delete_folder"];
 
 function toolNamed(name: string) {
@@ -54,7 +62,7 @@ function readText(result: { content?: Array<{ type: string; text?: string }> }):
 
 describe("MCP tool surface", () => {
   it("registers the read tools and the phase 3/4 write tools", () => {
-    expect(mcp.tools.map((tool) => tool.name)).toEqual(["echo", ...READ_TOOLS, ...WRITE_TOOLS]);
+    expect(mcp.tools.map((tool) => tool.name)).toEqual(["echo", ...READ_TOOLS, ...WRITE_TOOLS, ...NEW_TOOLS]);
     expect(mcp.name).toBe("ape-piteco-mcp");
     expect(mcp.version).toBe("0.3.0");
     expect(mcp.instructions).toMatch(/preview_delete_list/);

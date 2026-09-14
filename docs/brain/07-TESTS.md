@@ -162,6 +162,60 @@ Related: [[12-PROCESS-LOG-2026-09-11]] · [[areas/motion-system]] · [[08-RISKS]
 
 Related: [[12-PROCESS-LOG-2026-09-12]] · [[06-BUGS]] · [[08-RISKS]] · [[areas/visual-polish]]
 
+## Fechamento — Reference IDs, capability map e importadores MCP — 2026-09-14
+
+- [VERIFIED-TEST] MCP isolado: `24` arquivos e `158` testes passando, incluindo
+  os contratos novos de destino (camadas + `replace`, nome duplicado de pasta,
+  nome duplicado de lista, resolução por UUID em catálogo ambíguo, presença de
+  `reference_id` no catálogo, referência em caixa mista, lista de turma/
+  instituição fora do destino pessoal, consolidação comparada com os idiomas
+  reais da lista) e os contratos das migrations pendentes.
+- [VERIFIED-TEST] Suíte completa: `317` arquivos (`316` passando) e `1996`
+  testes passando; a única suíte vermelha é a preexistente citada abaixo.
+- [FATO CONFIRMADO] `scripts/contextPacket.test.mjs` falha com
+  `SyntaxError: Invalid or unexpected token` e `0 test`. A mesma falha ocorre
+  na branch `feat/folder-grid-view`, então é anterior a esta entrega e não foi
+  causada por ela; os quatro arquivos envolvidos passam em `node --check`.
+- [VERIFIED-TEST] `tsc --noEmit` nos dois projetos: exit `0`.
+- [VERIFIED-TEST] `eslint .`: exit `0` com `0` erros e `72` avisos
+  preexistentes.
+- [VERIFIED-TEST] Build completo (vite + pré-render + validações + orçamento de
+  bundle + avaliação de SEO): exit `0`, com rede liberada. A avaliação de
+  visibilidade marcou `100/100` (`passed: true`, sem falhas críticas).
+- [VERIFIED-TEST] `node scripts/build-mcp-deno-bundle.mjs --check`:
+  `BUNDLE_CHECK_PASS tools=29`; zero ocorrências de `npm:C:` e `npm:@/` no
+  bundle gerado. O manifesto e o catálogo listam as mesmas 29 tools.
+- [VERIFIED-TEST] `node scripts/brain-check.mjs`: `BRAIN_CHECK_PASS`
+  (`66` notas, `794` wikilinks).
+- [PENDING] Smoke autenticado real do MCP (capabilities, preview, lote de 3–5
+  cards, retry, glossário e escopo) continua pendente e depende da migration
+  aplicada; ver [[areas/mcp-reference-ids-and-importers]].
+- [FATO CONFIRMADO] Revisão cruzada independente (Luna High) rodou nesta rodada
+  e devolveu `FAIL` com 1 HIGH e 4 MEDIUM. O HIGH era artefato de leitura
+  durante o `vite build` e foi revalidado como falso positivo
+  (`BUNDLE_CHECK_PASS tools=29`, zero `npm:C:`). Dois MEDIUM eram defeitos
+  reais e foram corrigidos com teste (caixa da referência; escopo e idiomas do
+  catálogo de destino). Os outros dois são comportamentos preexistentes da UI e
+  ficaram registrados em [[08-RISKS]] como R-2026-09-14-02, sem alteração
+  nesta entrega.
+
+Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] · [[08-RISKS]] · [[06-BUGS]]
+
+## MCP — Reference IDs e importadores — 2026-09-14
+
+- [VERIFIED-TEST] 24 arquivos / 146 testes focados passaram, incluindo
+  contratos de referência, capability map, boundary autenticado, preview e
+  execução dos RPCs oficiais.
+- [VERIFIED-GATE] `npm run typecheck` e `npm run lint -- --quiet` passaram.
+- [VERIFIED-GATE] `npm run mcp:bundle` gerou 29 tools; `npm run
+  mcp:bundle:check` passou com 330842 bytes e sem imports absolutos
+  incompatíveis com Deno.
+- [NAO VERIFICADO] Não houve chamada real ao Supabase/MCP, aplicação da
+  migration ou deploy. O smoke autenticado e a RLS real são gates da etapa de
+  publicação, não evidência desta branch.
+
+Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] · [[08-RISKS]]
+
 ## Biblioteca — modos e emoji por pasta — 2026-09-14
 
 - [VERIFIED-TEST] `src/features/library/folderEmoji.test.ts`: prioridade nuvem → local → `📁`, normalização de espaços, persistência/remoção local, picker entre 36 e 48 opções e default preservado.

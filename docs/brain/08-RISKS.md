@@ -198,6 +198,52 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27
 - [MITIGADO NO PR] No PR #399 o único check que eu quebrei foi `mcp: função gerenciada privada deve declarar verify_jwt = true` — revertido (o function `mcp` fica não declarado, como estava). O gate local `node scripts/audit-security.mjs` volta a passar.
 - [FOLLOW-UP] Consertar os dois checks de CI acima é trabalho SEPARADO deste programa (SEO/robots e preview smoke), fora do escopo do MCP.
 
+## R-2026-09-14-01 — Reference IDs e importadores MCP aguardam backend
+
+- [FATO CONFIRMADO] Source, manifesto, catálogo e bundle local têm 29 tools; a
+  verificação local não prova que a Edge Function publicada esteja nessa
+  revisão.
+- [RISCO REDUZIDO] A biblioteca e o domínio MCP leem `folders.reference_id` e
+  `lists.reference_id`. O código da biblioteca e de `ListDetail` agora tenta as
+  colunas opcionais do mais rico ao mais seguro, então publicar antes da
+  migration já não derruba a tela de pastas: a coluna ausente apenas esconde as
+  referências.
+- [LIMITE] O efeito colateral é que uma coluna ausente custa tentativas
+  extras de query até a migration ser aplicada. As tools MCP continuam
+  dependendo da migration para operar por referência.
+- [MITIGAÇÃO] O bundle é gerado e conferido pelo pipeline local
+  (`BUNDLE_CHECK_PASS`, 29 tools, zero `npm:C:`/`npm:@/`); o artefato não foi
+  editado à mão. Antes da publicação: aplicar as três migrations com backup,
+  revisar RLS e executar `tools/list`, capabilities, preview e lote pequeno
+  autenticados no endpoint real.
+- [MITIGAÇÃO] O preview de importação passou a espelhar o contrato do gateway
+  (dono da pasta e da lista, sem turma/lixeira) e a recusar antes da chamada
+  `card_conflict=replace` com camadas, então o preview não promete transação
+  que o executor recusa.
+- [LIMITE] A fase atual expõe importação somente para biblioteca pessoal do
+  proprietário. Instituição/turma, Deno em runtime e retry real contra dados
+  reais continuam sem evidência nesta rodada.
+
+Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] · [[01-CURRENT-STATE]] · [[07-TESTS]]
+
+## R-2026-09-14-02 — fluxo interativo de importação da UI ainda diverge do gateway
+
+- [FATO CONFIRMADO] A revisão cruzada independente apontou que
+  `src/features/global-import/destinationCatalog.ts` não aplica `system_kind`,
+  `deleted_at` e o escopo de instituição em todos os caminhos, e que
+  `src/features/global-import/destinationModes.ts` usa
+  `new Map(existingLists.map(... normalize(list.title) ...))`, o que escolhe em
+  silêncio quando duas listas existentes têm o mesmo nome.
+- [LIMITE] Esses caminhos são PRÉ-EXISTENTES e não foram alterados nesta
+  entrega: a UI é interativa (o usuário confirma o destino na tela) e o gateway
+  oficial continua validando dono e pasta, então o risco é de escolha errada
+  visível, não de escrita fora de escopo. O caminho MCP, que não tem confirmação
+  humana, já foi corrigido.
+- [NEXT] Alinhar o catálogo da UI ao mesmo contrato e exigir seleção explícita
+  quando o nome for duplicado, com testes de política `append`/`replace`.
+
+Related: [[areas/mcp-reference-ids-and-importers]] · [[imports/2026-09-11/App-Piteco-Brain/areas/importers]] · [[01-CURRENT-STATE]] · [[07-TESTS]]
+
 ## R-2026-09-14-01 — emoji por pasta depende da migration para sincronização
 
 - [FATO CONFIRMADO] O código consulta e atualiza `folders.emoji`, mas a coluna não existia no schema conhecido desta rodada.

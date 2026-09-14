@@ -20,6 +20,34 @@ related:
 
 # Current State
 
+## 2026-09-14 — Reference IDs, capability map e importadores MCP (worktree dedicado)
+
+- [FATO CONFIRMADO] O trabalho vive no worktree
+  `C:\Users\pedro\Documents\App-Piteco-Worktrees\mcp-reference-importers-20260914`,
+  branch `feat/mcp-reference-importers`, fora do checkout principal
+  `C:\Users\pedro\Documents\APP PITECO`. Nada foi commitado, mergeado,
+  publicado nem aplicado no Supabase nesta rodada.
+- [FATO CONFIRMADO] A superfície MCP chegou a 29 tools: mapa de capacidades,
+  preview/execute de conteúdo e de glossário, além de referências humanas
+  `F-XXXXXX`/`L-XXXXXX` para pastas e listas. UUID continua canônico.
+- [DECISÃO VIGENTE] Destino de importação é resolvido pelo catálogo que espelha
+  o RPC oficial; plano default responde `ambiguous` em nome duplicado; replace
+  com camadas é recusado no preview. Detalhes em
+  [[areas/mcp-reference-ids-and-importers]].
+- [FATO CONFIRMADO] Gates verdes após a revisão cruzada: MCP `158/158`, suíte
+  `1996` testes, `tsc`
+  exit 0, `eslint` 0 erros, build exit 0 com SEO `100/100`, bundle
+  `BUNDLE_CHECK_PASS` (29 tools) e `BRAIN_CHECK_PASS`.
+- [PENDENTE] Três migrations aguardam aplicação controlada
+  (`20260914130000`, `20260914132000`, `20260914133000`). A publicação depende
+  delas: sem `reference_id` nas tabelas a biblioteca não carrega.
+- [FATO CONFIRMADO] Revisão cruzada independente executada (Luna High): o
+  achado HIGH foi falso positivo de tempo e dois MEDIUM reais foram corrigidos
+  com teste; dois permanecem como melhoria preexistente da UI em [[08-RISKS]].
+- [PENDENTE] Smoke autenticado real do MCP.
+  Evidência em [[07-TESTS]], risco em [[08-RISKS]] e checkpoint em
+  [[sessions/checkpoint-2026-09-14-mcp-reference-importers]].
+
 ## Data do checkpoint
 
 2026-09-10 — retomada após interrupção do Computer Use.
@@ -710,4 +738,32 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07
 
 
 - [FATO CONFIRMADO] PR #399 com CI: `build`, `rum-contract`, `validate`, `validate-environment`, Netlify deploy preview, header e redirect rules **PASS**. `Publication validation` (SEO/GEO) e `preview-safety` falham **também no main** — dívida pré-existente, não regressão do PR.
+
+## MCP — Reference IDs, capability map e importadores oficiais — 2026-09-14
+
+- [FATO CONFIRMADO] A branch isolada desta etapa é
+  `feat/mcp-reference-importers`, no worktree
+  `C:\Users\pedro\Documents\App-Piteco-Worktrees\mcp-reference-importers-20260914`.
+  A origem era `d8984160d1770aa561238b547c69c388020b1e35`; não houve merge,
+  push, migration aplicada ou deploy automático.
+- [FATO CONFIRMADO] O MCP tem 29 tools no source, manifesto e bundle gerado.
+  Foram adicionadas `get_piteco_capabilities`, preview/execute de conteúdo e
+  preview/execute de glossário. A capability map não inventa suporte quando a
+  RPC de capacidades está ausente.
+- [DECISÃO VIGENTE] Bulk usa `preview_content_import` → revisão →
+  `execute_content_import`; o executor é
+  `import_app_piteco_super_package_current`. Glossários usam
+  `import_folder_glossary_v2` com `merge`/`replace` e dry-run. Alterações
+  pequenas continuam nas tools granulares.
+- [FATO CONFIRMADO] Pastas/listas aceitam e devolvem UUID canônico e
+  `reference_id` humano imutável (`F-XXXXXX`/`L-XXXXXX`), sempre após filtros
+  de posse e escopo. A migration idempotente está em
+  `supabase/migrations/20260914130000_piteco_reference_ids.sql`, mas ainda não
+  foi executada no Supabase.
+- [VERIFIED-GATE] Nesta etapa: 24 arquivos/146 testes focados PASS, typecheck
+  app/node PASS, lint PASS, `mcp:bundle` gerou 330842 bytes e
+  `mcp:bundle:check` confirmou 29 tools e zero imports `npm:@/...`/`npm:C:`.
+- [PENDENTE/HUMANO] Aplicar a migration em ambiente controlado, revisar RLS e
+  fazer smoke autenticado pequeno pelo endpoint MCP antes de publicar. Ver
+  [[areas/mcp-reference-ids-and-importers]].
 

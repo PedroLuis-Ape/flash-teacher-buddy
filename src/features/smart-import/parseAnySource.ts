@@ -1,4 +1,4 @@
-import { normalizeGlobalImportValue } from "@/features/global-import/normalizer";
+import { normalizeGlobalImportValue } from "../global-import/normalizer";
 import { legacyPackageToSmartImport } from "./adapters";
 import { normalizeSmartImportJsonValue } from "./jsonNormalizer";
 import {

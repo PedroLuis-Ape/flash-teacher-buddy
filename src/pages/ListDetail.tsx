@@ -52,9 +52,11 @@ import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLaye
 import { LayeredCardPreviewDialog } from "@/features/cards/components/LayeredCardPreviewDialog";
 import { unmergeLayers } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { ReferenceIdControl } from "@/components/ape/ReferenceIdControl";
 
 interface ListType {
   id: string;
+  reference_id?: string | null;
   title: string;
   description: string | null;
   folder_id: string;
@@ -65,6 +67,7 @@ interface ListType {
 
 interface FolderType {
   id: string;
+  reference_id?: string | null;
   title: string;
   visibility: string;
   class_id?: string | null;
@@ -389,14 +392,25 @@ const ListDetail = () => {
     queryKey: ["folder", list?.folder_id],
     queryFn: async () => {
       if (!list?.folder_id) return null;
-      const { data, error } = await supabase
-        .from("folders")
-        .select("id, title, visibility, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-        .eq("id", list.folder_id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as (FolderType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string | null; labels_b?: string | null; tts_enabled?: boolean }) | null;
+      const runFolderQuery = (columns: string) =>
+        (supabase as any)
+          .from("folders")
+          .select(columns)
+          .eq("id", list.folder_id)
+          .maybeSingle();
+
+      let attempt = await runFolderQuery(
+        "id, reference_id, title, visibility, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled",
+      );
+      if (attempt.error) {
+        // Keep the page usable while `folders.reference_id` is still being migrated.
+        attempt = await runFolderQuery(
+          "id, title, visibility, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled",
+        );
+      }
+
+      if (attempt.error) throw attempt.error;
+      return attempt.data as (FolderType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string | null; labels_b?: string | null; tts_enabled?: boolean }) | null;
     },
     enabled: !!list?.folder_id,
     staleTime: 60_000,
@@ -987,8 +1001,14 @@ const ListDetail = () => {
           
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-1 break-words line-clamp-2">{folder.title}</p>
-              <h1 className="text-2xl md:text-3xl font-bold break-words line-clamp-2">{list.title}</h1>
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="min-w-0 text-sm text-muted-foreground mb-1 break-words line-clamp-2">{folder.title}</p>
+                <ReferenceIdControl entityLabel="pasta" referenceId={folder.reference_id} />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="min-w-0 text-2xl md:text-3xl font-bold break-words line-clamp-2">{list.title}</h1>
+                <ReferenceIdControl entityLabel="lista" referenceId={list.reference_id} />
+              </div>
               {list.description && (
                 <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}

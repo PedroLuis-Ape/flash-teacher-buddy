@@ -64,6 +64,8 @@ function listRow(overrides: Row, folder: Row): Row {
     title: "Lista",
     description: null,
     folder_id: String(folder.id),
+    class_id: null,
+    institution_id: null,
     order_index: 0,
     primary_side: "a",
     lang: "en",

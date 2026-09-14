@@ -2,6 +2,7 @@ import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createToolIdentity } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
+import { listIdentifierSchema } from "./identifierSchemas";
 import { previewListDeletion } from "../domain/trash";
 
 export default defineTool({
@@ -11,7 +12,7 @@ export default defineTool({
     "Step 1 of deleting a list: returns the target, how many cards would go to the trash, the real consequences (soft delete, 7-day retention, restore possible) " +
     "and a short-lived confirmation_token. Show this to the user before confirming. Read-only: it changes nothing.",
   inputSchema: {
-    list_id: z.string().uuid().describe("List uuid to be deleted."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX to be deleted."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async (args, ctx) => {

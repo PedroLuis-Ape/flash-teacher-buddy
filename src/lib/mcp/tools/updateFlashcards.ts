@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CARD_CONTEXT_TAG_MAX, CARD_TEXT_MAX, MAX_BATCH_CARDS, updateCards } from "../domain/cardWrites";
 import { createUserScopedDb } from "../domain/client";
 import { toolErrorResult, toolSuccess } from "../domain/errors";
+import { listIdentifierSchema } from "./identifierSchemas";
 
 const patchSchema = z.object({
   term: z.string().min(1).max(CARD_TEXT_MAX).optional().describe("New front text."),
@@ -29,7 +30,7 @@ export default defineTool({
     "Cards that are not found (other list, other account, already deleted) are reported in not_found instead of failing the whole batch. " +
     "term/translation/hint/example/context/word_hints/images/layer_index are editable; structural identity (list, owner, parent) is not. Max " + MAX_BATCH_CARDS + " cards per call.",
   inputSchema: {
-    list_id: z.string().uuid().describe("List that owns the cards."),
+    list_id: listIdentifierSchema.describe("List UUID or L-XXXXXX that owns the cards."),
     card_ids: z.array(z.string().uuid()).min(1).max(MAX_BATCH_CARDS).optional().describe("Cards that receive the same values (use together with set)."),
     set: patchSchema.optional().describe("Values applied to every card in card_ids."),
     updates: z

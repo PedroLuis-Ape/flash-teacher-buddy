@@ -1,5 +1,5 @@
 import type { UserScopedDb } from "./client";
-import { ACCESSIBLE_LIST_SELECT, compactFolderRef, compactList, findAccessibleList } from "./access";
+import { ACCESSIBLE_LIST_SELECT, compactFolderRef, compactList, findAccessibleFolder, findAccessibleList } from "./access";
 import { toMcpDomainError } from "./errors";
 import { countListCards, readCardPage } from "./flashcards";
 import {
@@ -11,7 +11,7 @@ import {
   resolvePage,
   sanitizeSearchTerm,
 } from "./query";
-import { assertScopeAccessible, requireUuid, scopeName, type LibraryScope } from "./scope";
+import { assertScopeAccessible, scopeName, type LibraryScope } from "./scope";
 
 export interface ListListsInput {
   scope: LibraryScope;
@@ -40,9 +40,10 @@ export interface ListListsResult {
 export async function listLists(db: UserScopedDb, input: ListListsInput): Promise<ListListsResult> {
   await assertScopeAccessible(db, input.scope);
   const { limit, offset } = resolvePage(input, { defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE });
-  const folderId = input.folderId === undefined || input.folderId === null
+  const folder = input.folderId === undefined || input.folderId === null
     ? undefined
-    : requireUuid(input.folderId, "folder_id");
+    : await findAccessibleFolder(db, input.folderId, input.scope);
+  const folderId = folder ? String(folder.id) : undefined;
   const search = input.search === undefined || input.search === null ? undefined : sanitizeSearchTerm(input.search);
 
   const base = db.client
