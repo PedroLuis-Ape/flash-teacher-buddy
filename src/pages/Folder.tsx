@@ -804,7 +804,7 @@ const Folder = () => {
                   Idiomas
                 </Button>
 
-                {isOwner && !isSystemFolder && id && (
+                {isOwner && !isSystemFolder && !isClassContext && id && (
                   <>
                     <Button
                       variant="outline"
