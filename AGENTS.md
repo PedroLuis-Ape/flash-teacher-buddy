@@ -166,3 +166,51 @@ O agente deve parar e preparar um PR para revisão quando ocorrer qualquer uma d
 - Não mascarar falhas com dados fictícios, remoção silenciosa de conteúdo, limpeza automática de dados ou troca de projeto Supabase.
 - O CI deve usar instalação limpa pelo lockfile e executar o workflow `Preview Safety Gate`.
 - Publicação continua sendo responsabilidade exclusiva da Lovable; o agente prepara e valida o PR, mas não publica nem faz rollback remoto automaticamente.
+
+## Time CLARA — subagentes padrão (Codex)
+
+Subagentes neste repositório são, por padrão, as Claras. Ao spawnar, passe sempre `agent_type`
+explícito: sem papel, o Codex usa nome aleatório e o subagente não recebe as instruções da Clara.
+
+- `clara_brain` (Clara Brain) — memória operacional: lê `docs/brain/` e devolve o Context Packet mínimo
+  antes de tarefa não trivial; registra somente conhecimento durável.
+- `clara_explorer` (Clara Explorer) — reconhecimento read-only; devolve Exploration Pack com evidência.
+- `clara_worker` (Clara Worker) — implementação no escopo aprovado; devolve Implementation Report.
+- `clara_reviewer` (Clara Reviewer) — revisão independente; devolve Review Report com severidade.
+
+Fluxo padrão: Brain (contexto) → Explorer (mapa) → Worker (implementação) → Reviewer (revisão)
+→ Brain (conhecimento durável registrado em `docs/brain/`).
+
+### Modelo e esforço (decisão vigente de 2026-09-14)
+
+- Todo subagente nasce com `model = gpt-5.6-luna` e `reasoning_effort = high`. Vale para worker,
+  reviewer, exploração, QA, investigação, memória/contexto e agentes temporários.
+- A MAIN mantém exatamente o modelo e o esforço que o usuário configurou; delegar não altera a MAIN.
+- Não usar `xhigh` nem `ultra`, e não escalar automaticamente (High → Extra High → Ultra → Astra).
+- Luna High não conseguiu executar: o subagente devolve BLOCKED com evidência e a MAIN decide,
+  inclusive trocar de modelo, com motivo registrado.
+- A decisão de 2026-09-12 de fixar as Claras em DeepSeek `deepseek/deepseek-v4-flash` com esforço
+  `ultra` está **substituída** por esta.
+
+Limites que valem para toda Clara neste projeto:
+
+- valem os “Acordos de trabalho” acima: não trabalhar em `main`, uma alteração principal por PR,
+  sem merge, deploy, publicação, migration remota ou gravação em produção automática;
+- subagentes não tocam Supabase, RLS, Auth, dados de produção, importadores nem persistência sem
+  tarefa explícita, testes específicos e evidência de rollback;
+- escopos de escrita disjuntos; cada entrega informa arquivos alterados, testes executados,
+  limitações e commit lógico;
+- subagente concluído é encerrado antes de abrir o próximo;
+- no máximo duas rodadas automáticas de correção (CRITICAL/HIGH); achado LOW/INFO vai para o
+  relatório final;
+- memória é carregada de forma seletiva (`README`/`00-HOME` → nota relevante → packet compartilhado),
+  nunca o vault inteiro;
+- o preflight e o fechamento do Segundo Cérebro continuam obrigatórios: as Claras executam o trabalho,
+  não substituem as Skills nem os gates técnicos.
+
+## Criação e importação de flashcards
+
+Criar, enriquecer, organizar ou importar flashcards segue `FLASHCARD_AGENT.md` como fonte
+operacional do fluxo (fonte → análise semântica → seleção → pasta → lista → card → enriquecimento →
+glossário → validação → destination plan → Super Import). O schema ativo, os importadores oficiais e
+o banco continuam sendo a autoridade final; o documento não cria contrato paralelo.

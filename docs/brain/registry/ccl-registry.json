@@ -1,0 +1,255 @@
+{
+  "registry_version": "r4ceadf",
+  "registry_sha256": "4ceadf069ad0efc846b7720a49b074112a32a80fafd4ca17c8b6495d0e50a41b",
+  "project": "app-piteco",
+  "project_slug": "app-piteco",
+  "ccl_version": "CL1",
+  "spec_sha256": "3eabc936688b52f8ea2cfd9790187c22bc9ed60db69b08631860f048d25f7bfc",
+  "updated_at": "2026-09-13",
+  "updated_by": "clara_brain",
+  "notes": "Registry canonico CCL do App Piteco. IDs sao imutaveis; aposentado vai para tombstones e nunca e reutilizado. registry_version = 'r' + sha256(payload canonico)[0:8].",
+  "refs": [
+    {
+      "id": "A1",
+      "type": "A",
+      "short": "stack React18+TS+Vite+Tailwind+shadcn+Radix+ReactQuery+Supabase",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#stack",
+      "status": "active"
+    },
+    {
+      "id": "C1",
+      "type": "C",
+      "short": "classe ape-content-safe-bottom (reserva de conteudo)",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#contratos-visuais",
+      "status": "active"
+    },
+    {
+      "id": "C2",
+      "type": "C",
+      "short": "classe ape-action-cluster (agrupamento responsivo de acoes)",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#contratos-visuais",
+      "status": "active"
+    },
+    {
+      "id": "C3",
+      "type": "C",
+      "short": "classe ape-interactive-surface (toque/foco)",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#contratos-visuais",
+      "status": "active"
+    },
+    {
+      "id": "C4",
+      "type": "C",
+      "short": "classe ape-overlay-scroll (overlay rolavel)",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#contratos-visuais",
+      "status": "active"
+    },
+    {
+      "id": "C5",
+      "type": "C",
+      "short": "Supabase: prod ymahldldyxvwjeruaxpr != admin xrnfhhoxmmstagmelvyi (readPlatformRuntime)",
+      "canonical": "[[areas/supabase-runtime]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#contrato-de-ambientes-supabase",
+      "status": "active"
+    },
+    {
+      "id": "C6",
+      "type": "C",
+      "short": "polimento nao altera handlers, query keys, payloads, cards, sessoes ou persistencia",
+      "canonical": "[[03-ARCHITECTURE]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#fronteiras",
+      "status": "active"
+    },
+    {
+      "id": "C7",
+      "type": "C",
+      "short": "motion e camada aditiva, independente de dados/estudo/navegacao",
+      "canonical": "[[areas/motion-system]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md#motion-proposto",
+      "status": "active"
+    },
+    {
+      "id": "D1",
+      "type": "D",
+      "short": "preservar identidade do app (nao criar app novo nem trocar linguagem visual)",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#preservar-a-identidade",
+      "status": "active"
+    },
+    {
+      "id": "D2",
+      "type": "D",
+      "short": "mobile-first: aprovar so apos 6 tamanhos moveis + tablet + desktop",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#mobile-first",
+      "status": "active"
+    },
+    {
+      "id": "D3",
+      "type": "D",
+      "short": "efeitos com funcao; sem blur pesado, particulas, flashes ou layout shift",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#efeitos-com-funcao",
+      "status": "active"
+    },
+    {
+      "id": "D4",
+      "type": "D",
+      "short": "polimento visual nao toca Supabase/RLS/auth/sessoes/progresso/persistencia",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#dados-fora-do-escopo",
+      "status": "active"
+    },
+    {
+      "id": "D5",
+      "type": "D",
+      "short": "evidencia antes da afirmacao: teste estatico nao substitui screenshot/interacao/console",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#evidencia-antes-da-afirmacao",
+      "status": "active"
+    },
+    {
+      "id": "D6",
+      "type": "D",
+      "short": "integração: commits logicos e reversiveis; sem merge/push/publicacao sem gate final",
+      "canonical": "[[04-DECISIONS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#integracao",
+      "status": "active"
+    },
+    {
+      "id": "D7",
+      "type": "D",
+      "short": "time CLARA como subagentes padrao do App Piteco",
+      "canonical": "[[05-AGENTS]]",
+      "evidence": "docs/brain/04-DECISIONS.md#time-clara-como-subagentes-padrao",
+      "status": "active"
+    },
+    {
+      "id": "E1",
+      "type": "E",
+      "short": "gates e evidencias de teste do projeto",
+      "canonical": "[[07-TESTS]]",
+      "evidence": "docs/brain/07-TESTS.md",
+      "status": "active"
+    },
+    {
+      "id": "E2",
+      "type": "E",
+      "short": "auditoria de seguranca 2026-09-12",
+      "canonical": "[[24-SECURITY-AUDIT-2026-09-12]]",
+      "evidence": "docs/brain/24-SECURITY-AUDIT-2026-09-12.md",
+      "status": "active"
+    },
+    {
+      "id": "N1",
+      "type": "N",
+      "short": "validar preview autenticado do Lovable (depende de acesso/sessao)",
+      "canonical": "[[01-CURRENT-STATE]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "N2",
+      "type": "N",
+      "short": "investigar deck publico (Lista nao encontrada) como tarefa funcional separada",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "P1",
+      "type": "P",
+      "short": "acordos: nao trabalhar em main; uma alteracao por PR; sem merge/deploy automatico",
+      "canonical": "AGENTS.md do projeto",
+      "evidence": "AGENTS.md#acordos-de-trabalho",
+      "status": "active"
+    },
+    {
+      "id": "P2",
+      "type": "P",
+      "short": "protocolo do Segundo Cerebro obrigatorio (preflight/fechamento + brain:check)",
+      "canonical": "[[10-CONTEXT-FEEDING-RULE]]",
+      "evidence": "docs/brain/10-CONTEXT-FEEDING-RULE.md",
+      "status": "active"
+    },
+    {
+      "id": "Q1",
+      "type": "Q",
+      "short": "consumidores auxiliares de Supabase ainda diretos marcados como [REVALIDATE]",
+      "canonical": "[[areas/supabase-runtime]]",
+      "evidence": "docs/brain/03-ARCHITECTURE.md",
+      "status": "active"
+    },
+    {
+      "id": "R1",
+      "type": "R",
+      "short": "safe-area correta no CSS pode falhar em viewport real com inset != 0",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "R2",
+      "type": "R",
+      "short": "dialogs com footer longo podem esconder a acao primaria com teclado virtual",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "R3",
+      "type": "R",
+      "short": "alterar componentes Radix compartilhados pode regressar muitas rotas",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "R4",
+      "type": "R",
+      "short": "worktree tem alteracao pre-existente em funcao Supabase; cuidado no staging",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "R5",
+      "type": "R",
+      "short": "merge local em main nao equivale a publicacao no Lovable",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "R6",
+      "type": "R",
+      "short": "limite de threads; auditoria nao substitui validacao propria",
+      "canonical": "[[08-RISKS]]",
+      "evidence": "docs/brain/08-RISKS.md",
+      "status": "active"
+    },
+    {
+      "id": "S1",
+      "type": "S",
+      "short": "checkpoint de estado 2026-09-10/11 (polimento visual responsivo)",
+      "canonical": "[[01-CURRENT-STATE]]",
+      "evidence": "docs/brain/01-CURRENT-STATE.md",
+      "status": "active"
+    },
+    {
+      "id": "T1",
+      "type": "T",
+      "short": "adocao do CCL v1 no ecossistema Clara",
+      "canonical": "[[25-CCL-REGISTRY]]",
+      "evidence": "docs/brain/25-CCL-REGISTRY.md",
+      "status": "active"
+    }
+  ],
+  "tombstones": []
+}
+
