@@ -8,6 +8,8 @@ import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
 import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
 import { ApeTabs } from "@/components/ape/ApeTabs";
+import { LibraryExportDialog } from "@/features/export/LibraryExportDialog";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -577,6 +579,8 @@ export default function FoldersOptimized() {
               {selectMode ? <><X className="mr-2 h-4 w-4" />Cancelar</> : <><CheckSquare className="mr-2 h-4 w-4" />Selecionar</>}
             </Button>
           )}
+          <LibraryExportDialog userId={userId} />
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild><Button size="sm" className="min-h-[40px]"><FolderPlus className="mr-2 h-4 w-4" />Nova pasta</Button></DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto">
