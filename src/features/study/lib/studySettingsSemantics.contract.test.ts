@@ -16,7 +16,7 @@ function snapshot(overrides: Partial<StudySettingsSnapshotV3> = {}): StudySettin
 }
 
 /** Preferência base do usuário: gamificado + aleatório. */
-const BASE = snapshot({ order: "random", studyFlowMode: "mastery_rounds" });
+const BASE_GAMIFIED = snapshot({ order: "random", studyFlowMode: "mastery_rounds" });
 
 describe("Foco Vermelho — restrição temporária, não preferência", () => {
   it("enquanto ativo, o estado EFETIVO é fila sequencial no modo extenso", () => {

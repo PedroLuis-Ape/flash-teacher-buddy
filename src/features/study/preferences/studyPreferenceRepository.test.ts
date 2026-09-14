@@ -46,8 +46,7 @@ describe("studyPreferenceRepository", () => {
       study_flow_mode: "mastery_rounds",
     }, "write")).toEqual({
       scope: "favorites",
-      playMode: "single",
-      playSide: "a",
+      playTarget: "prompt",
       studyFlowMode: "mastery_rounds",
     });
   });
