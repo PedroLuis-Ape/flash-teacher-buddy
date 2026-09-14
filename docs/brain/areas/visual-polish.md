@@ -62,5 +62,8 @@ Related: [[01-CURRENT-STATE]] · [[04-DECISIONS]] · [[07-TESTS]] · [[08-RISKS]
 - [DECISAO VIGENTE] A ordenação de pastas é local nesta fase porque `folders` não possui `order_index`; a preferência é isolada por usuário/instituição. A ordenação de listas é local por pasta. Ordem em nuvem exige migration e permanece fora deste lote.
 - [DECISAO VIGENTE] A identidade visual da pasta mantém `📁` como default e aceita emoji customizado. O seletor é acessível, tem alvo mínimo de toque e permite restaurar o default.
 - [FATO CONFIRMADO] A integração de nuvem é best-effort até a coluna `folders.emoji` existir; a ausência da coluna não impede a navegação nem a renderização da biblioteca.
+- [ROOT-CAUSE] A grade de pastas ficou comprimida depois do ajuste de compactação porque cada célula continuava renderizando quatro ações desktop como irmãos flex do card. Em uma coluna de ~250–300 px, os botões consumiam quase toda a largura e deixavam o `ApeCardFolder` como uma faixa estreita.
+- [CORRECAO] Em grade, o card volta a ocupar 100% da célula; mover/favoritar/ponto de atenção/excluir/emoji permanecem acessíveis pelo menu de três pontos em todos os breakpoints. Seleção e ordenação continuam disponíveis como overlays compactos, sem roubar uma coluna do card.
+- [VERIFIED-TEST] `src/pages/__tests__/visualNavigation.contract.test.ts` protege o contrato de card full-width e o menu de ações na grade para evitar regressão visual equivalente.
 
 Related: [[01-CURRENT-STATE]] · [[07-TESTS]] · [[08-RISKS]]
