@@ -124,8 +124,12 @@ correção dos achados M1–M5. O estado vigente é o abaixo.
 - [VERIFIED-TEST] Depois das correções: MCP `158/158`, suíte `1996` testes,
   `tsc` exit 0, `eslint` 0 erros, build exit 0 com SEO `100/100`,
   `BUNDLE_CHECK_PASS tools=29` (8009 linhas, zero `npm:C:`) e `BRAIN_CHECK_PASS`.
-- [PENDENTE] Smoke autenticado real do MCP. Nada foi commitado, mergeado,
-  publicado nem aplicado no Supabase.
+- [FATO CONFIRMADO] Commit `ffc92270` na branch `feat/mcp-reference-importers`
+  e merge no `main` pelo PR
+  [#401](https://github.com/PedroLuis-Ape/flash-teacher-buddy/pull/401)
+  (merge commit `720ae797`). Nada foi publicado e nenhuma migration foi
+  aplicada no Supabase.
+- [PENDENTE] Smoke autenticado real do MCP, que depende das migrations.
 - [CRÍTICO] A publicação depende das três migrations: sem
   `folders.reference_id`/`lists.reference_id` a biblioteca não carrega.
 
