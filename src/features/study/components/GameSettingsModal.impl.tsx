@@ -29,7 +29,7 @@ import type {
   StudyPlayModePreset,
   StudyPlaySidePreset,
 } from "@/features/study/preferences/studyPreset";
-import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
+import { usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import type {
   StudySettingsPatchV3,
@@ -99,14 +99,6 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const favoritesActive = settings.scope === "favorites";
   const redFocusActive = settings.redFocus;
 
-  // Espelha o preset efetivo no runtime de áudio/play (rótulos e botão Play).
-  useEffect(() => {
-    setPlayPresetRuntime({
-      playMode: settings.playMode,
-      playSide: settings.playSide,
-    });
-  }, [settings.playMode, settings.playSide]);
-
   const handleRestart = () => {
     onRestart();
     setOpen(false);
@@ -149,12 +141,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     onSettingsChange({ fastMode: checked });
   };
 
-  const handlePlayModeChange = (playMode: StudyPlayModePreset) => {
-    onSettingsChange({ playMode });
-  };
-
-  const handlePlaySideChange = (playSide: StudyPlaySidePreset) => {
-    onSettingsChange({ playSide });
+  const handlePlayTargetChange = (playTarget: StudyPlayTargetPreset) => {
+    onSettingsChange({ playTarget });
   };
 
   const applyDirection = (next: Direction) => {
@@ -166,13 +154,22 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     setOpen(false);
   };
 
-  const sideActionPrefix = settings.playMode === "single" ? "Somente" : "Começar em";
+  // No Modo gamificado a direção efetiva é sempre automática: as rodadas
+  // alternam os lados por card. A preferência base do usuário fica intocada.
+  const directionLockedByFlow = isDirectionLockedByFlowMode(settings.studyFlowMode);
+  const promptLabel = currentDirection === "b-a" ? playRuntime.labelB : playRuntime.labelA;
+  const answerLabel = currentDirection === "b-a" ? playRuntime.labelA : playRuntime.labelB;
+  const derivedSidesHint = currentDirection === "any"
+    ? "Os lados alternam por card."
+    : `Pergunta em ${promptLabel} · resposta em ${answerLabel}.`;
 
   const directionSummary = currentDirection === "a-b"
     ? `Responder em ${playRuntime.labelB}`
     : currentDirection === "b-a"
       ? `Responder em ${playRuntime.labelA}`
-      : "Misto (alternado)";
+      : directionLockedByFlow
+        ? "Automática (modo gamificado)"
+        : "Misto (alternado)";
   // Cada resumo mostra SOMENTE os valores da própria categoria: ordem não
   // repete filtros, formato não repete conteúdo, e quem fala de Foco Vermelho é
   // o conteúdo. O formato vem do snapshot efetivo (já com a restrição aplicada).
@@ -182,9 +179,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const flowSummary = settings.studyFlowMode === "mastery_rounds" ? "Modo gamificado" : "Modo extenso";
   // Áudio e exibição fala de comportamento (tocar/mostrar), nunca de
   // English/Português — isso é papel exclusivo de "Direção da prática".
-  const audioSummary = `${settings.fastMode ? "Mostra os dois lados" : "Um lado por vez"} · ${
-    settings.playMode === "single" ? "Toca só a pergunta" : "Toca pergunta e resposta"
-  }`;
+  const playTargetSummary = settings.playTarget === "prompt"
+    ? "Toca só a pergunta"
+    : settings.playTarget === "answer"
+      ? "Toca só a resposta"
+      : "Toca pergunta e resposta";
+  const audioSummary = `${settings.fastMode ? "Mostra os dois lados" : "Um lado por vez"} · ${playTargetSummary}`;
 
   const CategoryRow: React.FC<{
     icon: React.ReactNode;
@@ -397,9 +397,16 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               <p className="text-sm text-muted-foreground">
                 Escolha em qual lado você quer responder durante esta sessão.
               </p>
+              {directionLockedByFlow && (
+                <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
+                  Direção automática — o modo gamificado alterna os lados por card.
+                  Troque para o modo extenso para escolher um lado fixo.
+                </p>
+              )}
               <div className="grid grid-cols-1 gap-2">
                 <Button
                   type="button"
+                  disabled={directionLockedByFlow}
                   variant={currentDirection === "a-b" ? "default" : "outline"}
                   aria-pressed={currentDirection === "a-b"}
                   onClick={() => applyDirection("a-b")}
@@ -409,6 +416,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 </Button>
                 <Button
                   type="button"
+                  disabled={directionLockedByFlow}
                   variant={currentDirection === "b-a" ? "default" : "outline"}
                   aria-pressed={currentDirection === "b-a"}
                   onClick={() => applyDirection("b-a")}
@@ -418,6 +426,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 </Button>
                 <Button
                   type="button"
+                  disabled={directionLockedByFlow}
                   variant={currentDirection === "any" ? "default" : "outline"}
                   aria-pressed={currentDirection === "any"}
                   onClick={() => applyDirection("any")}
@@ -429,11 +438,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <Button
                   type="button"
                   onClick={handleInvertDirection}
+                  disabled={directionLockedByFlow}
                   variant="ghost"
                   className="min-h-[44px] w-full"
                 >
                   <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Inverter lado atual
+                  Inverter direção da sessão
                 </Button>
               </div>
             </div>
@@ -559,49 +569,41 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2">
                   <Button
                     type="button"
-                    variant={settings.playMode === "both" ? "default" : "outline"}
+                    variant={settings.playTarget === "both" ? "default" : "outline"}
                     size="sm"
-                    aria-pressed={settings.playMode === "both"}
-                    onClick={() => handlePlayModeChange("both")}
+                    aria-pressed={settings.playTarget === "both"}
+                    onClick={() => handlePlayTargetChange("both")}
+                    className="min-h-[44px] justify-start"
                   >
-                    Dois lados
+                    <span className="truncate">Pergunta + resposta</span>
                   </Button>
                   <Button
                     type="button"
-                    variant={settings.playMode === "single" ? "default" : "outline"}
+                    variant={settings.playTarget === "prompt" ? "default" : "outline"}
                     size="sm"
-                    aria-pressed={settings.playMode === "single"}
-                    onClick={() => handlePlayModeChange("single")}
+                    aria-pressed={settings.playTarget === "prompt"}
+                    onClick={() => handlePlayTargetChange("prompt")}
+                    className="min-h-[44px] justify-start"
                   >
-                    Somente um lado
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Button
-                    type="button"
-                    variant={settings.playSide === "a" ? "secondary" : "outline"}
-                    size="sm"
-                    aria-pressed={settings.playSide === "a"}
-                    onClick={() => handlePlaySideChange("a")}
-                    className="min-w-0"
-                  >
-                    <span className="truncate">{sideActionPrefix} {playRuntime.labelA}</span>
+                    <span className="truncate">Somente pergunta</span>
                   </Button>
                   <Button
                     type="button"
-                    variant={settings.playSide === "b" ? "secondary" : "outline"}
+                    variant={settings.playTarget === "answer" ? "default" : "outline"}
                     size="sm"
-                    aria-pressed={settings.playSide === "b"}
-                    onClick={() => handlePlaySideChange("b")}
-                    className="min-w-0"
+                    aria-pressed={settings.playTarget === "answer"}
+                    onClick={() => handlePlayTargetChange("answer")}
+                    className="min-h-[44px] justify-start"
                   >
-                    <span className="truncate">{sideActionPrefix} {playRuntime.labelB}</span>
+                    <span className="truncate">Somente resposta</span>
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Quem define os lados é a Direção da prática. {derivedSidesHint}
+                </p>
               </div>
             </div>
           )}
