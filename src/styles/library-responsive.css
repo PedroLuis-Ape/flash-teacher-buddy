@@ -10,8 +10,9 @@
 }
 
 .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)) !important;
-  align-items: stretch;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15.5rem), 1fr)) !important;
+  align-items: start;
+  gap: .625rem;
 }
 
 .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) {
@@ -32,8 +33,11 @@
 }
 
 .ape-tabs-shell .space-ui-folder-card {
-  height: 100%;
+  height: auto;
+  min-height: 4rem;
   min-width: 0;
+  padding-inline: .875rem;
+  padding-block: .5rem;
 }
 
 .ape-tabs-shell .space-ui-folder-card .ape-card-title {
@@ -42,7 +46,7 @@
 
 @media (min-width: 1536px) {
   .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-    grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)) !important;
   }
 }
 
@@ -52,11 +56,30 @@
   }
 
   .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .5rem;
+  }
+
+  /* Duas colunas só cabem com o ícone menor em telas estreitas. */
+  .ape-tabs-shell .space-ui-folder-card .space-ui-card-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: .625rem;
+  }
+
+  .ape-tabs-shell .space-ui-folder-card {
+    padding-inline: .625rem;
+    padding-block: .5rem;
   }
 
   .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button {
     width: 2.25rem;
     min-width: 2.25rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .ape-tabs-shell .grid:has(.space-ui-folder-card) {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }

@@ -80,9 +80,9 @@ export function ApeCardList({
             </Badge>
           )}
         </div>
-        {referenceId && <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/80">{referenceId}</span>}
+        {referenceId && <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground/80">{referenceId}</span>}
         {(subtitle || cardCount !== undefined || language || badge) && (
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="mt-1 truncate text-[13px] text-muted-foreground">
             {[
               subtitle,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? "card" : "cards"}`,
