@@ -43,7 +43,7 @@ import {
 
 export const STUDY_SETTINGS_SNAPSHOT_VERSION = 3 as const;
 
-export interface StudySettingsSnapshotV2 {
+export interface StudySettingsSnapshotV3 {
   version: 3;
   direction: StudyDirectionPreset;
   order: StudyOrderPreset;
@@ -58,9 +58,9 @@ export interface StudySettingsSnapshotV2 {
   writeCorrectionMode: StudyWriteCorrectionModePreset;
 }
 
-export type StudySettingsPatchV2 = Partial<Omit<StudySettingsSnapshotV2, "version">>;
+export type StudySettingsPatchV3 = Partial<Omit<StudySettingsSnapshotV3, "version">>;
 
-export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV2 = Object.freeze({
+export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV3 = Object.freeze({
   version: STUDY_SETTINGS_SNAPSHOT_VERSION,
   direction: DEFAULT_STUDY_PRESET.direction,
   order: DEFAULT_STUDY_PRESET.order,
@@ -87,15 +87,15 @@ function bool(value: unknown, fallback: boolean): boolean {
  * v1 não possuía `playMode`/`playSide`; os campos são preenchidos a partir do
  * fallback informado (normalmente o preset atual da lista/modo).
  */
-export function normalizeStudySettingsSnapshotV2(
+export function normalizeStudySettingsSnapshotV3(
   value: unknown,
-  fallback: StudySettingsSnapshotV2 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+  fallback: StudySettingsSnapshotV3 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
   options: { syncRewriteDirection?: boolean } = {},
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   // v1 chamava o escopo de `subset`.
   const scopeValue = raw.scope ?? raw.subset;
-  const snapshot: StudySettingsSnapshotV2 = {
+  const snapshot: StudySettingsSnapshotV3 = {
     version: STUDY_SETTINGS_SNAPSHOT_VERSION,
     direction: pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction),
     order: pick(STUDY_PRESET_ORDERS, raw.order, fallback.order),
@@ -130,11 +130,11 @@ export function normalizeStudySettingsSnapshotV2(
   return snapshot;
 }
 
-export function isStudySettingsSnapshotV2(value: unknown): value is StudySettingsSnapshotV2 {
+export function isStudySettingsSnapshotV3(value: unknown): value is StudySettingsSnapshotV3 {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   if (row.version !== STUDY_SETTINGS_SNAPSHOT_VERSION) return false;
-  const normalized = normalizeStudySettingsSnapshotV2(row);
+  const normalized = normalizeStudySettingsSnapshotV3(row);
   return JSON.stringify(normalized) === JSON.stringify({
     ...normalized,
     ...row,
@@ -146,9 +146,9 @@ export function isStudySettingsSnapshotV2(value: unknown): value is StudySetting
 export function studySettingsFromPreset(
   preset: StudyPreset,
   extra: { redFocus?: boolean } = {},
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   return applyStudySettingsConstraints(
-    normalizeStudySettingsSnapshotV2({
+    normalizeStudySettingsSnapshotV3({
       ...preset,
       redFocus: extra.redFocus ?? false,
     }),
@@ -168,8 +168,8 @@ export function studySettingsFromPreset(
 export const RED_FOCUS_CONSTRAINED_SETTINGS = ["order", "studyFlowMode"] as const;
 
 export function applyStudySettingsConstraints(
-  snapshot: StudySettingsSnapshotV2,
-): StudySettingsSnapshotV2 {
+  snapshot: StudySettingsSnapshotV3,
+): StudySettingsSnapshotV3 {
   if (!snapshot.redFocus) return snapshot;
   if (snapshot.order === "sequential" && snapshot.studyFlowMode === "continuous") return snapshot;
   return { ...snapshot, order: "sequential", studyFlowMode: "continuous" };
@@ -181,9 +181,9 @@ export function applyStudySettingsConstraints(
  * a restrição nunca foi gravada como preferência, então basta reaplicá-la.
  */
 export function releaseRedFocusConstraints(
-  next: StudySettingsSnapshotV2,
+  next: StudySettingsSnapshotV3,
   basePreset: Pick<StudyPreset, "order" | "studyFlowMode">,
-): StudySettingsSnapshotV2 {
+): StudySettingsSnapshotV3 {
   if (next.redFocus) return next;
   if (next.order === basePreset.order && next.studyFlowMode === basePreset.studyFlowMode) return next;
   return { ...next, order: basePreset.order, studyFlowMode: basePreset.studyFlowMode };
@@ -198,13 +198,13 @@ export function releaseRedFocusConstraints(
  * do usuário é exatamente o que fazia o preset normal ser sobrescrito.
  */
 export function studySettingsSemanticOverride(
-  next: StudySettingsSnapshotV2,
-  requested: StudySettingsPatchV2,
+  next: StudySettingsSnapshotV3,
+  requested: StudySettingsPatchV3,
 ): StudyPresetOverride {
   const full = studySettingsToPresetOverride(next);
   const interested = new Set<keyof StudyPresetOverride>();
 
-  (Object.keys(requested) as (keyof StudySettingsPatchV2)[]).forEach((key) => {
+  (Object.keys(requested) as (keyof StudySettingsPatchV3)[]).forEach((key) => {
     if (key === "redFocus") return;
     interested.add(key as keyof StudyPresetOverride);
     // Direção e lado da reescrita são a MESMA decisão (sincronização atômica).
@@ -230,7 +230,7 @@ export function studySettingsSemanticOverride(
 
 /** Overrides efêmeros aplicados quando uma sessão salva vence o preset atual. */
 export function studySettingsToPresetOverride(
-  snapshot: StudySettingsSnapshotV2,
+  snapshot: StudySettingsSnapshotV3,
 ): StudyPresetOverride {
   return {
     direction: snapshot.direction,
@@ -254,17 +254,17 @@ export const QUEUE_AFFECTING_SETTINGS = [
   "scope",
   "redFocus",
   "studyFlowMode",
-] as const satisfies readonly (keyof StudySettingsPatchV2)[];
+] as const satisfies readonly (keyof StudySettingsPatchV3)[];
 
-export function patchAffectsQueue(patch: StudySettingsPatchV2): boolean {
+export function patchAffectsQueue(patch: StudySettingsPatchV3): boolean {
   return QUEUE_AFFECTING_SETTINGS.some((key) => patch[key] !== undefined);
 }
 
 export function applyStudySettingsPatch(
-  current: StudySettingsSnapshotV2,
-  patch: StudySettingsPatchV2,
-): StudySettingsSnapshotV2 {
-  const requested: StudySettingsPatchV2 = { ...patch };
+  current: StudySettingsSnapshotV3,
+  patch: StudySettingsPatchV3,
+): StudySettingsSnapshotV3 {
+  const requested: StudySettingsPatchV3 = { ...patch };
   const nextActivityMode = requested.writeActivityMode ?? current.writeActivityMode;
   const enteringRewrite = requested.writeActivityMode === "rewrite"
     && current.writeActivityMode !== "rewrite";
@@ -278,7 +278,7 @@ export function applyStudySettingsPatch(
     requested.writeRewriteSide = directionToRewriteSide(current.direction) as typeof current.writeRewriteSide;
   }
 
-  const merged = normalizeStudySettingsSnapshotV2(
+  const merged = normalizeStudySettingsSnapshotV3(
     { ...current, ...requested },
     current,
     { syncRewriteDirection: false },
@@ -289,14 +289,14 @@ export function applyStudySettingsPatch(
 }
 
 export function diffStudySettings(
-  before: StudySettingsSnapshotV2,
-  after: StudySettingsSnapshotV2,
-): StudySettingsPatchV2 {
+  before: StudySettingsSnapshotV3,
+  after: StudySettingsSnapshotV3,
+): StudySettingsPatchV3 {
   const patch: Record<string, unknown> = {};
-  (Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT) as (keyof StudySettingsSnapshotV2)[])
+  (Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT) as (keyof StudySettingsSnapshotV3)[])
     .filter((key) => key !== "version")
     .forEach((key) => {
       if (before[key] !== after[key]) patch[key] = after[key];
     });
-  return patch as StudySettingsPatchV2;
+  return patch as StudySettingsPatchV3;
 }
