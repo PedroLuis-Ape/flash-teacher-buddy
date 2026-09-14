@@ -625,8 +625,13 @@ const Study = () => {
   // ── Sync flipDirection only after the preset source has settled ──
   useEffect(() => {
     if (preferencesHydrating) return;
-    setFlipDirection(restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction);
-  }, [preferencesHydrating, urlDirection, prefs.direction]);
+    // Direção EFETIVA: no Modo gamificado é sempre automática (`any`) em todos
+    // os modos, sem destruir a preferência base do usuário.
+    setFlipDirection(resolveEffectiveStudyDirection(
+      restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction,
+      effectivePreset.studyFlowMode,
+    ));
+  }, [preferencesHydrating, urlDirection, prefs.direction, effectivePreset.studyFlowMode]);
 
   // Apply one immutable starting preset for each account/list/mode context.
   // Later changes come only through the controlled settings handlers.
@@ -2515,6 +2520,7 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
+              playTarget={effectivePreset.playTarget}
               fastMode={gameSettings.fastMode}
               writeSettings={writeSessionSettings}
               ttsEnabled={effectiveStudySettings.ttsEnabled}
