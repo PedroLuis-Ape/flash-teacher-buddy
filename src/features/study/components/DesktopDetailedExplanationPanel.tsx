@@ -24,6 +24,7 @@ import {
   type ExplanationDisplayMode,
 } from "@/features/study/lib/studyExplanationPersistence";
 import "./desktop-explanation.css";
+import { shouldBlockSessionShortcut } from "@/features/study/lib/keyboardCommandRouter";
 
 interface DesktopDetailedExplanationPanelProps {
   explanation?: string | null;
@@ -317,8 +318,7 @@ export function DesktopDetailedExplanationPanel({
     if (!isDesktop) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (shouldBlockSessionShortcut(event)) return;
 
       if (event.altKey && event.key.toLocaleLowerCase() === "e" && hasContent) {
         event.preventDefault();

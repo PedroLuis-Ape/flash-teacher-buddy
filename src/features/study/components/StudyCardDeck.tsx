@@ -8,6 +8,7 @@ import {
   type TouchEvent,
 } from "react";
 import { cn } from "@/lib/utils";
+import { shouldBlockSessionShortcut } from "@/features/study/lib/keyboardCommandRouter";
 import "./studyCardDeck.css";
 
 type SwipeAction = "next" | "previous" | null;
@@ -352,7 +353,7 @@ export function StudyCardDeck({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isInteractiveTarget(event.target)) return;
+      if (shouldBlockSessionShortcut(event)) return;
       if (event.key === "ArrowLeft") prepareTransition("previous");
       if (event.key === "ArrowRight") prepareTransition("next");
     };
