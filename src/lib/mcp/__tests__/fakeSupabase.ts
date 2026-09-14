@@ -1,21 +1,23 @@
 /**
- * Minimal PostgREST-shaped fake used by the MCP domain tests.
+ * PostgREST-shaped fake used by the MCP domain tests.
  *
- * It filters/orders/paginates rows the same way the domain expects the real
- * client to, records every query built (so a test can assert the ownership and
- * system_kind filters), and can simulate an RLS denial for one table.
+ * It filters/orders/paginates reads and also performs inserts, updates and the
+ * product's trash RPCs over the same in-memory tables, so a test can exercise a
+ * full tool -> domain -> backend round trip. Every query built is recorded
+ * (filters included), which is how the ownership/scope assertions are proven.
  */
 
 type Row = Record<string, unknown>;
 
 export interface FakeFilter {
-  op: "eq" | "is" | "in" | "ilike" | "or";
+  op: "eq" | "is" | "in" | "ilike" | "or" | "not_null";
   column?: string;
   value?: unknown;
 }
 
 export interface FakeQueryCall {
   table: string;
+  operation: "select" | "insert" | "update";
   columns?: string;
   countRequested: boolean;
   head: boolean;
@@ -25,14 +27,27 @@ export interface FakeQueryCall {
   limit?: number;
 }
 
+export interface FakeRpcCall {
+  operation: "rpc";
+  table: string;
+  rpcName: string;
+  rpcParams: Record<string, unknown>;
+}
+
+export type RecordedCall = FakeQueryCall | FakeRpcCall;
+
 export interface FakeClientOptions {
   /** Table -> provider error, used to simulate RLS/permission denial. */
   deny?: Record<string, { code: string; message: string }>;
+  /** Overrides/replacements for the product RPCs (e.g. a NOT_FOUND answer). */
+  rpc?: Record<string, (params: Record<string, unknown>, tables: Record<string, Row[]>) => { data: unknown; error: unknown }>;
 }
 
 export interface FakeClient {
   from(table: string): unknown;
-  calls: FakeQueryCall[];
+  rpc(name: string, params?: Record<string, unknown>): Promise<{ data: unknown; error: unknown; count?: number | null }>;
+  calls: RecordedCall[];
+  tables: Record<string, Row[]>;
 }
 
 function resolvePath(row: Row | null | undefined, path: string): { found: boolean; value: unknown } {
@@ -83,6 +98,8 @@ function rowMatches(row: Row, filters: FakeFilter[]): boolean {
         return Array.isArray(filter.value) && filter.value.includes(resolved.value);
       case "ilike":
         return matchesIlike(resolved.value, String(filter.value));
+      case "not_null":
+        return resolved.value !== null && resolved.value !== undefined;
       default:
         return true;
     }
@@ -97,27 +114,172 @@ function compareValues(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b));
 }
 
+const NOW_ISO = "2026-09-13T12:00:00.000Z";
+
+/** Column defaults the database would apply on insert. */
+const TABLE_DEFAULTS: Record<string, Row> = {
+  folders: { system_kind: "user", visibility: "private", class_id: null, institution_id: null, deleted_at: null },
+  lists: {
+    system_kind: "user",
+    visibility: "private",
+    primary_side: "a",
+    order_index: 0,
+    class_id: null,
+    institution_id: null,
+    deleted_at: null,
+  },
+  flashcards: { deleted_at: null },
+};
+
+/**
+ * Keeps the embedded relationships a real PostgREST select would return in
+ * sync after inserts/updates, so re-reads filter embeds like production does.
+ */
+function syncEmbeds(table: string, row: Row, tables: Record<string, Row[]>): void {
+  if (table === "lists") {
+    const folder = (tables.folders ?? []).find((candidate) => candidate.id === row.folder_id);
+    if (folder) row.folders = folder;
+    return;
+  }
+  if (table === "flashcards") {
+    const list = (tables.lists ?? []).find((candidate) => candidate.id === row.list_id);
+    if (list) row.lists = list;
+    return;
+  }
+  if (table === "folders") {
+    row.lists = (tables.lists ?? [])
+      .filter((candidate) => candidate.folder_id === row.id)
+      .map((candidate) => ({ id: candidate.id, deleted_at: candidate.deleted_at, system_kind: candidate.system_kind }));
+  }
+}
+
+/** Product trash RPCs, implemented over the same tables. */
+function defaultRpc(
+  name: string,
+  params: Record<string, unknown>,
+  tables: Record<string, Row[]>,
+): { data: unknown; error: unknown } {
+  const flashcards = tables.flashcards ?? [];
+  const lists = tables.lists ?? [];
+  const folders = tables.folders ?? [];
+
+  if (name === "soft_delete_list") {
+    const listId = params.p_list_id;
+    for (const card of flashcards) {
+      if (card.list_id === listId && card.deleted_at == null) card.deleted_at = NOW_ISO;
+    }
+    for (const list of lists) {
+      if (list.id === listId) list.deleted_at = NOW_ISO;
+    }
+    return { data: { success: true }, error: null };
+  }
+
+  if (name === "soft_delete_folder") {
+    const folderId = params.p_folder_id;
+    const listIds = lists.filter((list) => list.folder_id === folderId).map((list) => list.id);
+    for (const card of flashcards) {
+      if (listIds.includes(card.list_id) && card.deleted_at == null) card.deleted_at = NOW_ISO;
+    }
+    for (const list of lists) {
+      if (list.folder_id === folderId && list.deleted_at == null) list.deleted_at = NOW_ISO;
+    }
+    for (const folder of folders) {
+      if (folder.id === folderId) folder.deleted_at = NOW_ISO;
+    }
+    return { data: { success: true }, error: null };
+  }
+
+  if (name === "restore_list") {
+    const listId = params.p_list_id;
+    for (const list of lists) {
+      if (list.id === listId) list.deleted_at = null;
+    }
+    for (const card of flashcards) {
+      if (card.list_id === listId && card.deleted_at != null) card.deleted_at = null;
+    }
+    return { data: { success: true }, error: null };
+  }
+
+  if (name === "restore_folder") {
+    const folderId = params.p_folder_id;
+    const listIds = lists.filter((list) => list.folder_id === folderId).map((list) => list.id);
+    for (const folder of folders) {
+      if (folder.id === folderId) folder.deleted_at = null;
+    }
+    for (const list of lists) {
+      if (list.folder_id === folderId) list.deleted_at = null;
+    }
+    for (const card of flashcards) {
+      if (listIds.includes(card.list_id)) card.deleted_at = null;
+    }
+    return { data: { success: true }, error: null };
+  }
+
+  return { data: { success: false, error: "UNSUPPORTED_RPC" }, error: null };
+}
+
+/** Global counter: generated ids must never collide across fake clients. */
+let globalSequence = 0;
+
+function nextGeneratedId(): string {
+  globalSequence += 1;
+  return "00000000-0000-4000-8000-" + String(globalSequence).padStart(12, "0");
+}
+
 export function createFakeClient(
   tables: Record<string, Row[]>,
   options: FakeClientOptions = {},
-  calls: FakeQueryCall[] = [],
+  calls: RecordedCall[] = [],
 ): FakeClient {
+  function rpc(name: string, params: Record<string, unknown> = {}) {
+    calls.push({ operation: "rpc", table: "rpc:" + name, rpcName: name, rpcParams: params });
+    const override = options.rpc?.[name];
+    if (override) return Promise.resolve(override(params, tables));
+    return Promise.resolve(defaultRpc(name, params, tables));
+  }
+
   function from(table: string) {
     const call: FakeQueryCall = {
       table,
+      operation: "select",
       countRequested: false,
       head: false,
       filters: [],
       orders: [],
     };
     calls.push(call);
+    let insertRows: Row[] = [];
+    let patch: Row | null = null;
 
     const run = () => {
       const denied = options.deny?.[table];
       if (denied) {
         return { data: null, error: { code: denied.code, message: denied.message, details: null, hint: null }, count: null };
       }
+
+      if (call.operation === "insert") {
+        const created = insertRows.map((row) => ({
+          ...(TABLE_DEFAULTS[table] ?? {}),
+          id: nextGeneratedId(),
+          created_at: NOW_ISO,
+          updated_at: NOW_ISO,
+          deleted_at: null,
+          ...row,
+        }));
+        tables[table] = [...(tables[table] ?? []), ...created];
+        for (const row of created) syncEmbeds(table, row, tables);
+        return { data: created, error: null, count: created.length };
+      }
+
       const matched = (tables[table] ?? []).filter((row) => rowMatches(row, call.filters));
+      if (call.operation === "update") {
+        for (const row of matched) {
+          Object.assign(row, patch ?? {});
+          syncEmbeds(table, row, tables);
+        }
+        return { data: matched, error: null, count: matched.length };
+      }
+
       const ordered = call.orders.length
         ? [...matched].sort((left, right) => {
             for (const order of call.orders) {
@@ -135,8 +297,10 @@ export function createFakeClient(
         : call.limit !== undefined
           ? ordered.slice(0, call.limit)
           : ordered;
+      // Reads return copies, like a real HTTP response would, so callers can
+      // never mutate the table by holding a previous result.
       return {
-        data: call.head ? null : paged,
+        data: call.head ? null : paged.map((row) => ({ ...row })),
         error: null,
         count: call.countRequested || call.head ? matched.length : null,
       };
@@ -147,6 +311,16 @@ export function createFakeClient(
         call.columns = columns;
         call.countRequested = opts?.count === "exact";
         call.head = opts?.head === true;
+        return builder;
+      },
+      insert(payload: Row | Row[]) {
+        call.operation = "insert";
+        insertRows = Array.isArray(payload) ? payload : [payload];
+        return builder;
+      },
+      update(values: Row) {
+        call.operation = "update";
+        patch = values;
         return builder;
       },
       eq(column: string, value: unknown) {
@@ -163,6 +337,12 @@ export function createFakeClient(
       },
       ilike(column: string, pattern: string) {
         call.filters.push({ op: "ilike", column, value: pattern });
+        return builder;
+      },
+      not(column: string, operator: string, value: unknown) {
+        if (operator === "is" && value === null) {
+          call.filters.push({ op: "not_null", column });
+        }
         return builder;
       },
       or(expression: string) {
@@ -199,5 +379,5 @@ export function createFakeClient(
     return builder;
   }
 
-  return { from, calls };
+  return { from, rpc, calls, tables };
 }

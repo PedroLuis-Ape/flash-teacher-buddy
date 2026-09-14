@@ -26,6 +26,19 @@ export interface UserScopedDb {
 }
 
 /**
+ * Opaque confirmation key used to sign/verify the stateless two-step
+ * confirmation tokens. It is the verified bearer of the current request, kept
+ * OUT of UserScopedDb on purpose so it can never leak into a tool payload by
+ * accident (no storage, no migration).
+ */
+export type ConfirmationKey = string & { readonly __confirmationKey: unique symbol };
+
+export interface ToolIdentity {
+  db: UserScopedDb;
+  confirmationKey: ConfirmationKey;
+}
+
+/**
  * Single authentication gate of the domain layer.
  *
  * Identity comes exclusively from the verified OAuth context: the model can
@@ -68,4 +81,13 @@ export function createUserScopedClient(token: string): SupabaseClient {
 export function createUserScopedDb(ctx: ToolContextLike | undefined): UserScopedDb {
   const { userId, token } = requireAuthenticatedUser(ctx);
   return { client: createUserScopedClient(token), userId };
+}
+
+/** Identity for tools that may need to sign or verify a confirmation token. */
+export function createToolIdentity(ctx: ToolContextLike | undefined): ToolIdentity {
+  const { userId, token } = requireAuthenticatedUser(ctx);
+  return {
+    db: { client: createUserScopedClient(token), userId },
+    confirmationKey: token as ConfirmationKey,
+  };
 }

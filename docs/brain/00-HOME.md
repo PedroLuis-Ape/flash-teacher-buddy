@@ -24,6 +24,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]] — regra
   permanente para recuperar somente o subgrafo relevante e reconectar
   conhecimento durável.
+- [[27-CONTEXT-PACKET-E-TELEMETRIA]] — regra READ ONCE -> COMPACT -> SHARE ->
+  REUSE, contexto compartilhado entre agentes e telemetria de custo de contexto.
 - [[11-ARCHIVE-IMPORT-2026-09-11]] — conteúdo completo importado do ZIP.
 - [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]] — regras para manter o vault conectado.
 - [[23-GIT-E-WORKTREES]] — checkout principal, pasta oficial de worktrees e regra de limpeza segura.

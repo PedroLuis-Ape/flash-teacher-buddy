@@ -90,3 +90,97 @@ export async function findAccessibleList(
   }
   return record;
 }
+
+export const OWNED_FOLDER_SELECT =
+  "id,title,description,visibility,institution_id,system_kind,deleted_at,class_id,lang_a,lang_b,tts_enabled";
+
+export interface FindOwnedOptions {
+  /** Used by the trash flow: a soft-deleted row is still an owned row. */
+  includeDeleted?: boolean;
+}
+
+export function compactFolderSummary(row: Record<string, unknown>): Record<string, unknown> {
+  const institutionId = str(row, "institution_id") ?? null;
+  return {
+    id: str(row, "id") ?? "",
+    title: str(row, "title") ?? "",
+    description: truncatedStr(row, "description", 160),
+    visibility: str(row, "visibility"),
+    institution_id: institutionId,
+    scope: institutionId ? "institution" : "personal",
+  };
+}
+
+export function folderInstitutionId(row: Record<string, unknown>): string | null {
+  return str(row, "institution_id") ?? null;
+}
+
+/**
+ * Resolves a folder the authenticated account owns, in ANY of its scopes
+ * (personal + institutions it owns). Scope is derived from the object itself,
+ * so write tools never need the model to declare where an existing object is.
+ */
+export async function findOwnedFolder(
+  db: UserScopedDb,
+  folderId: unknown,
+  options: FindOwnedOptions = {},
+): Promise<Record<string, unknown>> {
+  const id = requireUuid(folderId, "folder_id");
+
+  let query = db.client
+    .from("folders")
+    .select(OWNED_FOLDER_SELECT)
+    .eq("id", id)
+    .eq("owner_id", db.userId)
+    .eq("system_kind", "user")
+    .is("class_id", null);
+  if (!options.includeDeleted) query = query.is("deleted_at", null);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "Não foi possível ler a pasta.");
+
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Pasta não encontrada na biblioteca desta conta.", {
+      hint: "Use list_folders para descobrir o id correto antes de repetir.",
+    });
+  }
+  return record;
+}
+
+/**
+ * Same authority rule as findOwnedFolder, for lists: folder ownership is the
+ * scope authority, so a list is never resolved by a repeatable column alone.
+ */
+export async function findOwnedList(
+  db: UserScopedDb,
+  listId: unknown,
+  options: FindOwnedOptions = {},
+): Promise<Record<string, unknown>> {
+  const id = requireUuid(listId, "list_id");
+
+  let query = db.client
+    .from("lists")
+    .select(ACCESSIBLE_LIST_SELECT)
+    .eq("id", id)
+    .eq("folders.owner_id", db.userId)
+    .eq("folders.system_kind", "user")
+    .eq("system_kind", "user");
+  if (!options.includeDeleted) {
+    query = query
+      .is("deleted_at", null)
+      .is("folders.deleted_at", null)
+      .is("folders.class_id", null);
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) throw toMcpDomainError(error, "Não foi possível ler a lista.");
+
+  const record = asRow(data);
+  if (!record) {
+    throw new McpDomainError("not_found", "Lista não encontrada na biblioteca desta conta.", {
+      hint: "Use list_lists ou search_my_content para descobrir o id correto antes de repetir.",
+    });
+  }
+  return record;
+}

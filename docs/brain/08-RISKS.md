@@ -148,3 +148,21 @@ Related: [[sessions/2026-09-13-ab-language-orientation]] · [[06-BUGS]] · [[07-
   oficial para incluir as tools novas; validar tools/list apos a regeneracao.
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]]
+
+## R-2026-09-13-04 — escrita do MCP: cache de vocabulário, token e RLS não exercitada
+
+- [RISCO] invalidateVocabularyInventory limpa um Map em memória do isolate
+  atual. Com mais de um isolate servindo o MCP, uma análise pode usar
+  inventário de até 60 s (TTL) depois de uma escrita. Mitigação atual: TTL curto
+  + invalidação no isolate que escreveu. FOLLOW-UP: versionar invalidação por
+  fingerprint/updated_at consultado no banco.
+- [DECISAO VIGENTE] O confirmation token destrutivo é HMAC do bearer da
+  requisição: refresh de sessão entre preview e confirmação invalida o token e
+  exige novo preview (falha segura, sem operação parcial).
+- [NAO VERIFICADO] O isolamento entre contas na FASE 3/4 foi provado por
+  filtros de posse do domínio sobre fake PostgREST; a RLS real segue não
+  exercitada nesta rodada. Rodar smoke autenticado antes de publicar.
+- [LIMITE CONHECIDO] duplicate_list copia até 2000 cards ativos por chamada e
+  compensa falha de lote enviando a cópia parcial para a lixeira.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]]

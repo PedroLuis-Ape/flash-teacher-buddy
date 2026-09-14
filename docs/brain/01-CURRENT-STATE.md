@@ -614,3 +614,32 @@ Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-l
   [[sessions/2026-09-13-mcp-fase1-2-read]].
 
 Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — FASE 3 (escrita) + FASE 4 (destrutivos) — 2026-09-13
+
+- [FATO CONFIRMADO] 15 tools de escrita/destrutivas registradas (versão 0.3.0)
+  sobre a mesma camada de domínio: create/update folder (inclui mover entre
+  instituições), create/update/move/reorder/duplicate list, add/update/remove
+  cards em lote, preview+confirm de delete de lista/pasta e restore_from_trash.
+- [DECISAO VIGENTE] Objetos existentes são resolvidos por posse
+  (owner_id/folders.owner_id = auth.uid(), system_kind = user, não deletado);
+  criar exige destino explícito; listas espelham o workspace da pasta.
+- [DECISAO VIGENTE] Destrutivo exige dois passos: preview/dry_run devolve token
+  stateless (HMAC do bearer verificado, TTL 600 s, vinculado à contagem
+  previsualizada) e só confirm_delete_* aplica. Remoção de 25+ cards exige
+  dry_run. Nada de hard delete: a lixeira do produto (7 dias) é o destino.
+- [FATO CONFIRMADO] Batch real: 5 cards = 1 insert; edição "mesmos valores" =
+  1 UPDATE; retry do batch não duplica (skip por par term+translation).
+- [FATO CONFIRMADO] Integração com o motor de vocabulário:
+  analyze_text_against_library registrado no grupo read-only e toda escrita
+  invalida o inventário com a mesma chave (userId|scope) do motor.
+- [VERIFIED-GATE] typecheck app/node 0 · vitest src/lib/mcp 18 arquivos / 117
+  testes PASS (lote 12/89) · eslint 0 · build exit 0 com SEO 100/100 · brain-check
+  BRAIN_CHECK_PASS.
+- [NAO VERIFICADO] Nenhuma chamada real ao Supabase/MCP; a RLS real não foi
+  exercitada (a prova de isolamento entre contas é de domínio).
+- [FOLLOW-UP] invalidar inventário por fingerprint/versão (o cache é por
+  isolate, com TTL de 60 s). Ver [[08-RISKS]].
+- Ver [[areas/mcp-agent-api]] e [[sessions/2026-09-13-mcp-phase3-4]].
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]] · [[08-RISKS]]

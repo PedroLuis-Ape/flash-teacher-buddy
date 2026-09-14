@@ -13,6 +13,7 @@ export type McpErrorCode =
   | "not_found"
   | "invalid_input"
   | "conflict"
+  | "confirmation_required"
   | "unavailable";
 
 export interface McpDomainErrorOptions {
@@ -52,6 +53,7 @@ const ERROR_CODE_MAP: Record<string, McpErrorCode> = {
   "53300": "unavailable", // too_many_connections
   "22P02": "invalid_input", // invalid_text_representation (malformed uuid)
   "22023": "invalid_input", // invalid_parameter_value
+  "23514": "invalid_input", // check_violation (dominio fechado: study_type, visibility, primary_side)
   "23503": "invalid_input", // foreign_key_violation
   "23505": "conflict", // unique_violation
   PGRST116: "not_found",
@@ -64,6 +66,8 @@ const CODE_MESSAGES: Record<McpErrorCode, string> = {
   not_found: "O objeto solicitado não existe na biblioteca desta conta.",
   invalid_input: "A entrada enviada é inválida para esta operação.",
   conflict: "A operação conflita com o estado atual da biblioteca.",
+  confirmation_required:
+    "Esta operação é material e exige confirmação em dois passos (preview + token).",
   unavailable: "O backend da biblioteca não respondeu como esperado. Tente novamente.",
 };
 

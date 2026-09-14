@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToolContext } from "@lovable.dev/mcp-js";
-import type { FakeQueryCall } from "./fakeSupabase";
+import type { RecordedCall } from "./fakeSupabase";
 
 const hoisted = vi.hoisted(() => {
   const tables: Record<string, Record<string, unknown>[]> = {};
-  const calls: FakeQueryCall[] = [];
+  const calls: RecordedCall[] = [];
   return { tables, calls };
 });
 

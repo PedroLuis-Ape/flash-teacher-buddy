@@ -121,3 +121,62 @@ plugin Vite (mcpPlugin()); a fonte de verdade e src/lib/mcp/.
 Expor o escopo institucional nas tools, rodar smoke autenticado real e seguir
 para a FASE 3 reutilizando esta camada. Ver
 [[sessions/2026-09-13-mcp-fase1-2-read]].
+
+## FASE 3/4 — escrita e operações destrutivas (2026-09-13)
+
+- [DECISAO VIGENTE] Objetos existentes são resolvidos por POSSE
+  (findOwnedFolder/findOwnedList: owner_id ou folders.owner_id = auth.uid(),
+  system_kind = user, não deletado), sem exigir que o modelo declare o escopo:
+  o escopo é derivado do próprio objeto. Criar exige destino explícito
+  (folder_id em create_list; institution_id opcional em create_folder).
+- [DECISAO VIGENTE] create_list herda o institution_id da pasta e move_list
+  espelha o destino (folder_id + institution_id + order_index): lista e pasta
+  nunca discordam do workspace.
+- [DECISAO VIGENTE] Study settings são domínio fechado: study_type só aceita
+  language|general (CHECK do banco), primary_side a|b e idiomas em BCP-47
+  (aceita o nome "English" e normaliza para en).
+- [FATO CONFIRMADO] Batch real: add_flashcards faz UM insert multi-linha por
+  chamada (até 200 cards) com dedupe opcional por par (term+translation)
+  normalizado dentro da lista; update_flashcards tem dois modos — mesmos
+  valores para N cards (1 UPDATE) e valores por card (N updates concorrentes,
+  com not_found por card em vez de falhar o lote inteiro).
+- [FATO CONFIRMADO] duplicate_list copia a lista + deck ativo com ids novos,
+  remapeando parent_card_id e gerando identidade de grupo nova
+  (status_group_uid), então Favorito/Lista vermelha não são herdados; se um
+  lote falha, a cópia parcial vai para a lixeira (compensação via
+  soft_delete_list).
+- [DECISAO VIGENTE] Remoção de cards é soft delete com cascata de camadas
+  (parent_card_id), igual ao fluxo do app; acima de 25 linhas exige dry_run +
+  confirmation_token.
+- [DECISAO VIGENTE] Destrutivos de lista/pasta passam pelas RPCs do produto
+  (soft_delete_list, soft_delete_folder, restore_list, restore_folder) com
+  p_user_id = auth.uid(). O MCP nunca faz hard delete: a purga de 7 dias é do
+  produto e restrita a service_role.
+- [DECISAO VIGENTE] O confirmation token é STATELESS: HMAC-SHA256 de
+  (ação|uid|objeto|contagem previsualizada|exp) com chave = bearer verificado
+  da requisição, TTL de 600 s, sem tabela e sem migration. Consequências: não
+  é forjável sem o bearer, é específico da conta e deixa de casar quando o
+  objeto mudou desde o preview (força novo preview). Refresh de sessão entre
+  preview e confirmação invalida o token — falha segura.
+- [FATO CONFIRMADO] Reexecutar remoção é idempotente: objeto já removido
+  responde already_deleted/already_active, nunca erro destrutivo.
+- [VERIFIED-TEST] 12 arquivos / 89 testes do MCP, incluindo GATE_WRITE e
+  GATE_DESTRUCTIVE exercitados pelo boundary autenticado (handler real da tool
+  com vi.mock de @supabase/supabase-js sobre o fake PostgREST).
+- [NAO VERIFICADO] A RLS real continua não exercitada: a prova de isolamento
+  entre contas é de domínio (filtros de posse) sobre o fake. Ver [[08-RISKS]].
+- Ver [[sessions/2026-09-13-mcp-phase3-4]].
+
+## Contrato compartilhado com o motor de vocabulário (2026-09-13)
+
+- [DECISAO VIGENTE] A chave do inventário é userId + "|" + scopeName(scope)
+  (personal|institution) — a MESMA usada por analyze_text_against_library. Toda
+  escrita do MCP chama invalidateScopeInventory(userId, institutionId) no fim
+  da operação; quem criar novas rotas de escrita precisa manter esse contrato.
+- [FATO CONFIRMADO] O escopo de uma lista vem do embed da pasta
+  (folders.institution_id); mover lista invalida origem e destino.
+- [FATO CONFIRMADO] analyze_text_against_library entrou no index.ts no grupo
+  read-only (após search_my_content); o motor de vocabulário é do outro worker
+  e não foi editado por este lote.
+- [LIMITE] A invalidação é por processo (Map em memória do isolate); o TTL de
+  60 s é o limite de obsolescência nos demais isolates. Ver [[08-RISKS]].
