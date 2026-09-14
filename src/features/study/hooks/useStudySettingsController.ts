@@ -4,7 +4,9 @@ import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePref
 import { STUDY_RED_FOCUS_TRANSITION_EVENT } from "@/hooks/useStudyPreferences";
 import {
   applyStudySettingsPatch,
+  isDirectionLockedByFlowMode,
   patchAffectsQueue,
+  releaseMasteryRoundsConstraints,
   releaseRedFocusConstraints,
   studySettingsFromPreset,
   studySettingsSemanticOverride,
@@ -77,12 +79,19 @@ export function useStudySettingsController(
     const patched = applyStudySettingsPatch(settings, requested);
     // Sair do Foco Vermelho devolve ordem e formato ao preset base: a restrição
     // é temporária e nunca substituiu a preferência do usuário.
-    const next = settings.redFocus && requested.redFocus === false
+    const released = settings.redFocus && requested.redFocus === false
       ? releaseRedFocusConstraints(patched, effectivePreset)
       : patched;
+    // Sair do Modo gamificado devolve a direção base: no gamificado a direção
+    // efetiva é sempre automática, mas isso nunca foi persistido.
+    const next = isDirectionLockedByFlowMode(settings.studyFlowMode)
+      && !isDirectionLockedByFlowMode(released.studyFlowMode)
+      ? releaseMasteryRoundsConstraints(released, effectivePreset)
+      : released;
     const effectivePatch: StudySettingsPatchV3 = { ...requested };
     if (next.order !== settings.order) effectivePatch.order = next.order;
     if (next.studyFlowMode !== settings.studyFlowMode) effectivePatch.studyFlowMode = next.studyFlowMode;
+    if (next.direction !== settings.direction) effectivePatch.direction = next.direction;
 
     if (patchAffectsQueue(effectivePatch)) {
       onQueueAffectingChange?.(next, effectivePatch);
