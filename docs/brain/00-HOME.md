@@ -61,6 +61,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
   o que estava fora do main, o que foi consolidado e as atualizações de dependência pendentes.
 - [[sessions/2026-09-14-publicacao-mcp-producao]] — migrations do MCP aplicadas em
   produção, defeito do guard de coleções automáticas, bloqueio do deploy da Edge Function e lacunas descobertas.
+- [[sessions/2026-09-14-persistencia-e-listas-combinadas]] — persistência de estudo
+  servidor-canônica e Listas Combinadas (relato de outra IA, verificado contra o main e o banco de produção).
 
 ## Regra de retomada
 

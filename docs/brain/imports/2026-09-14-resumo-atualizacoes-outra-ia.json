@@ -1,0 +1,91 @@
+{
+  "data": "2026-09-14",
+  "projeto": "App Piteco / APE Education",
+  "resumo_geral": "Sessão focada em finalizar a persistência de progresso de estudo servidor-canônica, aplicar o backend das Listas Combinadas (Embedded Lists) e fechar provas/regressões. Nada foi publicado em produção.",
+
+  "atualizacoes": [
+    {
+      "id": 1,
+      "tema": "Persistência de progresso de estudo (servidor-canônico)",
+      "problema": "O app tinha o código moderno de salvamento pronto, mas o banco estava incompleto: faltavam as colunas schema_version e client_revision, a tabela study_progress_events e as três RPCs (claim_study_session_v1, persist_study_session_v1, record_flashcard_progress_v1). Sem isso o app caía no caminho antigo e o progresso podia ficar preso no aparelho (localStorage) ou ser sobrescrito.",
+      "solucao": [
+        "Migration delta idempotente aplicada no Supabase conectado: 20260914215300_208b1682-63b5-4a84-9d90-20f5dc733492.sql",
+        "Adicionadas colunas schema_version e client_revision em study_sessions",
+        "Novo check de modos (study_sessions_mode_check_v1) com os 7 modos válidos",
+        "Índice único parcial study_sessions_active_scope_unique_v1: uma sessão ativa por escopo lógico (usuário + recurso + modo + config)",
+        "Tabela study_progress_events com UNIQUE(user_id, operation_id) — resposta repetida nunca conta duas vezes",
+        "Três RPCs SECURITY DEFINER: claim_study_session_v1 (claim atômico com advisory lock), persist_study_session_v1 (escrita idempotente com controle de revisão), record_flashcard_progress_v1 (progresso por card anexado ao flashcard original, aceitando listas combinadas do próprio dono)",
+        "Migration 20260914215331_6a623a96-7afd-4325-b3db-1e503af76ba5.sql: REVOKE EXECUTE FROM anon nas três RPCs (só authenticated e service_role)"
+      ],
+      "frontend": "Não precisou de alteração — o código moderno já estava correto (outbox com flush a cada 5s/10 cards, resume server-canônico em studyResumeQuery). O localStorage passa a ser só cache/otimização; o servidor é a fonte de verdade.",
+      "feature_flag": "new_status_pipeline permanece 'off' — é um subsistema separado (group status), não faz parte do pipeline de persistência.",
+      "testes": "Novo arquivo src/features/study/lib/studyServerPersistence.contract.test.ts com 17 testes (escopo por lista/modo/config, cross-device, revisão antiga não regride, idempotência por operation_id, lista combinada grava no card original, recusa de card alheio, troca de conta).",
+      "preservacao": "188 sessões existentes preservadas; nenhuma tabela/dado de usuário apagado."
+    },
+    {
+      "id": 2,
+      "tema": "Listas Combinadas / Embedded Lists — backend aplicado",
+      "problema": "A migration oficial de Embedded Lists já existia no repo, mas as tabelas public.embedded_lists e public.embedded_list_cards retornavam NULL no banco real — não tinham sido aplicadas.",
+      "solucao": [
+        "Auditado o arquivo histórico contra o schema real: sem drift (owner_id, system_kind, class_id, reference_id, deleted_at compatíveis)",
+        "Delta aplicado no Supabase conectado criando public.embedded_lists e public.embedded_list_cards com UNIQUE(embedded_list_id, flashcard_id), FKs com ON DELETE CASCADE e índices",
+        "RPCs transacionais: create_embedded_list, embed_source_lists, embed_cards, unembed_cards, unembed_source_list, clear_embedded_list + leitura de membros com dados originais do card",
+        "RLS/políticas garantem que só o dono muta suas listas combinadas e só incorpora cards de listas válidas da mesma pasta",
+        "Invariantes mantidas: nenhum flashcard é duplicado; unembed remove só a referência, nunca o card original"
+      ],
+      "integracao_persistencia": "O baralho da lista combinada usa os IDs dos flashcards originais, então o progresso por card fica anexado ao card canônico; o escopo da sessão é a lista combinada + modo.",
+      "testes": "Novo arquivo src/features/study/lib/embeddedListStudyIntegration.contract.test.ts cobrindo o fluxo completo: criar combinada -> ler cards originais -> sessão com scope da combinada -> progresso canônico -> unembed não toca flashcard."
+    },
+    {
+      "id": 3,
+      "tema": "Correções pontuais de estudo e navegação (aplicadas e mergeadas mais cedo no dia)",
+      "itens": [
+        "Modo Flip livre/continuous: setas anterior/próxima funcionam sem exigir Sabia/Não Sabia; bloqueio de mastery só ativo quando studyFlowMode === 'mastery_rounds' com masteryStatus",
+        "Salvar e sair de sessão privada volta para /dashboard; CONCLUIR SESSÃO e Voltar à Lista continuam usando returnRoute; rotas públicas/portal preservadas",
+        "Card 'Revisão pessoal/Reforço' na Biblioteca: layout corrigido no mobile (ícone + texto juntos, botão Abrir em largura total no mobile e automático a partir de sm)",
+        "Modo Reescrita: corrigido o travamento da tela — guard anti-duplo-clique agora libera após 'Reescrever agora' / 'Tentar corrigir'",
+        "Botão de reforço renomeado para 'Adicionar ao Reforço' / 'Remover do Reforço' (antes era 'Difícil')"
+      ]
+    }
+  ],
+
+  "arquivos_principais": {
+    "migrations_aplicadas": [
+      "supabase/migrations/20260914215300_208b1682-63b5-4a84-9d90-20f5dc733492.sql",
+      "supabase/migrations/20260914215331_6a623a96-7afd-4325-b3db-1e503af76ba5.sql",
+      "delta de Embedded Lists (tabelas + RPCs) aplicado no Supabase conectado"
+    ],
+    "codigo": [
+      "src/features/study/lib/studyServerPersistence.contract.test.ts (novo, 17 testes)",
+      "src/features/study/lib/embeddedListStudyIntegration.contract.test.ts (novo)",
+      "src/features/library/embeddedLists.ts e EmbeddedListDialogs.tsx (criados mais cedo no dia)",
+      "src/features/study/lib/studyDeckSupabaseGateway.ts (branch embedded em fetch e availability)",
+      "src/pages/Folder.tsx (botão 'Lista combinada', selo, menu 'Gerenciar cards incorporados')"
+    ]
+  },
+
+  "gates": {
+    "typecheck": "OK",
+    "build": "OK (SEO 100/100; só warnings de CSS pré-existentes)",
+    "lint": "sem erros nos arquivos tocados",
+    "testes": "1.122+ testes passando (estudo, biblioteca, cards, páginas, i18n, gameCore)",
+    "banco_verificado": "colunas, constraints, índices e RPCs confirmados via information_schema/pg_proc; anon sem EXECUTE nas RPCs sensíveis"
+  },
+
+  "nao_feito": [
+    "Nada foi publicado/deployado em produção",
+    "Nenhum reset de banco, drop de tabela ou mudança de project ref/auth",
+    "Sem novas dependências de produção"
+  ],
+
+  "pendencias_reais": [
+    "Validação visual com conta real em dois dispositivos/navegadores (o ambiente aqui não tem sessão autenticada) — recomendado testar a mesma lista em dois aparelhos",
+    "Migração multilíngue ampla continua pendente",
+    "Teste de criar uma lista combinada de verdade na sua conta para confirmar a experiência na tela"
+  ],
+
+  "commits_referencia": [
+    "d14e9ec143b93950b17c18917610a6b06df31a49 (merge QA regressions fix)",
+    "3cebd121fed4cc7822129484888f20e75beac5e4 (base da rodada de embedded lists)"
+  ]
+}
