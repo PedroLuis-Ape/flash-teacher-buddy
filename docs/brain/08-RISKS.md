@@ -133,3 +133,68 @@ revisão dedicada.
 - [FOLLOW-UP] A duplicidade de direção em `gameCore.ts`, o recálculo dos wrappers e o `PronunciationStudyView` fixado em `sideB` permanecem fora deste lote.
 
 Related: [[sessions/2026-09-13-ab-language-orientation]] · [[06-BUGS]] · [[07-TESTS]]
+
+## R-2026-09-13-03 — bundle auto-gerado do MCP depende do pipeline Linux
+
+- [FATO CONFIRMADO] `@lovable.dev/mcp-js` 0.20.x no Windows externaliza o
+  entry absoluto como `npm:C:\\Users\\...\\src\\lib\\mcp\\index.ts`, o que e
+  invalido para Deno. O plugin so bundla de fato quando o caminho resolvido
+  comeca com `/` (comportamento do pipeline oficial Linux/Lovable).
+- [MITIGACAO] `npm run build` local sobrescreve esse artefato; nesta rodada o
+  arquivo commitado foi restaurado com `git restore`. Antes de commitar,
+  conferir `git diff -- supabase/functions/mcp/index.ts`: nao deve conter
+  `npm:C:`.
+- [CONSEQUENCIA] O bundle publicado precisa ser regenerado pelo pipeline
+  oficial para incluir as tools novas; validar tools/list apos a regeneracao.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]]
+
+## R-2026-09-13-04 — escrita do MCP: cache de vocabulário, token e RLS não exercitada
+
+- [RISCO] invalidateVocabularyInventory limpa um Map em memória do isolate
+  atual. Com mais de um isolate servindo o MCP, uma análise pode usar
+  inventário de até 60 s (TTL) depois de uma escrita. Mitigação atual: TTL curto
+  + invalidação no isolate que escreveu. FOLLOW-UP: versionar invalidação por
+  fingerprint/updated_at consultado no banco.
+- [DECISAO VIGENTE] O confirmation token destrutivo é HMAC do bearer da
+  requisição e agora inclui uid, lista/escopo e o conjunto exato de IDs,
+  além da contagem. Refresh de sessão entre preview e confirmação invalida o
+  token e exige novo preview (falha segura, sem operação parcial).
+- [NAO VERIFICADO] O isolamento entre contas na FASE 3/4 foi provado por
+  filtros de posse do domínio sobre fake PostgREST; a RLS real segue não
+  exercitada nesta rodada. Rodar smoke autenticado antes de publicar.
+- [LIMITE CONHECIDO] duplicate_list copia até 2000 cards ativos por chamada e
+  compensa falha de lote enviando a cópia parcial para a lixeira.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]]
+
+## R-2026-09-13-05 — audit log local ainda não é trilha durável
+
+- [FATO CONFIRMADO] FASE 7 emite `mcp.audit` via `console.log(JSON.stringify)`
+  no processo do MCP para escritas e destrutivos, sem migration e sem dados
+  de card/token.
+- [LIMITE] Logs locais dependem do coletor/runtime e não oferecem consulta,
+  retenção ou integridade de uma tabela.
+- [FOLLOW-UP] Evoluir para sink/tabela de auditoria com schema, retenção,
+  RLS e aprovação explícita antes de qualquer migration de produção.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]]
+
+## R-2026-09-13-03 — RESOLVIDO (mitigação commitada) — 2026-09-13
+
+- [FATO CONFIRMADO] Causa raiz: o resolver do plugin externaliza qualquer caminho que não comece com `.` ou `/`, então o caminho absoluto do Windows (`C:\...`) virava `npm:C:\...`, inválido no Deno.
+- [RESOLVIDO] `scripts/build-mcp-deno-bundle.mjs` reproduz o build do plugin com especificador relativo: `npm run mcp:bundle` gera o bundle com as 24 tools e `npm run mcp:bundle:check` detecta divergência.
+- [VERIFIED-GATE] Bundle gerado: 202108 bytes, 24 tools, imports `npm:@lovable.dev/mcp-js@0.20.1` / `npm:zod@^3.23.8`, zero `npm:C:`; paridade exata com `.lovable/mcp/manifest.json`.
+- [REVALIDATE] Execução sob Deno e deploy real continuam não verificados (Deno ausente na máquina; deploy depende de decisão humana).
+
+
+- [MITIGADO] `verify_jwt` do function `mcp` declarado explicitamente como `false` em `supabase/config.toml`, seguindo a convenção do repo (handler valida auth) e o comportamento já observado em produção (401 do SDK com `x-deno-execution-id`).
+
+
+## CI vermelho no `main` (pré-existente, 2026-09-13)
+
+- [FATO CONFIRMADO] O job **Preview Safety Gate** falha em todos os runs recentes do `main` (`8680e4a8`, `d84be800`, `6bf640c1`, `3ba95a62`): cenário `supabase-unavailable` espera `getByText('Jogar agora')` e dá timeout de 8s.
+- [FATO CONFIRMADO] O step **SEO and GEO consistency audit** (`node scripts/validate-seo.mjs`) também falha no `main`: "Search bots must inherit the wildcard private-route rules; a separate group can accidentally bypass them".
+- [MITIGADO NO PR] No PR #399 o único check que eu quebrei foi `mcp: função gerenciada privada deve declarar verify_jwt = true` — revertido (o function `mcp` fica não declarado, como estava). O gate local `node scripts/audit-security.mjs` volta a passar.
+- [FOLLOW-UP] Consertar os dois checks de CI acima é trabalho SEPARADO deste programa (SEO/robots e preview smoke), fora do escopo do MCP.
+

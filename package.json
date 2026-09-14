@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "preview:smoke": "node scripts/preview-smoke.mjs",
     "brain:check": "node scripts/brain-check.mjs",
+    "mcp:bundle": "node scripts/build-mcp-deno-bundle.mjs",
+    "mcp:bundle:check": "node scripts/build-mcp-deno-bundle.mjs --check",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run --passWithNoTests",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",

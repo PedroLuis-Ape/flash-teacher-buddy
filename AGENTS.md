@@ -58,6 +58,44 @@ Antes de concluir:
 O trabalho não é considerado completo enquanto a memória estiver
 materialmente desatualizada em relação ao código.
 
+## Custo de contexto — READ ONCE -> COMPACT -> SHARE -> REUSE (obrigatório)
+
+Consultar o Segundo Cérebro é custo UMA VEZ por tarefa, não um ritual por agente.
+Regra completa em `docs/brain/27-CONTEXT-PACKET-E-TELEMETRIA.md`.
+
+1. **READ ONCE** — ler o mínimo útil: o manifesto
+   `docs/brain/brain-manifest.json` (metadados por nota) mais as notas do domínio
+   afetado. Não ler o vault inteiro.
+2. **COMPACT** — transformar a leitura em um CONTEXT PACKET
+   (`node scripts/context-packet.mjs new --task <id> --objective "<texto>" --domain <dominio>`)
+   com objetivo, regras relevantes, contratos, decisões, riscos, arquivos,
+   "não quebrar" e incertezas abertas, mais ponteiros com `sha256`. O packet não
+   copia o vault.
+3. **SHARE** — entregar o MESMO packet a worker, reviewer e correção
+   (`node scripts/context-packet.mjs show --packet <arquivo> --actor worker`).
+4. **REUSE** — quem recebeu um packet válido NÃO refaz o preflight completo;
+   presume o packet válido até evidência contrária
+   (`node scripts/context-packet.mjs validate --packet <arquivo>`).
+
+- Invalidação SOMENTE por mudança material: objetivo/escopo, nota referenciada
+  alterada (`REF_CHANGED`) ou removida, contrato/decisão/risco referenciado
+  alterado, ou mudança de domínio. Nunca por tempo decorrido nem por "reler para
+  ter certeza"; drift global do vault é reportado como `DRIFT` e não obriga
+  reconstrução.
+- Lacuna material durante a execução: ler UMA nota
+  (`node scripts/context-packet.mjs read --packet <arquivo> --note-path <nota>`) e
+  fazer PATCH do packet (`node scripts/context-packet.mjs patch --packet <arquivo> --reason "<motivo>"`),
+  nunca reconstruir ou reler o vault.
+- O REVIEWER recebe objetivo, regras relevantes, diff, testes, evidências e
+  riscos pelo packet e NÃO relê o vault inteiro.
+- Ao encerrar, atualizar somente conhecimento durável e registrar o custo de
+  contexto da tarefa: `node scripts/brain-telemetry.mjs report --task <id>`.
+- Estimativa declarada de tokens: `tokens = ceil(bytes / 4)`. O ledger
+  `.superpowers/sdd/brain-telemetry.jsonl` é append-only.
+- `docs/brain/brain-manifest.json` é artefato derivado:
+  `node scripts/brain-index.mjs` regenera e
+  `node scripts/brain-index.mjs --check` falha se estiver desatualizado.
+
 ## Acordos de trabalho
 
 - Nunca trabalhe diretamente em `main`.

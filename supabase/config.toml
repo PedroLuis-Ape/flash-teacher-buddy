@@ -84,3 +84,13 @@ verify_jwt = true
 
 [functions.professor-students-overview]
 verify_jwt = true
+
+# NOTE (2026-09-13): the MCP function is intentionally NOT declared here.
+# It is an OAuth resource server: the handler validates the delegated token
+# (issuer/JWKS via @lovable.dev/mcp-js) and all data access stays behind RLS
+# with the caller's bearer. Declaring `verify_jwt = false` would require a
+# `gatewayJwtExceptions` entry in `config/security-audit.json`, and that
+# exception in turn requires a literal `auth.getUser()` guard in the function
+# source — which the generated MCP bundle does not contain. Leaving it
+# undeclared keeps the production behaviour unchanged (the gateway does not
+# block the handler today; the SDK answers 401 by itself).

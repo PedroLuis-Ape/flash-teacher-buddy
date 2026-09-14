@@ -585,3 +585,117 @@ Related: [[areas/browser-extension]] · [[sessions/2026-09-13-extensao-salvar-na
   diff (ver [[sessions/2026-09-13-convite-extensao-landing-publica]]).
 
 Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] · [[07-TESTS]]
+
+## MCP — FASE 1 (dominio) + FASE 2 (tools read-only) — 2026-09-13
+
+- [FATO CONFIRMADO] A camada operacional do MCP existe agora em
+  `src/lib/mcp/domain/` (erros controlados, client scoped ao token do usuario,
+  paginacao, escopo pessoal/institucional, pastas, listas, cards, perfil e
+  busca) e seis tools read-only registradas: `get_my_profile`, `list_folders`,
+  `list_lists`, `get_list`, `get_flashcards` e `search_my_content`.
+- [DECISAO VIGENTE] Identidade vem so do OAuth verificado; nenhuma tool aceita
+  `user_id`. Toda leitura estreita por `owner_id = auth.uid()`,
+  `system_kind = 'user'`, `deleted_at is null`, `class_id is null` e escopo —
+  mesmo onde a RLS permitiria ler conteudo publico de outra conta. Sem service
+  role e sem escrita nesta fase.
+- [FATO CONFIRMADO] Instituicoes no produto sao owner-only (sem membership);
+  membership e roles existem em TURMA (`turma_membros`). O dominio ja suporta
+  escopo institucional com um unico ponto de evolucao (`assertScopeAccessible`).
+- [VERIFIED-GATE] typecheck 0 (app e node) · 8 arquivos / 51 testes focados
+  PASS · eslint 0 nos arquivos do MCP · `npm run build` exit 0 com SEO
+  100/100 · `brain-check` BRAIN_CHECK_PASS.
+- [NAO VERIFICADO] Nenhuma chamada real ao Supabase/MCP: o GATE_READ esta
+  provado em nivel de dominio com fake PostgREST e mock de supabase-js.
+- [FATO CONFIRMADO] O build local no Windows regenera
+  `supabase/functions/mcp/index.ts` com import invalido (`npm:C:...`); o
+  artefato commitado foi restaurado e o achado esta em [[08-RISKS]].
+- [NEXT] Smoke autenticado real e, depois, FASE 3 (create/update) reutilizando
+  a mesma camada. Ver [[areas/mcp-agent-api]] e
+  [[sessions/2026-09-13-mcp-fase1-2-read]].
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-fase1-2-read]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — FASE 3 (escrita) + FASE 4 (destrutivos) — 2026-09-13
+
+- [FATO CONFIRMADO] 15 tools de escrita/destrutivas registradas (versão 0.3.0)
+  sobre a mesma camada de domínio: create/update folder (inclui mover entre
+  instituições), create/update/move/reorder/duplicate list, add/update/remove
+  cards em lote, preview+confirm de delete de lista/pasta e restore_from_trash.
+- [DECISAO VIGENTE] Objetos existentes são resolvidos por posse
+  (owner_id/folders.owner_id = auth.uid(), system_kind = user, não deletado);
+  criar exige destino explícito; listas espelham o workspace da pasta.
+- [DECISAO VIGENTE] Destrutivo exige dois passos: preview/dry_run devolve token
+  stateless (HMAC do bearer verificado, TTL 600 s, vinculado à contagem
+  previsualizada) e só confirm_delete_* aplica. Remoção de 25+ cards exige
+  dry_run. Nada de hard delete: a lixeira do produto (7 dias) é o destino.
+- [FATO CONFIRMADO] Batch real: 5 cards = 1 insert; edição "mesmos valores" =
+  1 UPDATE; retry do batch não duplica (skip por par term+translation).
+- [FATO CONFIRMADO] Integração com o motor de vocabulário:
+  analyze_text_against_library registrado no grupo read-only e toda escrita
+  invalida o inventário com a mesma chave (userId|scope) do motor.
+- [VERIFIED-GATE] typecheck app/node 0 · vitest src/lib/mcp 18 arquivos / 117
+  testes PASS (lote 12/89) · eslint 0 · build exit 0 com SEO 100/100 · brain-check
+  BRAIN_CHECK_PASS.
+- [NAO VERIFICADO] Nenhuma chamada real ao Supabase/MCP; a RLS real não foi
+  exercitada (a prova de isolamento entre contas é de domínio).
+- [FOLLOW-UP] invalidar inventário por fingerprint/versão (o cache é por
+  isolate, com TTL de 60 s). Ver [[08-RISKS]].
+- Ver [[areas/mcp-agent-api]] e [[sessions/2026-09-13-mcp-phase3-4]].
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase3-4]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — correções adversariais + FASE 5/6/7 — 2026-09-13
+
+- [FATO CONFIRMADO] A1–A4 foram corrigidos: confirmação de remoção vincula
+  uid/lista/escopo/IDs exatos; cache distingue institutionId; duplicatas
+  intra-lote são filtradas; card e camadas usam um único UPDATE atômico.
+- [FATO CONFIRMADO] A nova `create_study_material` resolve por nome/id em
+  escopo pessoal ou institucional, suporta `dry_run`/`preview`, cria apenas
+  quando explicitamente chamada com cards, faz uma inserção batch e compensa
+  criações parciais via lixeira.
+- [FATO CONFIRMADO] A superfície publicada normaliza quatro annotations
+  booleanas e as instruções ensinam descobrir → resolver → agir → reconferir,
+  sem IDs vindos da memória e com leituras paginadas.
+- [FATO CONFIRMADO] Escritas/destrutivos emitem evento `mcp.audit` JSON local
+  sem texto de card/token; evolução para tabela requer migration e decisão.
+- [VERIFIED-GATE] Suíte MCP: 19 arquivos / 126 testes PASS; typecheck app: 0
+  erros; brain-index check PASS; brain-check e demais evidências estão em
+  [[sessions/2026-09-13-mcp-phase5-7]].
+- [NAO VERIFICADO] Runtime MCP publicado e RLS real permanecem fora desta
+  unidade; o bundle gerado do Windows não deve ser incluído.
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07-TESTS]] · [[08-RISKS]]
+
+## MCP — fechamento do ciclo adversarial (rodada final) — 2026-09-13
+
+- [FATO CONFIRMADO] Rodada final de correcao (D1-D4): o confirmation token passou a incluir fingerprint SHA-256 de `id/updated_at/deleted_at` do alvo (restore invalida o token); o audit deixou de registrar IDs de alvos nao autorizados; `update_flashcards` faz 1 upsert em lote (antes 50 UPDATEs); o teste de dry-run rejeita qualquer escrita.
+- [VERIFIED-GATE] Suite MCP final: 19 arquivos / 129 testes PASS; typecheck app/node 0; ESLint 0; brain-check PASS (63 notas); brain-index check PASS (100 notas).
+- [VERIFIED-REVIEW] Ciclo adversarial encerrado em 3 rodadas: FAIL (2 HIGH + 2 MEDIUM) -> FAIL (1 HIGH + 2 MEDIUM + 1 LOW) -> PASS focado em D1-D4, sem defeito material novo.
+- [FATO CONFIRMADO] Entregas finais: `.lovable/mcp/manifest.json` regenerado (v0.3.0, 24 tools), `docs/mcp/PITECO-MCP-TOOLS.json` (catalogo oficial) e `docs/mcp/PITECO-MCP-IMPLEMENTATION-REPORT.md`.
+- [FOLLOW-UP] Falta um teste dedicado `remove_cards -> restore -> mesmo token falha` (o replay coberto hoje e de lista).
+- [PENDENTE/HUMANO] Deploy na Lovable (bundle Linux), `verify_jwt`, merge para `main` e smoke autenticado (FASE 8/9).
+
+Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07-TESTS]] · [[08-RISKS]]
+
+
+- [FATO CONFIRMADO] Lição registrada em [[learning/lessons/2026-09-13-fake-sem-updated-at]]: o harness de teste usava timestamp constante em `updated_at`, escondendo proteções baseadas em estado (fingerprint). Corrigido com relógio monotônico; teste novo de replay no caminho de cards (lote material de 30) passou.
+- [VERIFIED-GATE] Gate final: vitest src/lib/mcp 19 arquivos / **130 testes PASS**; typecheck app e node **0**; brain-check PASS (63 notas / 739 wikilinks); brain-index check PASS; `npm run build` **exit 0 com SEO 100/100** (20/20 nas cinco dimensões).
+
+
+## MCP — bundle Deno corrigido e pronto para publicação — 2026-09-13
+
+- [FATO CONFIRMADO] R-2026-09-13-03 resolvido: `scripts/build-mcp-deno-bundle.mjs` + `npm run mcp:bundle` / `mcp:bundle:check` geram e verificam o bundle Deno correto no Windows.
+- [VERIFIED-GATE] Bundle: 202108 bytes, 24 tools, imports `npm:` válidos, zero `npm:C:`; paridade exata com o manifesto oficial.
+- [PENDENTE/HUMANO] Deploy (Lovable), `verify_jwt`, merge para `main` e smoke autenticado (FASE 8/9).
+
+
+## MCP — PR aberto para revisão (2026-09-13)
+
+- [FATO CONFIRMADO] Branch `integration/ape-program-20260913` publicado no GitHub (8 commits) e **PR #399** aberto contra `main`: https://github.com/PedroLuis-Ape/flash-teacher-buddy/pull/399
+- [DECISAO VIGENTE] Nada foi mergeado nem deployado: o programa do MCP entrega em PR revisável e o deploy depende da publicação na Lovable.
+- [PENDENTE/HUMANO] Merge do PR #399, publicação na Lovable (regenera o bundle em Linux) e smoke autenticado (FASE 8/9).
+- [FOLLOW-UP] Divergência vault × `docs/brain` (22 notas) segue para reconciliação.
+
+
+- [FATO CONFIRMADO] PR #399 com CI: `build`, `rum-contract`, `validate`, `validate-environment`, Netlify deploy preview, header e redirect rules **PASS**. `Publication validation` (SEO/GEO) e `preview-safety` falham **também no main** — dívida pré-existente, não regressão do PR.
+

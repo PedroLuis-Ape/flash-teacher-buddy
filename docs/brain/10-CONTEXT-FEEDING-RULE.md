@@ -7,7 +7,7 @@ aliases:
 type: protocol
 status: active
 area: knowledge-management
-last_reviewed: 2026-09-12
+last_reviewed: 2026-09-13
 related:
   - "[[00-HOME]]"
   - "[[01-CURRENT-STATE]]"
@@ -18,6 +18,7 @@ related:
   - "[[08-RISKS]]"
   - "[[09-ASTRA-HANDOFF]]"
   - "[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]"
+  - "[[27-CONTEXT-PACKET-E-TELEMETRIA]]"
   - "[[areas/visual-polish]]"
   - "[[areas/motion-system]]"
   - "[[areas/adaptive-learning]]"
@@ -49,6 +50,71 @@ O caminho operacional confirmado do vault externo é
 `C:\Users\pedro\Documents\App-Piteco-Brain`. O nome
 `C:\Users\pedro\Documents\App-Piteco-Braine` não existe e não deve originar
 uma segunda estrutura.
+
+## READ ONCE -> COMPACT -> SHARE -> REUSE (regra de custo de contexto)
+
+Regra vigente para eliminar releitura redundante do Segundo Cérebro dentro da
+MESMA tarefa. Schema do packet, comandos e telemetria estão em
+[[27-CONTEXT-PACKET-E-TELEMETRIA]].
+
+1. **READ ONCE** - consultar o Segundo Cérebro uma única vez por tarefa, no
+   início, pelo caminho mais estreito: o manifesto
+   `docs/brain/brain-manifest.json` (metadados por nota) e as notas do domínio
+   afetado.
+2. **COMPACT** - transformar a leitura em um CONTEXT PACKET compacto
+   (`node scripts/context-packet.mjs new`): objetivo, regras relevantes,
+   arquitetura, contratos, decisões, riscos, arquivos, invariantes e incertezas
+   abertas, mais PONTEIROS com `sha256` para as notas relevantes. O packet não
+   copia o vault e não substitui o código/Git.
+3. **SHARE** - entregar o MESMO packet às etapas seguintes (worker, reviewer,
+   correção), sempre com o mesmo `brain_version` e `packet_hash`.
+4. **REUSE** - quem já recebeu um packet válido NÃO refaz o preflight completo.
+   Presume o packet válido até evidência contrária
+   (`context-packet validate`) e só busca contexto quando faltar informação
+   material.
+
+### Invalidação
+
+O packet só é invalidado ou rebaseado por mudança MATERIAL:
+
+- objetivo ou escopo da tarefa mudou;
+- alguma nota referenciada pelo packet mudou (`REF_CHANGED`) ou deixou de
+  existir (`REF_MISSING`);
+- contrato, decisão ou risco referenciado mudou;
+- domínio/área da tarefa mudou.
+
+Nunca invalidar por minutos decorridos, por ansiedade ou por "reler para ter
+certeza": drift global do vault (nota que o packet não referencia) é reportado
+como `DRIFT` e não obriga reconstrução.
+
+### Retrieval sob demanda
+
+Faltou informação material:
+
+1. ler **UMA** nota (`context-packet read --note-path <nota>`);
+2. **PATCH** do packet (`context-packet patch --reason "<motivo>"`) para que o
+   próximo agente não repita a leitura;
+3. continuar a execução, no mesmo `brain_version`.
+
+Reler o vault inteiro ou reconstruir o packet como resposta a uma lacuna
+pontual é proibido.
+
+### Papéis
+
+- **MAIN**: lê uma vez, cria e compartilha o packet, decide invalidação.
+- **WORKER**: executa a partir do packet; não refaz preflight; lacuna pontual =
+  uma nota + patch.
+- **REVIEWER**: recebe objetivo, regras relevantes, diff, testes, evidências e
+  riscos pelo packet e NÃO relê o vault inteiro; busca UMA nota quando o fato
+  material não estiver coberto.
+- **CORREÇÃO / SEGUNDA REVISÃO**: continuam do mesmo packet patchado.
+
+### Fechamento
+
+No fim da tarefa, atualizar apenas conhecimento durável na nota-fonte correta,
+sem reabrir o vault inteiro. O custo de contexto da tarefa fica no ledger
+`.superpowers/sdd/brain-telemetry.jsonl` e é lido com
+`node scripts/brain-telemetry.mjs report`.
 
 ## Como recuperar contexto sem desperdiçar contexto
 
