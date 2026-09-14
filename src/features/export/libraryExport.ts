@@ -82,7 +82,7 @@ async function loadOwned<T extends Row>(
   options: { softDelete?: boolean; order?: string[] } = {},
 ): Promise<T[]> {
   return fetchAllSupabaseRows<T>((from, to) => {
-    let query: any = (supabase.from(table) as any).select(columns).eq(ownerColumn, ownerId);
+    let query: any = (supabase.from as any)(table).select(columns).eq(ownerColumn, ownerId);
     if (options.softDelete) query = query.is('deleted_at', null);
     for (const column of options.order ?? ['created_at']) {
       query = query.order(column, { ascending: true });
