@@ -26,14 +26,14 @@ import { Link } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
 import type {
   StudyFlowModePreset,
-  StudyPlayModePreset,
-  StudyPlaySidePreset,
+  StudyPlayTargetPreset,
 } from "@/features/study/preferences/studyPreset";
 import { usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
-import type {
-  StudySettingsPatchV3,
-  StudySettingsSnapshotV3,
+import {
+  isDirectionLockedByFlowMode,
+  type StudySettingsPatchV3,
+  type StudySettingsSnapshotV3,
 } from "@/features/study/lib/studySettingsSnapshotV3";
 import { cn } from "@/lib/utils";
 import { WriteActivitySettings } from "./WriteActivitySettings";
