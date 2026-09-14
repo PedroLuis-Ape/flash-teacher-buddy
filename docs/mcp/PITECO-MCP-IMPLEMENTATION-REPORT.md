@@ -66,7 +66,7 @@ Detalhes, schemas e annotations: `docs/mcp/PITECO-MCP-TOOLS.json`.
 
 ## 6. Evidências (números reais)
 
-- `node node_modules/vitest/vitest.mjs run src/lib/mcp` → **19 arquivos / 129 testes PASS** (supervisor).
+- `node node_modules/vitest/vitest.mjs run src/lib/mcp` → **19 arquivos / 130 testes PASS** (supervisor).
 - `tsc --noEmit -p tsconfig.app.json` → **0 erros**; `tsconfig.node.json` → **0 erros**.
 - ESLint do pacote MCP → exit 0.
 - `node scripts/brain-check.mjs` → `BRAIN_CHECK_PASS` (63 notas, 735 wikilinks).
@@ -74,6 +74,14 @@ Detalhes, schemas e annotations: `docs/mcp/PITECO-MCP-TOOLS.json`.
 - Motor de vocabulário (TEST I): 1000 listas / 12.000 cards → **14 requests, 12 páginas, 254 ms**.
 - `update_flashcards`: 50 updates → **1 upsert** (antes 50 UPDATEs).
 - Replay de token: remover → restaurar → **mesmo token falha**.
+- Fingerprint no caminho de **cards**: com um lote material (30 cards ≥ `MAX_REMOVAL_WITHOUT_CONFIRMATION`),
+  alterar o estado de um card afetado depois do preview **invalida o token** (teste de regressão em
+  `domainWriteCards.test.ts`).
+- `npm run build` → **exit 0 com SEO 100/100** (20/20 em entity_clarity, editorial_depth, discovery,
+  rendered_artifact e privacy_integrity).
+- Lição de harness: o double de teste reutilizava timestamp constante em `updated_at` e **escondia**
+  proteções baseadas em estado; corrigido com relógio monotônico
+  (`learning/lessons/2026-09-13-fake-sem-updated-at.md`).
 
 ### Ciclo de revisão independente
 
@@ -118,8 +126,9 @@ Detalhes, schemas e annotations: `docs/mcp/PITECO-MCP-TOOLS.json`.
 
 ## 10. Próximos passos exatos
 
-1. Adicionar o teste dedicado `remove_cards → restore → mesmo token falha` (o replay coberto hoje é de
-   lista; o mecanismo é o mesmo, mas a cobertura do caminho de cards está ausente).
+1. ~~Adicionar o teste dedicado do caminho de cards~~ **FEITO**: cards não têm caminho de restauração
+   (`TRASH_TARGETS = ["list", "folder"]`), então a garantia equivalente — token morre quando o estado
+   muda — está coberta por teste de regressão.
 2. Rodar `npm run build` em ambiente Linux/Lovable e confirmar `SEO 100/100` + bundle Deno válido.
 3. Deployar o function `mcp` e rodar `node docs/mcp/smoke-mcp.mjs` com `PITECO_MCP_TOKEN`
    (initialize → tools/list → get_my_profile → list_folders → list_lists → get_flashcards).
@@ -130,4 +139,3 @@ Detalhes, schemas e annotations: `docs/mcp/PITECO-MCP-TOOLS.json`.
 
 Ver `docs/mcp/PITECO-MCP-CONNECTION.md` (URL, OAuth DCR + PKCE, requisitos de `Accept`/`SSE`,
 checklist humano) e `docs/mcp/smoke-mcp.mjs` (token somente por `PITECO_MCP_TOKEN`).
-
