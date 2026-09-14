@@ -696,3 +696,6 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07
 - [PENDENTE/HUMANO] Merge do PR #399, publicação na Lovable (regenera o bundle em Linux) e smoke autenticado (FASE 8/9).
 - [FOLLOW-UP] Divergência vault × `docs/brain` (22 notas) segue para reconciliação.
 
+
+- [FATO CONFIRMADO] PR #399 com CI: `build`, `rum-contract`, `validate`, `validate-environment`, Netlify deploy preview, header e redirect rules **PASS**. `Publication validation` (SEO/GEO) e `preview-safety` falham **também no main** — dívida pré-existente, não regressão do PR.
+

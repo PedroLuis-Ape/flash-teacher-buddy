@@ -5,8 +5,8 @@
   "byte_basis": "utf8-bytes-lf-normalized",
   "note_count": 101,
   "historical_note_count": 38,
-  "total_bytes": 380520,
-  "brain_version": "8781576942fcd4fbf88d08babbd30b7e96409db082c3e08ed65606e2d4b8e14e",
+  "total_bytes": 381724,
+  "brain_version": "e470cdd728a41588df377a0231a7ce6009a4e4e629a0826b9487793ebb8a708b",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -142,7 +142,7 @@
     },
     "current-state": {
       "notes": 1,
-      "bytes": 45741,
+      "bytes": 46030,
       "historical_notes": 0,
       "canonical_document": "01-CURRENT-STATE.md",
       "canonical_confidence": "declared"
@@ -219,7 +219,7 @@
     },
     "release": {
       "notes": 1,
-      "bytes": 12824,
+      "bytes": 13739,
       "historical_notes": 0,
       "canonical_document": "08-RISKS.md",
       "canonical_confidence": "declared"
@@ -321,8 +321,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 45741,
-      "sha256": "2efd87b9c0b90ba85d6dcbb0be41a25bd4f2d0d7a085ecab24af004007550d32"
+      "bytes": 46030,
+      "sha256": "c3b39d0d8b03faba52f50bffd19a3da53d387f7595f1c030e105cbec85704e76"
     },
     {
       "path": "02-MASTER-PLAN.md",
@@ -419,8 +419,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 12824,
-      "sha256": "a4feef386ce2772de272421bb6f4d5bea757007569ed36f5d5fba5ba5beb23cc"
+      "bytes": 13739,
+      "sha256": "113e59137838cd38288a4f9e53e13f27b904b35e9d1218ccb9fe9cb88f457d55"
     },
     {
       "path": "09-ASTRA-HANDOFF.md",

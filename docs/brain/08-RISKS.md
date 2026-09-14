@@ -190,3 +190,11 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[27
 
 - [MITIGADO] `verify_jwt` do function `mcp` declarado explicitamente como `false` em `supabase/config.toml`, seguindo a convenção do repo (handler valida auth) e o comportamento já observado em produção (401 do SDK com `x-deno-execution-id`).
 
+
+## CI vermelho no `main` (pré-existente, 2026-09-13)
+
+- [FATO CONFIRMADO] O job **Preview Safety Gate** falha em todos os runs recentes do `main` (`8680e4a8`, `d84be800`, `6bf640c1`, `3ba95a62`): cenário `supabase-unavailable` espera `getByText('Jogar agora')` e dá timeout de 8s.
+- [FATO CONFIRMADO] O step **SEO and GEO consistency audit** (`node scripts/validate-seo.mjs`) também falha no `main`: "Search bots must inherit the wildcard private-route rules; a separate group can accidentally bypass them".
+- [MITIGADO NO PR] No PR #399 o único check que eu quebrei foi `mcp: função gerenciada privada deve declarar verify_jwt = true` — revertido (o function `mcp` fica não declarado, como estava). O gate local `node scripts/audit-security.mjs` volta a passar.
+- [FOLLOW-UP] Consertar os dois checks de CI acima é trabalho SEPARADO deste programa (SEO/robots e preview smoke), fora do escopo do MCP.
+
