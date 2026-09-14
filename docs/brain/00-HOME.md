@@ -70,6 +70,10 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 
 ## Regra de retomada
 
+**Primeiro passo de qualquer agente:** ler o bloco **FECHAMENTOS** no topo de
+[[01-CURRENT-STATE]]. Ele tem, por data, o que ficou finalizado, até onde ficou
+pronto e o que está em espera — é o que evita reler o vault inteiro.
+
 Ler primeiro [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
 depois [[01-CURRENT-STATE]] e o checkpoint da sessão.
 

@@ -29,6 +29,19 @@ related:
 
 # START HERE — Protocolo de contexto do App Piteco
 
+## Fechamento de sessão (formato obrigatório)
+
+Toda sessão relevante termina com uma entrada datada no bloco **FECHAMENTOS**,
+no topo de [[01-CURRENT-STATE]], neste formato:
+
+`### FECHAMENTO <AAAA-MM-DD>` · **Finalizado** · **Pronto até** · **Não entrou** ·
+**Em espera por decisão** (ou **Depende de**).
+
+O objetivo é econômico: um agente novo lê **um bloco** e sabe onde o projeto
+parou, sem varrer o vault. Detalhe longo continua nas notas de sessão linkadas;
+aqui fica só o estado datado. Se uma informação antiga ficar incorreta, atualize
+a entrada existente — não empilhe versões contraditórias.
+
 Esta é a nota central permanente para qualquer trabalho relacionado ao App
 Piteco / APE Education. Ela é uma rota de entrada e uma regra de operação; não
 é um substituto para as notas profundas de arquitetura, áreas, decisões,
