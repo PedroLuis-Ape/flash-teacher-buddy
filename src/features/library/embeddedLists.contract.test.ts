@@ -72,6 +72,32 @@ describe("embedded lists SQL contract", () => {
     expect(SQL).toContain("RAISE EXCEPTION 'Lista de origem inválida");
   });
 
+  it("cascades membership when a source list row is hard-deleted", () => {
+    expect(SQL).toContain("source_list_id uuid NOT NULL REFERENCES public.lists(id) ON DELETE CASCADE");
+  });
+
+  it("rejects embedded lists as sources in both embed paths", () => {
+    const nestedGuards = SQL.match(
+      /SELECT 1 FROM public\.embedded_lists nested WHERE nested\.list_id = source_list\.id/g,
+    ) ?? [];
+    expect(nestedGuards.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("requires at least one source list and rejects class folders on creation", () => {
+    expect(SQL).toContain("RAISE EXCEPTION 'Selecione pelo menos uma lista de origem");
+    expect(SQL).toContain("AND class_id IS NULL;");
+    expect(SQL).toContain("RAISE EXCEPTION 'Pasta inexistente, de turma ou sem permissão.'");
+  });
+
+  it("keeps embedded lists private even under bulk folder sharing", () => {
+    expect(SQL).toContain("CREATE OR REPLACE FUNCTION public.keep_embedded_lists_private()");
+    expect(SQL).toContain("BEFORE UPDATE OF visibility, class_id ON public.lists");
+    expect(SQL).toContain("DROP TRIGGER IF EXISTS keep_embedded_lists_private_trg ON public.lists");
+    expect(SQL).toContain("NEW.visibility := 'private'");
+    expect(SQL).toContain("NEW.class_id := NULL");
+  });
+
+
   it("returns the original flashcard rows for study reads", () => {
     expect(SQL).toContain("RETURNS SETOF public.flashcards");
     expect(SQL).toContain("is_embedded");

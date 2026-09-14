@@ -318,13 +318,18 @@ const Folder = () => {
       
       if (folderError) throw folderError;
 
-      // Update all lists in folder
-      const { error: listsError } = await supabase
-        .from("lists")
-        .update({ visibility: "class" })
-        .eq("folder_id", id as string);
-      
-      if (listsError) throw listsError;
+      // Update only normal lists in folder. Embedded lists stay owner-private in v1.
+      const normalListIds = lists.filter((list) => !list.is_embedded).map((list) => list.id);
+      if (normalListIds.length > 0) {
+        const { error: listsError } = await supabase
+          .from("lists")
+          .update({ visibility: "class" })
+          .eq("folder_id", id as string)
+          .in("id", normalListIds);
+
+        if (listsError) throw listsError;
+      }
+
 
       // Enable public portal access if requested
       if (allowPublicPortal) {
@@ -799,7 +804,7 @@ const Folder = () => {
                   Idiomas
                 </Button>
 
-                {isOwner && !isSystemFolder && id && (
+                {isOwner && !isSystemFolder && !isClassContext && id && (
                   <>
                     <Button
                       variant="outline"
@@ -1349,8 +1354,32 @@ const Folder = () => {
                                   })}
                                 />
                               )}
+                              {list.is_embedded && isOwner && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                        data-testid="embedded-list-manage-action-row"
+                                        aria-label={`Gerenciar cards incorporados de ${list.title}`}
+                                        title="Gerenciar cards incorporados"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setManagingEmbeddedList(list);
+                                        }}
+                                      >
+                                        <Layers className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerenciar cards incorporados</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                               {canEdit && (
                                 <>
+
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
