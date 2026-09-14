@@ -392,7 +392,7 @@ export default function FoldersOptimized() {
       <p className="mt-1 text-xs">Crie sua primeira pasta de estudos</p>
     </div>
   ) : folderViewMode === "grid" ? (
-    <div className="grid grid-cols-1 gap-3 auto-rows-fr min-[360px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 items-start gap-2.5 min-[360px]:grid-cols-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
       {filteredFolders.map((folder) => {
         const isFavorite = folderFavorites.includes(folder.id);
         const isAttention = folderAttention.includes(folder.id);

@@ -61,9 +61,9 @@ export function ApeCardFolder({
 
       <div className="flex-1 min-w-0">
         <ScrollingTitle text={title} className="ape-card-title" />
-        {referenceId && <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/80">{referenceId}</span>}
+        {referenceId && <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground/80">{referenceId}</span>}
         {(listCount !== undefined || cardCount !== undefined) && (
-          <p className="text-xs text-muted-foreground leading-tight mt-1 truncate">
+          <p className="text-[13px] text-muted-foreground leading-tight mt-1 truncate">
             {[
               listCount !== undefined && `${listCount} ${listCount === 1 ? "lista" : "listas"}`,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? "card" : "cards"}`,
