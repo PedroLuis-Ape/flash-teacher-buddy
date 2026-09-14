@@ -23,9 +23,10 @@ describe("contrato TTS do modo Pronuncia", () => {
     expect(impl).toContain("disabled={!ttsEnabled}");
   });
 
-  it("a voz segue o idioma do lado exibido", () => {
+  it("a voz segue o lado resolvido pelo contrato canônico, não sideB fixo", () => {
     const impl = read("src/features/study/components/PronunciationStudyView.impl.tsx");
-    expect(impl).toContain("const speakSide = sideB;");
+    expect(impl).toContain("resolveStudySides(");
+    expect(impl).toContain("const speakSide = answerSide;");
     expect(impl).toContain("const speakLang = toBCP47(speakSide.lang);");
     expect(impl).toContain("langOverride: speakLang");
   });
