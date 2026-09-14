@@ -318,13 +318,18 @@ const Folder = () => {
       
       if (folderError) throw folderError;
 
-      // Update all lists in folder
-      const { error: listsError } = await supabase
-        .from("lists")
-        .update({ visibility: "class" })
-        .eq("folder_id", id as string);
-      
-      if (listsError) throw listsError;
+      // Update only normal lists in folder. Embedded lists stay owner-private in v1.
+      const normalListIds = lists.filter((list) => !list.is_embedded).map((list) => list.id);
+      if (normalListIds.length > 0) {
+        const { error: listsError } = await supabase
+          .from("lists")
+          .update({ visibility: "class" })
+          .eq("folder_id", id as string)
+          .in("id", normalListIds);
+
+        if (listsError) throw listsError;
+      }
+
 
       // Enable public portal access if requested
       if (allowPublicPortal) {
