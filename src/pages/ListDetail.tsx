@@ -754,7 +754,9 @@ const ListDetail = () => {
           .insert({
             owner_id: userId,
             title: "Minhas Pastas",
-            visibility: "private"
+            visibility: "private",
+            // reference_id é gerado por trigger no banco.
+            reference_id: undefined as unknown as string
           })
           .select("id")
           .single();
@@ -773,8 +775,11 @@ const ListDetail = () => {
           folder_id: targetFolderId,
           title: `${list.title} (Cópia)`,
           description: list.description,
-          visibility: "private"
+          visibility: "private",
+          // reference_id é gerado por trigger no banco.
+          reference_id: undefined as unknown as string
         })
+
         .select("id")
         .single();
       
