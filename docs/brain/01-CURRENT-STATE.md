@@ -48,10 +48,13 @@ related:
 - **Pronto até:** código no `main` (`28251383`) com `tsc` exit 0, **2014 testes
   passando**, `eslint` 0 erros, `vite build` ✓ e bundle MCP regenerado
   (29 tools). Nada publicado em produção.
-- **Não entrou:** TTS Runtime (P0), gestos/swipe (P0), Study Runtime único,
-  StudyViewportShell, unificação Study/Mixed, limpeza de hacks/CSS legado, e a
-  parte fina do prompt de Configurações (política de mudança de fila durante a
-  sessão e validação cruzada Study × MixedStudy).
+- **Pendente, para alinhar antes de começar** (nada iniciado; é fila sugerida da
+  auditoria, não compromisso): TTS Runtime (P0), gestos/swipe (P0), Study Runtime
+  único, StudyViewportShell, unificação Study/Mixed, limpeza de hacks/CSS legado,
+  e a parte fina do prompt de Configurações (política de mudança de fila durante
+  a sessão e validação cruzada Study × MixedStudy). O Pedro vai dizer quando (e
+  se) quer puxar cada uma — o único item realmente fechado da fila é o roteador
+  de teclado. Ver [[sessions/2026-09-14-roteador-de-teclado]].
 - **Em espera por decisão (não é bloqueio técnico):** o MCP foi deixado DE LADO
   a pedido do Pedro em 2026-09-14. Tudo do MCP está pronto e versionado
   (migrations aplicadas em produção, bundle com 29 tools, workflow no `main`); o
