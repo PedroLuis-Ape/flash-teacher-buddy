@@ -1,4 +1,6 @@
 ---
+category: agent
+area: study
 cssclasses:
   - ape-ai-note
 type: session-checkpoint

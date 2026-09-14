@@ -1,4 +1,7 @@
 ---
+category: archive
+area: supabase
+status: archived
 cssclasses:
   - ape-ai-note
 ---

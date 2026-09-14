@@ -1,4 +1,5 @@
 ---
+category: architecture
 cssclasses:
   - ape-ai-note
 type: learning-attempt

@@ -1,4 +1,6 @@
 ---
+category: game
+area: study
 cssclasses:
   - ape-ai-note
 type: area

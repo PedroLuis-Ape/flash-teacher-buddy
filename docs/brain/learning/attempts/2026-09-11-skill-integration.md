@@ -1,4 +1,7 @@
 ---
+category: agent
+area: codex
+status: active
 cssclasses:
   - ape-ai-note
 type: attempt

@@ -1,4 +1,7 @@
 ---
+category: documentation
+area: piteco
+status: archived
 cssclasses:
   - ape-ai-note
 ---

@@ -1,4 +1,5 @@
 ---
+category: game
 cssclasses:
   - ape-ai-note
 type: learning-hub

@@ -1,4 +1,6 @@
 ---
+category: architecture
+area: extension
 cssclasses:
   - ape-ai-note
 type: area

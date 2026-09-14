@@ -1,4 +1,6 @@
 ---
+category: archive
+area: mcp
 cssclasses:
   - ape-ai-note
 type: area

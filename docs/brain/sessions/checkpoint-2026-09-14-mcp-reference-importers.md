@@ -1,4 +1,6 @@
 ---
+category: archive
+area: study
 cssclasses:
   - ape-ai-note
 type: session-checkpoint

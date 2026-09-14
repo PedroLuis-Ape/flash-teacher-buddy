@@ -1,4 +1,6 @@
 ---
+category: game
+area: piteco
 type: lesson
 id: LESSON-XXX
 status: candidate

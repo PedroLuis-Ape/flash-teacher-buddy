@@ -1,4 +1,5 @@
 ---
+category: agent
 cssclasses:
   - ape-ai-note
 type: protocol-registry

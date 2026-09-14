@@ -1,4 +1,7 @@
 ---
+category: architecture
+area: piteco
+status: active
 cssclasses:
   - ape-ai-note
 ---

@@ -1,4 +1,5 @@
 ---
+category: data
 cssclasses:
   - ape-ai-note
 type: lesson

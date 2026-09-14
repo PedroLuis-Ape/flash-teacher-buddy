@@ -1,4 +1,7 @@
 ---
+category: archive
+area: codex
+status: archived
 cssclasses:
   - ape-ai-note
 ---

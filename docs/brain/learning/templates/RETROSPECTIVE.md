@@ -1,4 +1,6 @@
 ---
+category: archive
+status: archived
 type: retrospective
 date:
 area:

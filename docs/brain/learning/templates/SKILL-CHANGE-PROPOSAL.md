@@ -1,4 +1,6 @@
 ---
+category: agent
+area: codex
 type: skill-change-proposal
 status: proposed
 related_lessons: []

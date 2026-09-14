@@ -1,4 +1,7 @@
 ---
+category: archive
+area: study
+status: archived
 cssclasses:
   - ape-ai-note
 ---

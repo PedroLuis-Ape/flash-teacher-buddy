@@ -1,4 +1,7 @@
 ---
+category: bug
+area: piteco
+status: active
 cssclasses:
   - ape-ai-note
 ---

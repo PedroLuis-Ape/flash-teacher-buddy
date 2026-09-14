@@ -1,4 +1,7 @@
 ---
+category: test
+area: study
+status: active
 cssclasses:
   - ape-ai-note
 ---
