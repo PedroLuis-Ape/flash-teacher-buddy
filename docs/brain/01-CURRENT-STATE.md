@@ -1,4 +1,5 @@
 ---
+category: documentation
 cssclasses:
   - ape-ai-note
 type: current-state

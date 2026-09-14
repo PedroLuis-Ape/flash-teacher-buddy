@@ -1,4 +1,7 @@
 ---
+category: decision
+area: piteco
+status: active
 cssclasses:
   - ape-ai-note
 ---

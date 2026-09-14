@@ -1,4 +1,5 @@
 ---
+category: bug
 cssclasses:
   - ape-ai-note
 type: risk-register

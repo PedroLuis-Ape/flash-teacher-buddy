@@ -1,4 +1,6 @@
 ---
+category: game
+area: piteco
 cssclasses:
   - ape-ai-note
 type: lesson

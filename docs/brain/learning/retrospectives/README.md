@@ -1,4 +1,5 @@
 ---
+category: archive
 cssclasses:
   - ape-ai-note
 type: learning-folder

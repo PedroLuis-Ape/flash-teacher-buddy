@@ -1,4 +1,6 @@
 ---
+category: agent
+status: active
 cssclasses:
   - ape-ai-note
 type: session

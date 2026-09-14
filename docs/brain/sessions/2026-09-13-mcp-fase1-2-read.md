@@ -1,4 +1,7 @@
 ---
+category: agent
+area: study
+status: active
 cssclasses:
   - ape-ai-note
 ---

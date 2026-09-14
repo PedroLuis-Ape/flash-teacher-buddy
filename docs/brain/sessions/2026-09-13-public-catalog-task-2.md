@@ -1,4 +1,5 @@
 ---
+category: test
 cssclasses:
   - ape-ai-note
 type: session

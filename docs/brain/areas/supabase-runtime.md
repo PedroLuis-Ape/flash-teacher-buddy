@@ -1,4 +1,6 @@
 ---
+category: data
+area: supabase
 cssclasses:
   - ape-ai-note
 type: area

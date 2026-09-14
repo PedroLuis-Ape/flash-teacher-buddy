@@ -1,4 +1,6 @@
 ---
+category: test
+status: active
 type: session
 date: 2026-09-13
 agent: codex-orchestrator

@@ -1,4 +1,6 @@
 ---
+category: test
+status: reference
 type: session
 date: 2026-09-13
 agent: codex-orchestrator

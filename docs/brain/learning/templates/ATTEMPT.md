@@ -1,4 +1,7 @@
 ---
+category: game
+area: piteco
+status: active
 type: attempt
 date:
 agent:

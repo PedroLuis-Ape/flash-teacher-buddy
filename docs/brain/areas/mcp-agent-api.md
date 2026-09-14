@@ -1,4 +1,6 @@
 ---
+category: agent
+area: mcp
 cssclasses:
   - ape-ai-note
 type: area
