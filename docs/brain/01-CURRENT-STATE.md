@@ -688,3 +688,11 @@ Related: [[areas/mcp-agent-api]] · [[sessions/2026-09-13-mcp-phase5-7]] · [[07
 - [VERIFIED-GATE] Bundle: 202108 bytes, 24 tools, imports `npm:` válidos, zero `npm:C:`; paridade exata com o manifesto oficial.
 - [PENDENTE/HUMANO] Deploy (Lovable), `verify_jwt`, merge para `main` e smoke autenticado (FASE 8/9).
 
+
+## MCP — PR aberto para revisão (2026-09-13)
+
+- [FATO CONFIRMADO] Branch `integration/ape-program-20260913` publicado no GitHub (8 commits) e **PR #399** aberto contra `main`: https://github.com/PedroLuis-Ape/flash-teacher-buddy/pull/399
+- [DECISAO VIGENTE] Nada foi mergeado nem deployado: o programa do MCP entrega em PR revisável e o deploy depende da publicação na Lovable.
+- [PENDENTE/HUMANO] Merge do PR #399, publicação na Lovable (regenera o bundle em Linux) e smoke autenticado (FASE 8/9).
+- [FOLLOW-UP] Divergência vault × `docs/brain` (22 notas) segue para reconciliação.
+
