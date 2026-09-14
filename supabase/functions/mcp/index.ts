@@ -8,10 +8,8 @@ var __esm = (fn, res) => function __init() {
 };
 
 // <define:import.meta.env>
-var define_import_meta_env_default;
 var init_define_import_meta_env = __esm({
   "<define:import.meta.env>"() {
-    define_import_meta_env_default = {};
   }
 });
 
@@ -20,11 +18,11 @@ init_define_import_meta_env();
 
 // src/lib/mcp/index.ts
 init_define_import_meta_env();
-import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/tools/analyzeText.ts
 init_define_import_meta_env();
-import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z2 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/client.ts
@@ -86,11 +84,11 @@ function resolvePlatformRuntime(input, testMode = false, installed) {
 function readPlatformRuntime() {
   return resolvePlatformRuntime(
     {
-      projectId: define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID,
-      url: define_import_meta_env_default.VITE_SUPABASE_URL,
-      publicValue: define_import_meta_env_default.VITE_SUPABASE_PUBLISHABLE_KEY
+      projectId: "ymahldldyxvwjeruaxpr",
+      url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+      publicValue: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30.idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w"
     },
-    define_import_meta_env_default.MODE === "test",
+    false,
     typeof window !== "undefined" ? window.__APE_PLATFORM_RUNTIME__ : void 0
   );
 }
@@ -2805,7 +2803,7 @@ var analyzeText_default = defineTool({
 
 // src/lib/mcp/tools/echo.ts
 init_define_import_meta_env();
-import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z3 } from "npm:zod@^3.23.8";
 var echo_default = defineTool2({
   name: "echo",
@@ -2818,7 +2816,7 @@ var echo_default = defineTool2({
 
 // src/lib/mcp/tools/getFlashcards.ts
 init_define_import_meta_env();
-import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z4 } from "npm:zod@^3.23.8";
 var getFlashcards_default = defineTool3({
   name: "get_flashcards",
@@ -2848,7 +2846,7 @@ var getFlashcards_default = defineTool3({
 
 // src/lib/mcp/tools/getList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z5 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/lists.ts
@@ -2936,7 +2934,7 @@ var getList_default = defineTool4({
 
 // src/lib/mcp/tools/getMyProfile.ts
 init_define_import_meta_env();
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/domain/profile.ts
 init_define_import_meta_env();
@@ -2979,7 +2977,7 @@ var getMyProfile_default = defineTool5({
 
 // src/lib/mcp/tools/listFolders.ts
 init_define_import_meta_env();
-import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z6 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/folders.ts
@@ -3057,7 +3055,7 @@ var listFolders_default = defineTool6({
 
 // src/lib/mcp/tools/listLists.ts
 init_define_import_meta_env();
-import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z7 } from "npm:zod@^3.23.8";
 var listLists_default = defineTool7({
   name: "list_lists",
@@ -3089,7 +3087,7 @@ var listLists_default = defineTool7({
 
 // src/lib/mcp/tools/searchMyContent.ts
 init_define_import_meta_env();
-import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z8 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/search.ts
@@ -3256,7 +3254,7 @@ var searchMyContent_default = defineTool8({
 
 // src/lib/mcp/tools/addFlashcards.ts
 init_define_import_meta_env();
-import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z9 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/cardWrites.ts
@@ -3803,7 +3801,7 @@ var addFlashcards_default = defineTool9({
 
 // src/lib/mcp/tools/confirmDeleteFolder.ts
 init_define_import_meta_env();
-import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z10 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/trash.ts
@@ -4070,7 +4068,7 @@ var confirmDeleteFolder_default = defineTool10({
 
 // src/lib/mcp/tools/confirmDeleteList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z11 } from "npm:zod@^3.23.8";
 var confirmDeleteList_default = defineTool11({
   name: "confirm_delete_list",
@@ -4098,7 +4096,7 @@ var confirmDeleteList_default = defineTool11({
 
 // src/lib/mcp/tools/createFolder.ts
 init_define_import_meta_env();
-import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z12 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/folderWrites.ts
@@ -4196,7 +4194,7 @@ var createFolder_default = defineTool12({
 
 // src/lib/mcp/tools/createList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z13 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/listWrites.ts
@@ -4527,7 +4525,7 @@ var createList_default = defineTool13({
 
 // src/lib/mcp/tools/duplicateList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z14 } from "npm:zod@^3.23.8";
 var duplicateList_default = defineTool14({
   name: "duplicate_list",
@@ -4556,7 +4554,7 @@ var duplicateList_default = defineTool14({
 
 // src/lib/mcp/tools/moveList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool15 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool15 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var moveList_default = defineTool15({
   name: "move_list",
   title: "Move list to another folder",
@@ -4579,7 +4577,7 @@ var moveList_default = defineTool15({
 
 // src/lib/mcp/tools/previewDeleteFolder.ts
 init_define_import_meta_env();
-import { defineTool as defineTool16 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool16 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var previewDeleteFolder_default = defineTool16({
   name: "preview_delete_folder",
   title: "Preview deleting a folder",
@@ -4601,7 +4599,7 @@ var previewDeleteFolder_default = defineTool16({
 
 // src/lib/mcp/tools/previewDeleteList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool17 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool17 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var previewDeleteList_default = defineTool17({
   name: "preview_delete_list",
   title: "Preview deleting a list",
@@ -4623,7 +4621,7 @@ var previewDeleteList_default = defineTool17({
 
 // src/lib/mcp/tools/removeFlashcards.ts
 init_define_import_meta_env();
-import { defineTool as defineTool18 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool18 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z15 } from "npm:zod@^3.23.8";
 var removeFlashcards_default = defineTool18({
   name: "remove_flashcards",
@@ -4658,7 +4656,7 @@ var removeFlashcards_default = defineTool18({
 
 // src/lib/mcp/tools/reorderLists.ts
 init_define_import_meta_env();
-import { defineTool as defineTool19 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool19 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z16 } from "npm:zod@^3.23.8";
 var reorderLists_default = defineTool19({
   name: "reorder_lists",
@@ -4682,7 +4680,7 @@ var reorderLists_default = defineTool19({
 
 // src/lib/mcp/tools/restoreFromTrash.ts
 init_define_import_meta_env();
-import { defineTool as defineTool20 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool20 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z17 } from "npm:zod@^3.23.8";
 var restoreFromTrash_default = defineTool20({
   name: "restore_from_trash",
@@ -4706,7 +4704,7 @@ var restoreFromTrash_default = defineTool20({
 
 // src/lib/mcp/tools/updateFlashcards.ts
 init_define_import_meta_env();
-import { defineTool as defineTool21 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool21 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z18 } from "npm:zod@^3.23.8";
 var patchSchema = z18.object({
   term: z18.string().min(1).max(CARD_TEXT_MAX).optional().describe("New front text."),
@@ -4749,7 +4747,7 @@ var updateFlashcards_default = defineTool21({
 
 // src/lib/mcp/tools/updateFolder.ts
 init_define_import_meta_env();
-import { defineTool as defineTool22 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool22 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z19 } from "npm:zod@^3.23.8";
 var updateFolder_default = defineTool22({
   name: "update_folder",
@@ -4782,7 +4780,7 @@ var updateFolder_default = defineTool22({
 
 // src/lib/mcp/tools/updateList.ts
 init_define_import_meta_env();
-import { defineTool as defineTool23 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool23 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z20 } from "npm:zod@^3.23.8";
 var updateList_default = defineTool23({
   name: "update_list",
@@ -4825,7 +4823,7 @@ var updateList_default = defineTool23({
 
 // src/lib/mcp/tools/createStudyMaterial.ts
 init_define_import_meta_env();
-import { defineTool as defineTool24 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool24 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z21 } from "npm:zod@^3.23.8";
 
 // src/lib/mcp/domain/studyMaterialWrites.ts
@@ -5040,7 +5038,7 @@ var createStudyMaterial_default = defineTool24({
 
 // src/lib/mcp/tools/getPitecoCapabilities.ts
 init_define_import_meta_env();
-import { defineTool as defineTool25 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool25 } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/domain/capabilities.ts
 init_define_import_meta_env();
@@ -5248,7 +5246,7 @@ var getPitecoCapabilities_default = defineTool25({
 
 // src/lib/mcp/tools/previewContentImport.ts
 init_define_import_meta_env();
-import { defineTool as defineTool26 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool26 } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/domain/importers.ts
 init_define_import_meta_env();
@@ -7865,7 +7863,7 @@ var previewContentImport_default = defineTool26({
 
 // src/lib/mcp/tools/executeContentImport.ts
 init_define_import_meta_env();
-import { defineTool as defineTool27 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool27 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var executeContentImport_default = defineTool27({
   name: "execute_content_import",
   title: "Execute official content import",
@@ -7885,7 +7883,7 @@ var executeContentImport_default = defineTool27({
 
 // src/lib/mcp/tools/previewGlossaryImport.ts
 init_define_import_meta_env();
-import { defineTool as defineTool28 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool28 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var previewGlossaryImport_default = defineTool28({
   name: "preview_glossary_import",
   title: "Preview official folder glossary import",
@@ -7905,7 +7903,7 @@ var previewGlossaryImport_default = defineTool28({
 
 // src/lib/mcp/tools/executeGlossaryImport.ts
 init_define_import_meta_env();
-import { defineTool as defineTool29 } from "npm:@lovable.dev/mcp-js@0.20.1";
+import { defineTool as defineTool29 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var executeGlossaryImport_default = defineTool29({
   name: "execute_glossary_import",
   title: "Execute official folder glossary import",
@@ -8061,7 +8059,7 @@ function publishedTool(tool) {
   const normalized2 = { ...tool, annotations };
   return auditedToolNames.has(tool.name) ? withAudit(normalized2) : normalized2;
 }
-var projectRef = define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID ?? "ymahldldyxvwjeruaxpr";
+var projectRef = "ymahldldyxvwjeruaxpr";
 var instructions = [
   "Agent integration for APE Piteco (personal study library).",
   "Every tool runs as the authenticated user: identity comes from the verified OAuth token, so no tool accepts a user id and none can reach another account.",
@@ -8120,5 +8118,5 @@ var mcp_default = defineMcp({
 });
 
 // lovable-mcp-supabase-entry.ts
-import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.1/stacks/supabase";
+import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.0/stacks/supabase";
 Deno.serve(createSupabaseHandler(mcp_default, { functionName: "mcp" }));

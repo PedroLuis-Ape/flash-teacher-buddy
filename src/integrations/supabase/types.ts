@@ -1043,7 +1043,7 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id: string
-          reference_id?: string
+          reference_id: string
           study_type?: string
           system_kind?: string
           title: string
@@ -1479,8 +1479,8 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
-          reference_id: string
           primary_side: string
+          reference_id: string
           study_type: string
           system_kind: string
           title: string
@@ -1503,8 +1503,8 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id: string
-          reference_id?: string
           primary_side?: string
+          reference_id: string
           study_type?: string
           system_kind?: string
           title: string
@@ -1527,8 +1527,8 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id?: string
-          reference_id?: string
           primary_side?: string
+          reference_id?: string
           study_type?: string
           system_kind?: string
           title?: string
@@ -1851,6 +1851,36 @@ export type Database = {
           },
         ]
       }
+      product_event: {
+        Row: {
+          created_at: string
+          id: number
+          locale: string | null
+          name: string
+          occurred_on: string
+          payload: Json
+          surface: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          locale?: string | null
+          name: string
+          occurred_on?: string
+          payload?: Json
+          surface?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          locale?: string | null
+          name?: string
+          occurred_on?: string
+          payload?: Json
+          surface?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_id: string | null
@@ -2030,6 +2060,62 @@ export type Database = {
           version?: number | null
         }
         Relationships: []
+      }
+      public_resource_editorial: {
+        Row: {
+          created_at: string
+          is_indexable: boolean
+          level: string | null
+          list_id: string
+          locale: string
+          resource_type: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          slug: string
+          status: string
+          summary: string | null
+          theme: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_indexable?: boolean
+          level?: string | null
+          list_id: string
+          locale?: string
+          resource_type?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slug: string
+          status?: string
+          summary?: string | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_indexable?: boolean
+          level?: string | null
+          list_id?: string
+          locale?: string
+          resource_type?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slug?: string
+          status?: string
+          summary?: string | null
+          theme?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_resource_editorial_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_logs: {
         Row: {
@@ -3415,7 +3501,15 @@ export type Database = {
         Args: { p_folder_ids: string[]; p_user_id: string }
         Returns: Json
       }
+      bulk_soft_delete_folders_unsafe_v1: {
+        Args: { p_folder_ids: string[]; p_user_id: string }
+        Returns: Json
+      }
       bulk_soft_delete_lists: {
+        Args: { p_list_ids: string[]; p_user_id: string }
+        Returns: Json
+      }
+      bulk_soft_delete_lists_unsafe_v1: {
         Args: { p_list_ids: string[]; p_user_id: string }
         Returns: Json
       }
@@ -3441,6 +3535,10 @@ export type Database = {
         Returns: boolean
       }
       claim_gift_atomic: {
+        Args: { p_gift_id: string; p_user_id: string }
+        Returns: Json
+      }
+      claim_gift_atomic_unsafe_v1: {
         Args: { p_gift_id: string; p_user_id: string }
         Returns: Json
       }
@@ -3470,8 +3568,19 @@ export type Database = {
         }
         Returns: Json
       }
+      equip_skin_atomic_unsafe_v1: {
+        Args: {
+          p_kind: string
+          p_operation_id: string
+          p_skin_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       generate_ape_id: { Args: never; Returns: string }
       generate_class_code: { Args: never; Returns: string }
+      generate_folder_reference_id: { Args: never; Returns: string }
+      generate_list_reference_id: { Args: never; Returns: string }
       generate_public_id: { Args: { p_user_type: string }; Returns: string }
       generate_user_tag: { Args: never; Returns: string }
       get_account_glossary_for_list_v1: {
@@ -3491,6 +3600,14 @@ export type Database = {
       get_exchange_config: { Args: never; Returns: Json }
       get_exchange_quote: {
         Args: { p_pts: number; p_user_id: string }
+        Returns: Json
+      }
+      get_exchange_quote_unsafe_v1: {
+        Args: { p_pts: number; p_user_id: string }
+        Returns: Json
+      }
+      get_featured_public_resource_v1: {
+        Args: { _locale?: string }
         Returns: Json
       }
       get_folder_glossary_for_list_v1: {
@@ -3537,6 +3654,7 @@ export type Database = {
         }[]
       }
       get_import_capabilities_v1: { Args: never; Returns: Json }
+      get_import_capabilities_v2: { Args: never; Returns: Json }
       get_kingdom_activities: {
         Args: { _kingdom_code: string }
         Returns: {
@@ -3649,6 +3767,7 @@ export type Database = {
           lang_a: string | null
           lang_b: string | null
           owner_id: string
+          reference_id: string
           study_type: string
           system_kind: string
           title: string
@@ -3677,6 +3796,7 @@ export type Database = {
           lang_a: string | null
           lang_b: string | null
           owner_id: string
+          reference_id: string
           study_type: string
           system_kind: string
           title: string
@@ -3709,6 +3829,7 @@ export type Database = {
           order_index: number
           owner_id: string
           primary_side: string
+          reference_id: string
           study_type: string
           system_kind: string
           title: string
@@ -3758,6 +3879,10 @@ export type Database = {
             }[]
           }
         | { Args: { p_public_id: string }; Returns: Json }
+      get_public_resource_v1: {
+        Args: { _locale?: string; _slug?: string }
+        Returns: Json
+      }
       get_public_teacher_folders: {
         Args: { _slug: string }
         Returns: {
@@ -3825,11 +3950,27 @@ export type Database = {
           teacher_id: string
         }[]
       }
+      get_subscribed_teachers_with_stats_unsafe_v1: {
+        Args: { _student_id: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          folder_count: number
+          teacher_id: string
+        }[]
+      }
       get_turma_engagement_report_v1: {
         Args: { _days?: number; _turma_id: string }
         Returns: Json
       }
       get_user_card_counts: {
+        Args: { _institution_id?: string; _user_id: string }
+        Returns: {
+          card_count: number
+          list_id: string
+        }[]
+      }
+      get_user_card_counts_unsafe_v1: {
         Args: { _institution_id?: string; _user_id: string }
         Returns: {
           card_count: number
@@ -3985,6 +4126,18 @@ export type Database = {
         Args: { _turma_id: string; _user_id: string }
         Returns: boolean
       }
+      list_public_resources_v1: {
+        Args: {
+          _level?: string
+          _limit?: number
+          _locale?: string
+          _offset?: number
+          _q?: string
+          _resource_type?: string
+          _theme?: string
+        }
+        Returns: Json
+      }
       merge_cards_into_layers: {
         Args: { _card_ids: string[]; _list_id: string; _title: string }
         Returns: Json
@@ -4007,7 +4160,20 @@ export type Database = {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
         Returns: Json
       }
+      process_exchange_unsafe_v1: {
+        Args: { p_operation_id: string; p_pts: number; p_user_id: string }
+        Returns: Json
+      }
       process_skin_purchase: {
+        Args: {
+          p_buyer_id: string
+          p_operation_id: string
+          p_price: number
+          p_skin_id: string
+        }
+        Returns: Json
+      }
+      process_skin_purchase_unsafe_v1: {
         Args: {
           p_buyer_id: string
           p_operation_id: string
@@ -4072,6 +4238,15 @@ export type Database = {
       }
       publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
       purge_expired_trash: { Args: never; Returns: Json }
+      record_product_event_v1: {
+        Args: {
+          _locale?: string
+          _name: string
+          _payload?: Json
+          _surface?: string
+        }
+        Returns: Json
+      }
       record_turma_engagement_v1: {
         Args: {
           _atribuicao_id?: string
@@ -4095,11 +4270,23 @@ export type Database = {
         Args: { p_flashcard_id: string; p_user_id: string }
         Returns: Json
       }
+      restore_flashcard_unsafe_v1: {
+        Args: { p_flashcard_id: string; p_user_id: string }
+        Returns: Json
+      }
       restore_folder: {
         Args: { p_folder_id: string; p_user_id: string }
         Returns: Json
       }
+      restore_folder_unsafe_v1: {
+        Args: { p_folder_id: string; p_user_id: string }
+        Returns: Json
+      }
       restore_list: {
+        Args: { p_list_id: string; p_user_id: string }
+        Returns: Json
+      }
+      restore_list_unsafe_v1: {
         Args: { p_list_id: string; p_user_id: string }
         Returns: Json
       }
@@ -4152,6 +4339,10 @@ export type Database = {
           p_user_type?: string
         }
         Returns: Json
+      }
+      security_actor_matches_v1: {
+        Args: { p_claimed: string }
+        Returns: boolean
       }
       set_flashcard_group_favorite: {
         Args: {
@@ -4235,12 +4426,25 @@ export type Database = {
         Args: { p_folder_id: string; p_user_id: string }
         Returns: Json
       }
+      soft_delete_folder_unsafe_v1: {
+        Args: { p_folder_id: string; p_user_id: string }
+        Returns: Json
+      }
       soft_delete_list: {
         Args: { p_list_id: string; p_user_id: string }
         Returns: Json
       }
+      soft_delete_list_unsafe_v1: {
+        Args: { p_list_id: string; p_user_id: string }
+        Returns: Json
+      }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
+      swap_flashcards_sides_unsafe_v1: {
+        Args: { _list_id: string }
+        Returns: Json
+      }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      swap_list_sides_unsafe_v1: { Args: { _list_id: string }; Returns: Json }
       sync_folder_glossaries_from_super_import_v1: {
         Args: { _batch_id: string; _payload: Json }
         Returns: Json
@@ -4261,6 +4465,24 @@ export type Database = {
       }
       unmerge_layered_card: { Args: { _principal_id: string }; Returns: Json }
       update_own_profile: {
+        Args: {
+          p_avatar_skin_id?: string
+          p_avatar_url?: string
+          p_first_name?: string
+          p_google_connect_prompt_dont_show?: boolean
+          p_google_connect_prompt_version_seen?: number
+          p_google_connected_at?: string
+          p_is_teacher?: boolean
+          p_last_active_at?: string
+          p_mascot_skin_id?: string
+          p_public_access_enabled?: boolean
+          p_public_slug?: string
+          p_user_id: string
+          p_user_type?: string
+        }
+        Returns: Json
+      }
+      update_own_profile_unsafe_v1: {
         Args: {
           p_avatar_skin_id?: string
           p_avatar_url?: string
