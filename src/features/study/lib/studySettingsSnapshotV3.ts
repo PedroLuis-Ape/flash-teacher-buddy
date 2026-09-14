@@ -83,9 +83,10 @@ function bool(value: unknown, fallback: boolean): boolean {
 }
 
 /**
- * Normaliza e migra qualquer snapshot conhecido (v1 ou v2) para o contrato v2.
- * v1 não possuía `playMode`/`playSide`; os campos são preenchidos a partir do
- * fallback informado (normalmente o preset atual da lista/modo).
+ * Normaliza e migra qualquer snapshot conhecido (v1, v2 ou v3) para o contrato
+ * v3. v1 não possuía configuração de Play; v2 possuía `playMode`/`playSide`
+ * (lado físico), convertidos para `playTarget` semântico com a direção do
+ * próprio snapshot.
  */
 export function normalizeStudySettingsSnapshotV3(
   value: unknown,
@@ -95,9 +96,16 @@ export function normalizeStudySettingsSnapshotV3(
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   // v1 chamava o escopo de `subset`.
   const scopeValue = raw.scope ?? raw.subset;
+  const direction = pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction);
+  // Migração v2 → v3: lado físico + direção viram alvo semântico.
+  const playTarget = (STUDY_PRESET_PLAY_TARGETS as readonly string[]).includes(raw.playTarget as string)
+    ? (raw.playTarget as StudyPlayTargetPreset)
+    : (raw.playMode !== undefined || raw.playSide !== undefined)
+      ? legacyPlayToTarget(raw.playMode, raw.playSide, direction)
+      : fallback.playTarget;
   const snapshot: StudySettingsSnapshotV3 = {
     version: STUDY_SETTINGS_SNAPSHOT_VERSION,
-    direction: pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction),
+    direction,
     order: pick(STUDY_PRESET_ORDERS, raw.order, fallback.order),
     scope: pick(STUDY_PRESET_SCOPES, scopeValue, fallback.scope),
     redFocus: bool(raw.redFocus, fallback.redFocus),
@@ -167,12 +175,62 @@ export function studySettingsFromPreset(
  */
 export const RED_FOCUS_CONSTRAINED_SETTINGS = ["order", "studyFlowMode"] as const;
 
+/**
+ * Campos que o Modo gamificado (`mastery_rounds`) controla enquanto ativo.
+ *
+ * Regra de produto: no gamificado a DIREÇÃO EFETIVA é sempre automática (`any`)
+ * em TODOS os modos de jogo, porque as rodadas alternam os lados por card. É
+ * restrição efetiva temporária, do mesmo tipo do Foco Vermelho: a preferência
+ * base do usuário nunca é destruída nem persistida como `any`.
+ */
+export const MASTERY_ROUNDS_CONSTRAINED_SETTINGS = ["direction", "writeRewriteSide"] as const;
+
+export function isDirectionLockedByFlowMode(studyFlowMode: StudyFlowModePreset): boolean {
+  return studyFlowMode === "mastery_rounds";
+}
+
+/** Direção EFETIVA — única função que a UI e o motor devem consultar. */
+export function resolveEffectiveStudyDirection(
+  baseDirection: StudyDirectionPreset,
+  studyFlowMode: StudyFlowModePreset,
+): StudyDirectionPreset {
+  return isDirectionLockedByFlowMode(studyFlowMode) ? "any" : baseDirection;
+}
+
 export function applyStudySettingsConstraints(
   snapshot: StudySettingsSnapshotV3,
 ): StudySettingsSnapshotV3 {
-  if (!snapshot.redFocus) return snapshot;
-  if (snapshot.order === "sequential" && snapshot.studyFlowMode === "continuous") return snapshot;
-  return { ...snapshot, order: "sequential", studyFlowMode: "continuous" };
+  let next = snapshot;
+
+  if (next.redFocus && !(next.order === "sequential" && next.studyFlowMode === "continuous")) {
+    next = { ...next, order: "sequential", studyFlowMode: "continuous" };
+  }
+
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)
+    && !(next.direction === "any" && next.writeRewriteSide === "alternating")) {
+    next = { ...next, direction: "any", writeRewriteSide: "alternating" };
+  }
+
+  return next;
+}
+
+/**
+ * Ao SAIR do Modo gamificado, a direção volta para a preferência base: entrar no
+ * gamificado com base `a-b` produz `any` efetivo, e sair devolve `a-b`.
+ */
+export function releaseMasteryRoundsConstraints(
+  next: StudySettingsSnapshotV3,
+  basePreset: Pick<StudyPreset, "direction" | "writeRewriteSide">,
+): StudySettingsSnapshotV3 {
+  if (isDirectionLockedByFlowMode(next.studyFlowMode)) return next;
+  if (next.direction === basePreset.direction) return next;
+  return {
+    ...next,
+    direction: basePreset.direction,
+    writeRewriteSide: next.writeActivityMode === "rewrite"
+      ? directionToRewriteSide(basePreset.direction) as typeof next.writeRewriteSide
+      : basePreset.writeRewriteSide,
+  };
 }
 
 /**
