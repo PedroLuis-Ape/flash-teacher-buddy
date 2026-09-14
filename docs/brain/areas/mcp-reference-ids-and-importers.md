@@ -28,8 +28,12 @@ related:
 - [DECISÃO VIGENTE] A migration
   `supabase/migrations/20260914130000_piteco_reference_ids.sql` gera referências
   com alfabeto sem caracteres ambíguos, faz backfill idempotente, garante
-  unicidade e impede alteração posterior por trigger. A migration ainda não
-  foi aplicada neste ambiente nem em produção.
+  unicidade e impede alteração posterior por trigger. **Aplicada em produção
+  (`ymahldldyxvwjeruaxpr`) em 2026-09-14**, junto com
+  `20260914132000_lists_with_card_counts_reference_id.sql` e
+  `20260914133000_import_capabilities_glossary.sql`. O backfill precisou da
+  escotilha `app.allow_system_collection_mutation` por causa do guard de
+  coleções automáticas — ver [[sessions/2026-09-14-publicacao-mcp-producao]].
 
 ## Superfície MCP
 

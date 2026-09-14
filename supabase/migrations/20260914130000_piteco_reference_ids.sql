@@ -63,6 +63,14 @@ $$;
 
 -- Idempotent for a partially applied migration or a retry: existing aliases
 -- are preserved and only missing values are generated.
+--
+-- O guard de coleções automáticas (trg_folders_system_collection_readonly /
+-- trg_lists_system_collection_readonly) bloqueia UPDATE em linhas com
+-- system_kind <> 'user', e pastas/listas automáticas também precisam do alias.
+-- O backfill é administrativo e usa a escotilha sancionada pelo próprio guard
+-- (usuário postgres + GUC), que é transaction-local e volta ao normal no fim.
+SELECT set_config('app.allow_system_collection_mutation', 'on', true);
+
 UPDATE public.folders
 SET reference_id = public.generate_folder_reference_id()
 WHERE reference_id IS NULL OR btrim(reference_id) = '';
@@ -70,6 +78,8 @@ WHERE reference_id IS NULL OR btrim(reference_id) = '';
 UPDATE public.lists
 SET reference_id = public.generate_list_reference_id()
 WHERE reference_id IS NULL OR btrim(reference_id) = '';
+
+SELECT set_config('app.allow_system_collection_mutation', 'off', true);
 
 ALTER TABLE public.folders
   ALTER COLUMN reference_id SET NOT NULL;
