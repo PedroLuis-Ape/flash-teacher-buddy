@@ -65,6 +65,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
   servidor-canônica e Listas Combinadas (relato de outra IA, verificado contra o main e o banco de produção).
 - [[sessions/2026-09-14-configuracoes-da-sessao]] — contrato único das Configurações da
   Sessão: estado efetivo do Foco Vermelho, restauração ao desligar e persistência por patch semântico.
+- [[sessions/2026-09-14-roteador-de-teclado]] — dono único do teclado da sessão (P0)
+  e a fila do plano de reforma: TTS, gestos, runtime único, viewport, unificação Study/Mixed.
 
 ## Regra de retomada
 
