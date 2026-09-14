@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
+import { clearShortcutScope, setShortcutScope } from "@/features/study/lib/keyboardCommandRouter";
 import {
   evaluateWriteAnswer,
   summarizeDifferences,
@@ -200,6 +201,15 @@ export const WriteStudyView = ({
   const feedbackRef = useRef<HTMLDivElement>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
+
+  // Dono do teclado no modo escrever: enquanto o aluno está digitando, NENHUM
+  // atalho de sessão pode rodar (nem Q/A/W/D do preset gamer). Depois de enviar,
+  // o escopo vira "feedback" e os atalhos voltam a valer. O estado é explícito,
+  // então não depende de onde o foco está no momento do keydown.
+  useEffect(() => {
+    setShortcutScope("write-answer", evaluation ? "feedback" : "text-entry");
+    return () => clearShortcutScope("write-answer");
+  }, [evaluation]);
 
   // Central advance gate — every "next"/"skip" path goes through this
   // controller so we can (a) demand a finalized status before advancing and

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import {
   loadShortcuts,
   normalizeKey,
-  isTypingTarget,
   type ShortcutActionId,
   type ShortcutMap,
 } from "@/features/study/lib/keyboardShortcuts";
+import { shouldBlockSessionShortcut } from "@/features/study/lib/keyboardCommandRouter";
 
 export type ShortcutHandlers = Partial<Record<ShortcutActionId, (e: KeyboardEvent) => void>>;
 
@@ -53,8 +53,9 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers, opts: Options =
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (optsRef.current.disabled) return;
-      const typing = isTypingTarget(e.target);
-      if (typing && !(optsRef.current.allowEnterInTyping && e.key === "Enter")) return;
+      // Dono único do teclado: campo de texto, modal e escopo restrito barram
+      // qualquer comando da sessão antes de chegar no mapa de atalhos.
+      if (shouldBlockSessionShortcut(e, { allowEnter: optsRef.current.allowEnterInTyping })) return;
 
       const key = normalizeKey(e.key);
       const m = mapRef.current;

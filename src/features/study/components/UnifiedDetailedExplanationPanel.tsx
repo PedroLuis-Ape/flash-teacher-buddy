@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { subscribeDetailedExplanationPanelToggle } from "@/features/study/lib/currentDetailedExplanation";
+import { shouldBlockSessionShortcut } from "@/features/study/lib/keyboardCommandRouter";
 import "./desktop-explanation.css";
 
 interface UnifiedDetailedExplanationPanelProps {
@@ -121,8 +122,7 @@ export function UnifiedDetailedExplanationPanel({
   useEffect(() => {
     if (!isDesktop) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (shouldBlockSessionShortcut(event)) return;
       if (event.altKey && event.key.toLocaleLowerCase() === "e" && hasContent) {
         event.preventDefault();
         setPersistentEnabled(!enabled);
