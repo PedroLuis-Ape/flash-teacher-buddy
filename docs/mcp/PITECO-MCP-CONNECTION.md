@@ -535,15 +535,20 @@ Não verificado localmente: execução do bundle sob Deno (Deno não está insta
 
 O MCP é um **OAuth resource server**: lê o header `Authorization` cru e valida o token delegado
 (issuer/JWKS) pelo SDK. O check legado do gateway derruba a requisição antes do handler rodar
-(401 **sem** `x-deno-execution-id`), então o function foi declarado explicitamente em
-`supabase/config.toml`:
+(401 **sem** `x-deno-execution-id`).
 
-```toml
-[functions.mcp]
-verify_jwt = false
-```
+O function **permanece intencionalmente NÃO declarado** em `supabase/config.toml`. Motivo medido:
 
-Isso **documenta** o comportamento que já está em produção (os probes mostram `x-deno-execution-id`
-nos 401, prova de que o código executa) e evita que um deploy futuro aplique o default do gateway.
-A autenticação continua obrigatória e é feita pelo SDK — o endpoint sem token responde 401.
+1. o gate de publicação do repo (`scripts/audit-security.mjs` + `config/security-audit.json`)
+   exige, para função gerenciada privada, `verify_jwt = true` **ou** uma entrada em
+   `gatewayJwtExceptions`;
+2. a exceção, por sua vez, exige um padrão literal de guarda
+   `const { data: { user }, error } = await ...auth.getUser(...)` no fonte da função — que o bundle
+   gerado do MCP **não** possui (a validação acontece dentro do SDK/handler de tool);
+3. declarar `verify_jwt = false` sem esses dois itens quebra o check "Publication validation"
+   (verificado no PR #399).
+
+O comportamento de produção não muda: os probes mostram 401 **com** `x-deno-execution-id`, prova de
+que o código executa e a autenticação é feita pelo SDK. O bloqueio por gateway continua um risco
+documentado para qualquer deploy que passe a aplicar o default.
 
