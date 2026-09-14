@@ -1321,7 +1321,9 @@ const Folder = () => {
                             </div>
                             <p className={`text-xs leading-tight mt-0.5 ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
                               {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
+                              {list.is_embedded ? ` • 🔗 Combinada${list.source_count ? ` • ${list.source_count} ${list.source_count === 1 ? "fonte" : "fontes"}` : ""}` : ""}
                             </p>
+
                             {list.reference_id && <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">{list.reference_id}</p>}
                           </div>
 
