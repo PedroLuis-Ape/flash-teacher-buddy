@@ -458,8 +458,11 @@ const Folder = () => {
           description: newList.description,
           owner_id: session.user.id,
           order_index: lists.length,
+          // reference_id é gerado por trigger no banco; enviar undefined omite a chave.
+          reference_id: undefined as unknown as string,
           ...studyDbColumns,
         })
+
         .select()
         .single();
 
