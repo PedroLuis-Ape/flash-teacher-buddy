@@ -181,7 +181,7 @@ export default function MixedStudy() {
   const baseDirection: Direction = resolveEffectiveStudyDirection(
     restoredSessionDirectionRef.current
       ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction),
-    selectedFlowModeRef?.current ?? effectivePreset.studyFlowMode,
+    effectivePreset.studyFlowMode,
   );
   const requestedFavoritesOnly = restoredSessionSubsetRef.current
     ? restoredSessionSubsetRef.current === "favorites"
