@@ -15,28 +15,83 @@
   gap: .625rem;
 }
 
+/*
+ * Grid mode uses the whole tile for the folder card. The previous flex row kept
+ * four desktop action buttons beside every card, which squeezed the card down
+ * to a narrow strip. Actions stay available through the existing three-dots
+ * menu, matching the compact list cards used inside folders.
+ */
 .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) {
-  min-width: 0;
-  align-items: stretch;
-  gap: .375rem;
-}
-
-.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > div {
+  position: relative;
+  display: block;
   min-width: 0;
 }
 
-.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button {
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > div:has(> .space-ui-folder-card) {
+  min-width: 0;
+  width: 100%;
+}
+
+/* In normal grid mode, the four standalone desktop actions are redundant. */
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card):has(> button[title="Ações da pasta"]) > button:not([title="Ações da pasta"]) {
+  display: none !important;
+}
+
+/* Keep the complete actions menu visible at every breakpoint in grid mode. */
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button[title="Ações da pasta"] {
+  position: absolute;
+  top: 50%;
+  right: .5rem;
+  z-index: 2;
+  display: inline-flex !important;
   width: 2.5rem;
   min-width: 2.5rem;
-  height: auto;
-  min-height: 4rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  transform: translateY(-50%);
+}
+
+/* Selection mode has no menu trigger; keep its checkbox as an overlay instead. */
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card):not(:has(> button[title="Ações da pasta"])) > button {
+  position: absolute;
+  top: 50%;
+  right: .5rem;
+  z-index: 2;
+  display: inline-flex;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  transform: translateY(-50%);
+}
+
+/* Local ordering remains usable without consuming a second grid column. */
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > div:not(:has(> .space-ui-folder-card)) {
+  position: absolute;
+  top: 50%;
+  left: .375rem;
+  z-index: 2;
+  gap: .125rem;
+  transform: translateY(-50%);
+}
+
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > div:not(:has(> .space-ui-folder-card)) > button {
+  width: 1.75rem;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  min-height: 1.75rem;
+}
+
+.ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card):has(> div:not(:has(> .space-ui-folder-card))) .space-ui-folder-card {
+  padding-left: 3.25rem;
 }
 
 .ape-tabs-shell .space-ui-folder-card {
+  width: 100%;
   height: auto;
   min-height: 4rem;
   min-width: 0;
-  padding-inline: .875rem;
+  padding-inline: .875rem 3.75rem;
   padding-block: .5rem;
 }
 
@@ -68,13 +123,17 @@
   }
 
   .ape-tabs-shell .space-ui-folder-card {
-    padding-inline: .625rem;
+    padding-inline: .625rem 3.25rem;
     padding-block: .5rem;
   }
 
-  .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button {
+  .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button[title="Ações da pasta"],
+  .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card):not(:has(> button[title="Ações da pasta"])) > button {
+    right: .375rem;
     width: 2.25rem;
     min-width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
   }
 }
 

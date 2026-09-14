@@ -6,6 +6,10 @@ const librarySource = readFileSync(
   new URL("../../features/library/FoldersOptimized.tsx", import.meta.url),
   "utf8",
 );
+const libraryResponsiveCss = readFileSync(
+  new URL("../../styles/library-responsive.css", import.meta.url),
+  "utf8",
+);
 const folderSource = readFileSync(new URL("../Folder.tsx", import.meta.url), "utf8");
 
 describe("responsive home and library navigation contract", () => {
@@ -22,6 +26,15 @@ describe("responsive home and library navigation contract", () => {
     expect(librarySource).toContain("Ações da pasta");
     expect(librarySource).toContain("sm:hidden");
     expect(folderSource).toContain("flex-wrap");
+  });
+
+  it("keeps folder grid cards full width instead of squeezing them between desktop actions", () => {
+    expect(libraryResponsiveCss).toContain("display: block;");
+    expect(libraryResponsiveCss).toContain('button[title="Ações da pasta"]');
+    expect(libraryResponsiveCss).toContain('button:not([title="Ações da pasta"])');
+    expect(libraryResponsiveCss).toContain("display: none !important;");
+    expect(libraryResponsiveCss).toContain("display: inline-flex !important;");
+    expect(libraryResponsiveCss).toContain("width: 100%;");
   });
 
   it("keeps grid cards reachable without a pointer", () => {
