@@ -72,18 +72,17 @@ describe("Persistência por patch semântico", () => {
   });
 
   it("mudar áudio/exibição não persiste direção e vice-versa", () => {
-    const audio = applyStudySettingsPatch(BASE, { fastMode: true, playMode: "single" });
-    expect(studySettingsSemanticOverride(audio, { fastMode: true, playMode: "single" })).toEqual({
+    const audio = applyStudySettingsPatch(BASE, { fastMode: true, playTarget: "prompt" });
+    expect(studySettingsSemanticOverride(audio, { fastMode: true, playTarget: "prompt" })).toEqual({
       fastMode: true,
-      playMode: "single",
+      playTarget: "prompt",
     });
 
     const direction = applyStudySettingsPatch(BASE, { direction: "b-a" });
     const override = studySettingsSemanticOverride(direction, { direction: "b-a" });
     expect(override.direction).toBe("b-a");
     expect(override.fastMode).toBeUndefined();
-    expect(override.playMode).toBeUndefined();
-    expect(override.playSide).toBeUndefined();
+    expect(override.playTarget).toBeUndefined();
   });
 
   it("direção e lado da reescrita são uma decisão só e persistem juntos", () => {
@@ -97,7 +96,7 @@ describe("Persistência por patch semântico", () => {
 
   it("áudio e correção não reconstroem a fila; ordem, escopo, formato e Foco Vermelho sim", () => {
     expect(patchAffectsQueue({ fastMode: true })).toBe(false);
-    expect(patchAffectsQueue({ playSide: "b" })).toBe(false);
+    expect(patchAffectsQueue({ playTarget: "answer" })).toBe(false);
     expect(patchAffectsQueue({ writeCorrectionMode: "hard" })).toBe(false);
     expect(patchAffectsQueue({ direction: "b-a" })).toBe(false);
     expect(patchAffectsQueue({ order: "random" })).toBe(true);

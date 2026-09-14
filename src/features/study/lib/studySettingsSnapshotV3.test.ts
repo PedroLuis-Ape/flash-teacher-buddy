@@ -3,34 +3,56 @@ import {
   DEFAULT_STUDY_SETTINGS_SNAPSHOT,
   applyStudySettingsPatch,
   diffStudySettings,
-  normalizeStudySettingsSnapshotV2,
+  normalizeStudySettingsSnapshotV3,
   patchAffectsQueue,
   studySettingsToPresetOverride,
-} from "./studySettingsSnapshotV2";
+} from "./studySettingsSnapshotV3";
 
-describe("contrato único de configurações v2", () => {
+// No Modo gamificado a direção efetiva é sempre automática; os casos que
+// escolhem um lado fixo rodam no formato extenso (continuous).
+const BASE_CONTINUOUS = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, studyFlowMode: "continuous" as const };
+
+describe("contrato único de configurações v3", () => {
   it("cobre todos os campos ajustáveis na janela", () => {
     expect(Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT).sort()).toEqual([
-      "direction", "fastMode", "order", "playMode", "playSide", "redFocus",
+      "direction", "fastMode", "order", "playTarget", "redFocus",
       "scope", "studyFlowMode", "version", "writeActivityMode",
       "writeCorrectionMode", "writeRewriteSide",
     ]);
   });
 
-  it("migra snapshots v1 (subset, sem playMode/playSide)", () => {
-    const fallback = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, playMode: "single" as const, playSide: "b" as const };
-    expect(normalizeStudySettingsSnapshotV2({
+  it("migra snapshots v1 (subset, sem configuração de Play)", () => {
+    const fallback = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, playTarget: "answer" as const };
+    expect(normalizeStudySettingsSnapshotV3({
       version: 1, subset: "favorites", direction: "b-a", order: "sequential",
       writeActivityMode: "rewrite", writeRewriteSide: "b", writeCorrectionMode: "flexible",
     }, fallback)).toMatchObject({
       // Reescrever: a direção é reparada a partir do lado persistido (b => a-b).
-      version: 2, scope: "favorites", direction: "a-b", order: "sequential",
-      playMode: "single", playSide: "b", writeActivityMode: "rewrite", writeRewriteSide: "b",
+      version: 3, scope: "favorites", direction: "a-b", order: "sequential",
+      playTarget: "answer", writeActivityMode: "rewrite", writeRewriteSide: "b",
     });
   });
 
+  it("migra snapshots v2 (playMode/playSide físico) para playTarget semântico", () => {
+    // Lado escolhido == lado da pergunta => somente pergunta.
+    expect(normalizeStudySettingsSnapshotV3({
+      version: 2, direction: "a-b", playMode: "single", playSide: "a",
+    }).playTarget).toBe("prompt");
+    // Lado escolhido == lado da resposta => somente resposta.
+    expect(normalizeStudySettingsSnapshotV3({
+      version: 2, direction: "a-b", playMode: "single", playSide: "b",
+    }).playTarget).toBe("answer");
+    // Direção invertida: o mesmo lado físico "b" agora é a pergunta.
+    expect(normalizeStudySettingsSnapshotV3({
+      version: 2, direction: "b-a", playMode: "single", playSide: "b",
+    }).playTarget).toBe("prompt");
+    expect(normalizeStudySettingsSnapshotV3({
+      version: 2, direction: "b-a", playMode: "both", playSide: "b",
+    }).playTarget).toBe("both");
+  });
+
   it("descarta valores inválidos preservando o fallback", () => {
-    expect(normalizeStudySettingsSnapshotV2({ direction: "xx", order: "zz", scope: "nope" }))
+    expect(normalizeStudySettingsSnapshotV3({ direction: "xx", order: "zz", scope: "nope" }))
       .toMatchObject({
         direction: DEFAULT_STUDY_SETTINGS_SNAPSHOT.direction,
         order: DEFAULT_STUDY_SETTINGS_SNAPSHOT.order,
@@ -45,7 +67,7 @@ describe("contrato único de configurações v2", () => {
     expect(patchAffectsQueue({ studyFlowMode: "continuous" })).toBe(true);
     expect(patchAffectsQueue({ direction: "b-a" })).toBe(false);
     expect(patchAffectsQueue({ writeCorrectionMode: "hard" })).toBe(false);
-    expect(patchAffectsQueue({ playMode: "single", playSide: "b", fastMode: true })).toBe(false);
+    expect(patchAffectsQueue({ playTarget: "prompt", fastMode: true })).toBe(false);
   });
 
   it("força fila sequencial no Foco Vermelho", () => {
@@ -67,11 +89,14 @@ describe("contrato único de configurações v2", () => {
   it("computa apenas a diferença real entre dois snapshots", () => {
     expect(diffStudySettings(
       DEFAULT_STUDY_SETTINGS_SNAPSHOT,
-      { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, scope: "favorites", playSide: "b" },
-    )).toEqual({ scope: "favorites", playSide: "b" });
+      { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, scope: "favorites", playTarget: "answer" },
+    )).toEqual({ scope: "favorites", playTarget: "answer" });
   });
 
   it("sincroniza direção e lado da reescrita numa única ação", () => {
+    const DEFAULT_STUDY_SETTINGS_SNAPSHOT = {
+      ...BASE_CONTINUOUS,
+    };
     expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "b" }))
       .toMatchObject({ writeRewriteSide: "b", direction: "a-b" });
     expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "a" }))
@@ -90,7 +115,7 @@ describe("contrato único de configurações v2", () => {
     expect(applyStudySettingsPatch(translate, { writeActivityMode: "rewrite" }))
       .toMatchObject({ writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "b-a" });
 
-    expect(normalizeStudySettingsSnapshotV2({
+    expect(normalizeStudySettingsSnapshotV3({
       version: 2, writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "a-b",
     })).toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
   });
