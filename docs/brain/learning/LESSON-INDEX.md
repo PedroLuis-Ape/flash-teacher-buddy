@@ -22,6 +22,8 @@ duplica o conteúdo das lições.
   preservar o receiver ao tipar métodos de SDK que dependem de `this`.
 - `CANDIDATE_LESSON`: [[learning/lessons/2026-09-13-gate-auth-em-superficie-publica]] —
   convite de aquisição não pode existir só no shell autenticado.
+- `VALIDATED_LESSON`: [[learning/lessons/2026-09-12-browser-first-tts]] — usar `speechSynthesis`
+  do navegador como motor principal e `chrome.tts` só como fallback; lista de vozes vazia não é sucesso.
 
 ## Status aceitos
 
