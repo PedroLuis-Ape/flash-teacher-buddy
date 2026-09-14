@@ -5,7 +5,9 @@ import { STUDY_RED_FOCUS_TRANSITION_EVENT } from "@/hooks/useStudyPreferences";
 import {
   applyStudySettingsPatch,
   patchAffectsQueue,
+  releaseRedFocusConstraints,
   studySettingsFromPreset,
+  studySettingsSemanticOverride,
   studySettingsToPresetOverride,
   type StudySettingsPatchV2,
   type StudySettingsSnapshotV2,
@@ -72,9 +74,15 @@ export function useStudySettingsController(
       requested = { ...requested, scope: "all" };
     }
 
-    const next = applyStudySettingsPatch(settings, requested);
+    const patched = applyStudySettingsPatch(settings, requested);
+    // Sair do Foco Vermelho devolve ordem e formato ao preset base: a restrição
+    // é temporária e nunca substituiu a preferência do usuário.
+    const next = settings.redFocus && requested.redFocus === false
+      ? releaseRedFocusConstraints(patched, effectivePreset)
+      : patched;
     const effectivePatch: StudySettingsPatchV2 = { ...requested };
     if (next.order !== settings.order) effectivePatch.order = next.order;
+    if (next.studyFlowMode !== settings.studyFlowMode) effectivePatch.studyFlowMode = next.studyFlowMode;
 
     if (patchAffectsQueue(effectivePatch)) {
       onQueueAffectingChange?.(next, effectivePatch);
@@ -93,16 +101,18 @@ export function useStudySettingsController(
       emitStudyFlowModeChanged(next.studyFlowMode);
     }
 
-    // Uma mudança manual substitui o override restaurado e vira o novo preset
-    // da lista/modo, na mesma ação.
-    const presetOverride = studySettingsToPresetOverride(next);
-    setSessionOverrides(presetOverride);
-    persistPreset(presetOverride);
+    // A sessão em andamento acompanha o estado EFETIVO (que pode incluir a
+    // restrição temporária do Foco Vermelho), mas o preset da lista/modo grava
+    // somente as decisões que o usuário tomou nesta ação — nunca o snapshot
+    // inteiro, e nunca uma restrição temporária.
+    setSessionOverrides(studySettingsToPresetOverride(next));
+    persistPreset(studySettingsSemanticOverride(next, requested));
 
     return next;
   }, [
     applyRuntime,
     canUseFavorites,
+    effectivePreset,
     onFavoritesUnavailable,
     onQueueAffectingChange,
     persistPreset,
