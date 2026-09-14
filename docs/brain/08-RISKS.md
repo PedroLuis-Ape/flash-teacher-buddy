@@ -244,6 +244,15 @@ Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] ·
 
 Related: [[areas/mcp-reference-ids-and-importers]] · [[imports/2026-09-11/App-Piteco-Brain/areas/importers]] · [[01-CURRENT-STATE]] · [[07-TESTS]]
 
+## R-2026-09-14-03 — atualizações de dependência pendentes (majors)
+
+- [FATO CONFIRMADO] A auditoria de continuidade fechou as PRs de dependência porque nenhuma era mergeável sem migração validada: `vite` 6.4.3 → 8.3.0 e `vitest` 4.1.9 → 5.0.0 (#271), `react-router-dom` 6 → 7 (#171), `sonner` 1 → 2 (#172), além de dois patches com lockfile defasado (#173 radix tooltip, #174 tailwind typography).
+- [RISCO] O projeto segue em toolchain antiga (`vite` 6 / `vitest` 4). Enquanto a migração não for feita em PR dedicado com `typecheck`, suíte, `lint`, `build`, `preview:smoke` e `check:dependencies`, o Dependabot continuará repropondo versões que não podem ser mergeadas direto.
+- [MITIGAÇÃO] Migrar um major por PR, começando pelo toolchain (vite/vitest) porque desbloqueia os demais; regenerar os lockfiles a partir do `main` atual antes de validar.
+- [LIMITE] Nada disso foi aplicado nesta rodada; o `main` continua exatamente na toolchain validada.
+
+Related: [[sessions/2026-09-14-auditoria-de-continuidade]] · [[01-CURRENT-STATE]] · [[07-TESTS]] · [[23-GIT-E-WORKTREES]]
+
 ## R-2026-09-14-01 — emoji por pasta depende da migration para sincronização
 
 - [FATO CONFIRMADO] O código consulta e atualiza `folders.emoji`, mas a coluna não existia no schema conhecido desta rodada.
