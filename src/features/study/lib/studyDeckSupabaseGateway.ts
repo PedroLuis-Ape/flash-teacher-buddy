@@ -31,6 +31,49 @@ function asRows<T>(data: unknown): T[] | null {
   return Array.isArray(data) ? data as T[] : null;
 }
 
+function isMissingEmbeddedSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown; details?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+  const text = `${String(candidate.message ?? "")} ${String(candidate.details ?? "")}`.toLowerCase();
+  return code === "42P01"
+    || code === "PGRST205"
+    || (text.includes("embedded_lists") && (text.includes("does not exist") || text.includes("schema cache")));
+}
+
+async function probeEmbeddedPrivateList(
+  resourceId: string,
+  signal: AbortSignal,
+): Promise<{ isEmbedded: boolean; error: unknown }> {
+  const result = await (supabase as any)
+    .from("embedded_lists")
+    .select("list_id")
+    .eq("list_id", resourceId)
+    .abortSignal(signal)
+    .maybeSingle();
+  throwIfAborted(signal);
+
+  // The frontend can be published before the migration without breaking every
+  // existing private list. Until the new schema exists, all lists behave as
+  // the canonical normal-list path.
+  if (result.error && isMissingEmbeddedSchemaError(result.error)) {
+    return { isEmbedded: false, error: null };
+  }
+  return { isEmbedded: Boolean(result.data?.list_id), error: result.error };
+}
+
+async function fetchEmbeddedStudyDeckPage<T>(
+  context: StudyDeckPageContext,
+): Promise<StudyDeckPage<T>> {
+  const result = await (supabase.rpc as any)("get_embedded_flashcards", {
+    _embedded_list_id: context.resourceId,
+  })
+    .abortSignal(context.signal)
+    .range(context.from, context.to);
+  throwIfAborted(context.signal);
+  return { data: asRows<T>(result.data), error: result.error };
+}
+
 /** One canonical Supabase read boundary for Study and MixedStudy. */
 export async function fetchStudyDeckPage<T>(
   context: StudyDeckPageContext,
@@ -46,6 +89,12 @@ export async function fetchStudyDeckPage<T>(
       .range(context.from, context.to);
     throwIfAborted(context.signal);
     return { data: asRows<T>(result.data), error: result.error };
+  }
+
+  if (context.source === "private-rest" && context.resourceKind === "list") {
+    const embedded = await probeEmbeddedPrivateList(context.resourceId, context.signal);
+    if (embedded.error) return { data: null, error: embedded.error };
+    if (embedded.isEmbedded) return fetchEmbeddedStudyDeckPage<T>(context);
   }
 
   const client = context.source === "portal-collection-rest" ? publicSupabase : supabase;
@@ -110,6 +159,43 @@ async function countVisibleRows(
   return { count: result.count, error: result.error };
 }
 
+async function probeEmbeddedAvailability(
+  context: StudyDeckGatewayContext,
+): Promise<StudyDeckAvailabilityProbe | null> {
+  if (context.source !== "private-rest" || context.resourceKind !== "list") return null;
+
+  const embedded = await probeEmbeddedPrivateList(context.resourceId, context.signal);
+  if (embedded.error) {
+    return {
+      status: "unconfirmed",
+      reason: classifyStudyDeckVerificationError(embedded.error),
+    };
+  }
+  if (!embedded.isEmbedded) return null;
+
+  const result = await (supabase.rpc as any)("get_embedded_list_availability", {
+    _embedded_list_id: context.resourceId,
+  })
+    .abortSignal(context.signal)
+    .maybeSingle();
+  throwIfAborted(context.signal);
+  if (result.error) {
+    return {
+      status: "unconfirmed",
+      reason: classifyStudyDeckVerificationError(result.error),
+    };
+  }
+  if (!result.data) return { status: "unconfirmed", reason: "unknown" };
+
+  const countRow = result.data as { resource_exists: boolean; raw_count: number; playable_count: number };
+  return {
+    status: "verified",
+    resourceExists: Boolean(countRow.resource_exists),
+    rawCount: Number(countRow.raw_count),
+    playableCount: Number(countRow.playable_count),
+  };
+}
+
 /**
  * Independent authority check. It never converts an error, missing RPC or RLS
  * denial into zero.
@@ -139,6 +225,9 @@ export async function probeStudyDeckAvailability(
       playableCount: Number(countRow.playable_count),
     };
   }
+
+  const embeddedAvailability = await probeEmbeddedAvailability(context);
+  if (embeddedAvailability) return embeddedAvailability;
 
   const resource = await verifyResourceExists(context);
   if (resource.error) {
