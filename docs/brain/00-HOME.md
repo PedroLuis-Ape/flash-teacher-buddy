@@ -63,6 +63,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
   produção, defeito do guard de coleções automáticas, bloqueio do deploy da Edge Function e lacunas descobertas.
 - [[sessions/2026-09-14-persistencia-e-listas-combinadas]] — persistência de estudo
   servidor-canônica e Listas Combinadas (relato de outra IA, verificado contra o main e o banco de produção).
+- [[sessions/2026-09-14-configuracoes-da-sessao]] — contrato único das Configurações da
+  Sessão: estado efetivo do Foco Vermelho, restauração ao desligar e persistência por patch semântico.
 
 ## Regra de retomada
 
