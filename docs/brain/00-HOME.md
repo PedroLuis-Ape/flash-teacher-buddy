@@ -59,6 +59,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
   para retomar Reference IDs/importadores sem assumir que está pronto.
 - [[sessions/2026-09-14-auditoria-de-continuidade]] — auditoria de continuidade:
   o que estava fora do main, o que foi consolidado e as atualizações de dependência pendentes.
+- [[sessions/2026-09-14-publicacao-mcp-producao]] — migrations do MCP aplicadas em
+  produção, defeito do guard de coleções automáticas, bloqueio do deploy da Edge Function e lacunas descobertas.
 
 ## Regra de retomada
 
