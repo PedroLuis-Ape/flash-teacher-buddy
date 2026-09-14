@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.embedded_lists (
 CREATE TABLE IF NOT EXISTS public.embedded_list_cards (
   embedded_list_id uuid NOT NULL REFERENCES public.embedded_lists(list_id) ON DELETE CASCADE,
   flashcard_id uuid NOT NULL REFERENCES public.flashcards(id) ON DELETE CASCADE,
-  source_list_id uuid NOT NULL REFERENCES public.lists(id),
+  source_list_id uuid NOT NULL REFERENCES public.lists(id) ON DELETE CASCADE,
   embedded_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (embedded_list_id, flashcard_id)
 );
@@ -237,7 +237,10 @@ BEGIN
     AND source_list.deleted_at IS NULL
     AND source_list.system_kind = 'user'
     AND source_list.folder_id = v_folder_id
-    AND source_list.id <> _embedded_list_id;
+    AND source_list.id <> _embedded_list_id
+    AND NOT EXISTS (
+      SELECT 1 FROM public.embedded_lists nested WHERE nested.list_id = source_list.id
+    );
 
   IF v_valid <> v_requested THEN
     RAISE EXCEPTION 'Card inválido para incorporação: use cards seus, de listas normais da mesma pasta.';
@@ -289,15 +292,25 @@ BEGIN
     RAISE EXCEPTION 'Informe um título para a lista combinada.';
   END IF;
 
+  IF (
+    SELECT COUNT(DISTINCT source_id)
+    FROM unnest(COALESCE(_source_list_ids, '{}'::uuid[])) AS source_id
+    WHERE source_id IS NOT NULL
+  ) < 1 THEN
+    RAISE EXCEPTION 'Selecione pelo menos uma lista de origem para a lista combinada.';
+  END IF;
+
+  -- v1: escopo privado do dono. Pastas de turma ficam fora.
   SELECT * INTO v_folder
   FROM public.folders
   WHERE id = _folder_id
     AND owner_id = auth.uid()
     AND deleted_at IS NULL
-    AND system_kind = 'user';
+    AND system_kind = 'user'
+    AND class_id IS NULL;
 
   IF v_folder.id IS NULL THEN
-    RAISE EXCEPTION 'Pasta inexistente ou sem permissão.';
+    RAISE EXCEPTION 'Pasta inexistente, de turma ou sem permissão.';
   END IF;
 
   INSERT INTO public.lists (
@@ -637,6 +650,31 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_lists_with_card_counts(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_lists_with_card_counts(uuid) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Defesa: listas combinadas permanecem privadas mesmo em atualização em massa
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.keep_embedded_lists_private()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.embedded_lists WHERE list_id = NEW.id) THEN
+    NEW.visibility := 'private';
+    NEW.class_id := NULL;
+  END IF;
+  RETURN NEW;
+END
+$$;
+
+DROP TRIGGER IF EXISTS keep_embedded_lists_private_trg ON public.lists;
+CREATE TRIGGER keep_embedded_lists_private_trg
+  BEFORE UPDATE OF visibility, class_id ON public.lists
+  FOR EACH ROW
+  EXECUTE FUNCTION public.keep_embedded_lists_private();
 
 COMMIT;
 
