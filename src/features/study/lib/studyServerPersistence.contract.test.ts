@@ -348,7 +348,8 @@ describe("study persistence delta migration", () => {
   it("ancora o progresso no card original e aceita lista combinada do próprio usuário", () => {
     expect(deltaSql).toContain("SELECT f.list_id INTO v_canonical_list_id");
     expect(deltaSql).toContain("public.embedded_list_cards");
-    expect(deltaSql).toContain("el.owner_id = v_user_id");
+    expect(deltaSql).toContain("el.owner_id = $3");
+    expect(deltaSql).toContain("USING p_list_id, p_flashcard_id, v_user_id");
     expect(deltaSql).toContain("ON CONFLICT (user_id, operation_id) DO NOTHING");
     expect(deltaSql).toContain("ON CONFLICT (user_id, flashcard_id) DO UPDATE");
   });
