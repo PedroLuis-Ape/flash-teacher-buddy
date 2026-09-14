@@ -2282,15 +2282,62 @@ export type Database = {
         }
         Relationships: []
       }
+      study_progress_events: {
+        Row: {
+          correct: boolean
+          created_at: string
+          flashcard_id: string
+          id: string
+          list_id: string
+          operation_id: string
+          user_id: string
+        }
+        Insert: {
+          correct: boolean
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          list_id: string
+          operation_id: string
+          user_id: string
+        }
+        Update: {
+          correct?: boolean
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          list_id?: string
+          operation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_progress_events_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_progress_events_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_sessions: {
         Row: {
           cards_order: Json
+          client_revision: number
           completed: boolean
           created_at: string
           current_index: number
           id: string
           list_id: string
           mode: string
+          schema_version: number
           session_scope_key: string | null
           session_snapshot: Json | null
           settings_snapshot: Json | null
@@ -2299,12 +2346,14 @@ export type Database = {
         }
         Insert: {
           cards_order: Json
+          client_revision?: number
           completed?: boolean
           created_at?: string
           current_index?: number
           id?: string
           list_id: string
           mode: string
+          schema_version?: number
           session_scope_key?: string | null
           session_snapshot?: Json | null
           settings_snapshot?: Json | null
@@ -2313,12 +2362,14 @@ export type Database = {
         }
         Update: {
           cards_order?: Json
+          client_revision?: number
           completed?: boolean
           created_at?: string
           current_index?: number
           id?: string
           list_id?: string
           mode?: string
+          schema_version?: number
           session_scope_key?: string | null
           session_snapshot?: Json | null
           settings_snapshot?: Json | null
@@ -3542,6 +3593,19 @@ export type Database = {
         Args: { p_gift_id: string; p_user_id: string }
         Returns: Json
       }
+      claim_study_session_v1: {
+        Args: {
+          p_cards_order: Json
+          p_current_index: number
+          p_list_id: string
+          p_mode: string
+          p_schema_version: number
+          p_session_scope_key: string
+          p_session_snapshot: Json
+          p_settings_snapshot: Json
+        }
+        Returns: Json
+      }
       create_class_folder_with_assignment: {
         Args: { _description?: string; _title: string; _turma_id: string }
         Returns: {
@@ -4156,6 +4220,10 @@ export type Database = {
           translated_text: string
         }[]
       }
+      persist_study_session_v1: {
+        Args: { p_payload: Json; p_revision: number; p_session_id: string }
+        Returns: Json
+      }
       process_exchange: {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
         Returns: Json
@@ -4238,6 +4306,15 @@ export type Database = {
       }
       publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
       purge_expired_trash: { Args: never; Returns: Json }
+      record_flashcard_progress_v1: {
+        Args: {
+          p_correct: boolean
+          p_flashcard_id: string
+          p_list_id: string
+          p_operation_id: string
+        }
+        Returns: Json
+      }
       record_product_event_v1: {
         Args: {
           _locale?: string
