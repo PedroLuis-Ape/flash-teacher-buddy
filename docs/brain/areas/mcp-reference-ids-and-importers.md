@@ -96,9 +96,11 @@ related:
   `BUNDLE_CHECK_PASS`, zero ocorrências de `npm:C:` e `npm:@/`. O manifesto
   `.lovable/mcp/manifest.json` e o catálogo `docs/mcp/PITECO-MCP-TOOLS.json`
   listam as mesmas 29 tools.
-- [DECISÃO VIGENTE] A branch desta etapa é
-  `feat/mcp-reference-importers`, em worktree dedicado. Nenhuma migration,
-  publicação, deploy ou merge foi executado automaticamente.
+- [FATO CONFIRMADO] A etapa foi commitada como `ffc92270` na branch
+  `feat/mcp-reference-importers` e integrada ao `main` do GitHub pelo PR
+  [#401](https://github.com/PedroLuis-Ape/flash-teacher-buddy/pull/401)
+  (merge commit `720ae797`), em 2026-09-14. Ainda NÃO houve: aplicação das
+  migrations, deploy da Edge Function `mcp` nem publicação.
 
 ## Próximo passo
 

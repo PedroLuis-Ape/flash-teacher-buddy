@@ -25,8 +25,9 @@ related:
 - [FATO CONFIRMADO] O trabalho vive no worktree
   `C:\Users\pedro\Documents\App-Piteco-Worktrees\mcp-reference-importers-20260914`,
   branch `feat/mcp-reference-importers`, fora do checkout principal
-  `C:\Users\pedro\Documents\APP PITECO`. Nada foi commitado, mergeado,
-  publicado nem aplicado no Supabase nesta rodada.
+  `C:\Users\pedro\Documents\APP PITECO`. A etapa foi commitada (`ffc92270`) e
+  integrada ao `main` do GitHub pelo PR #401 (`720ae797`). Nada foi publicado e
+  nenhuma migration foi aplicada no Supabase.
 - [FATO CONFIRMADO] A superfície MCP chegou a 29 tools: mapa de capacidades,
   preview/execute de conteúdo e de glossário, além de referências humanas
   `F-XXXXXX`/`L-XXXXXX` para pastas e listas. UUID continua canônico.
