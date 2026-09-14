@@ -5,7 +5,7 @@ import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, Loader2 } f
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
-import { toBCP47 } from "@/features/study/lib/resolveStudySides";
+import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
 import { playCorrect, playWrong } from "@/lib/sfx";
@@ -44,6 +44,9 @@ interface PronunciationStudyViewProps {
   canGoPrevious?: boolean;
   /** Quando a lista desliga o TTS, nada aqui pode falar. */
   ttsEnabled?: boolean;
+  /** Direção canônica da sessão. Resolve pergunta/resposta como nos outros modos. */
+  direction?: string;
+  flashcardId?: string;
 }
 
 export function PronunciationStudyView({
@@ -70,11 +73,21 @@ export function PronunciationStudyView({
   onIncorrect,
   onSkip,
   ttsEnabled = true,
+  direction = "a-b",
+  flashcardId,
 }: PronunciationStudyViewProps) {
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
-  const speakSide = sideB;
-  const hintSide = sideA;
+  // CONTRATO CANÔNICO: nenhum modo escolhe sideA/sideB por conta própria. O
+  // aluno pronuncia a RESPOSTA e a PERGUNTA é a dica exibida.
+  const { promptSide, answerSide } = resolveStudySides(
+    sideA,
+    sideB,
+    direction,
+    flashcardId || front,
+  );
+  const speakSide = answerSide;
+  const hintSide = promptSide;
   const speakLang = toBCP47(speakSide.lang);
   const hintLang = toBCP47(hintSide.lang);
 
