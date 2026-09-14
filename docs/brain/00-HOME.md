@@ -57,6 +57,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 - [[sessions/checkpoint-2026-09-13-mcp-pause]] — parada com checkpoint completo do MCP (2026-09-13).
 - [[sessions/checkpoint-2026-09-14-mcp-reference-importers]] — estado exato
   para retomar Reference IDs/importadores sem assumir que está pronto.
+- [[sessions/2026-09-14-auditoria-de-continuidade]] — auditoria de continuidade:
+  o que estava fora do main, o que foi consolidado e as atualizações de dependência pendentes.
 
 ## Regra de retomada
 
