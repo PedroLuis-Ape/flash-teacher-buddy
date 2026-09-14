@@ -1349,8 +1349,32 @@ const Folder = () => {
                                   })}
                                 />
                               )}
+                              {list.is_embedded && isOwner && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                        data-testid="embedded-list-manage-action-row"
+                                        aria-label={`Gerenciar cards incorporados de ${list.title}`}
+                                        title="Gerenciar cards incorporados"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setManagingEmbeddedList(list);
+                                        }}
+                                      >
+                                        <Layers className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerenciar cards incorporados</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                               {canEdit && (
                                 <>
+
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
