@@ -23,4 +23,11 @@ describe("responsive home and library navigation contract", () => {
     expect(librarySource).toContain("sm:hidden");
     expect(folderSource).toContain("flex-wrap");
   });
+
+  it("keeps grid cards reachable without a pointer", () => {
+    expect(folderSource).toContain('role="button"');
+    expect(folderSource).toContain("tabIndex={0}");
+    expect(folderSource).toContain("event.key === \"Enter\"");
+    expect(folderSource).toContain("event.key === \" \"");
+  });
 });

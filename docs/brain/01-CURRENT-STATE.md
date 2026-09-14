@@ -586,6 +586,18 @@ Related: [[areas/browser-extension]] · [[sessions/2026-09-13-extensao-salvar-na
 
 Related: [[areas/browser-extension]] · [[sessions/2026-09-13-convite-extensao-landing-publica]] · [[06-BUGS]] · [[07-TESTS]]
 
+## Biblioteca — modos de visualização e emoji por pasta — 2026-09-14
+
+- [FATO CONFIRMADO] O worktree `C:\Users\pedro\Documents\App-Piteco-Worktrees\folder-grid-view-20260914`, branch `feat/folder-grid-view`, reúne a implementação dos dois lotes de biblioteca: alternância lista/grade para pastas e listas, ordenação local de pastas e emoji configurável por pasta.
+- [DECISAO VIGENTE] O modo padrão das listas continua `lista`; o modo padrão das pastas é `grade`. As preferências usam `localStorage` (`piteco.lists.viewMode`, `piteco.folders.viewMode`, ordem de listas por pasta e ordem de pastas por usuário/instituição), sem alterar o contrato de dados existente.
+- [DECISAO VIGENTE] Pastas continuam com `📁` quando não há escolha. Emoji escolhido é resolvido por prioridade nuvem → dispositivo → padrão; o seletor oferece opções curadas, campo livre e `Usar padrão` para remover a personalização.
+- [FATO CONFIRMADO] A migration `supabase/migrations/20260914010000_folder_emoji.sql` apenas adiciona `public.folders.emoji` de forma idempotente. Ela foi preparada no código, mas não foi aplicada automaticamente no Supabase nesta etapa.
+- [MITIGACAO] Enquanto a coluna não existir, a consulta da biblioteca tenta a seleção com `emoji`, recua para a seleção compatível e mantém a personalização local. A gravação informa que ficou somente neste dispositivo; após a migration, a mesma ação sincroniza na nuvem.
+- [FATO CONFIRMADO] Ao salvar ou restaurar o padrão, a query da biblioteca é invalidada; o card e a lista de favoritos refletem a mudança sem refresh manual.
+- [PENDENTE] Revalidar a sincronização em dois dispositivos depois de aplicar a migration e fazer QA visual autenticado nas larguras móveis; não declarar essa evidência a partir apenas dos gates automatizados.
+
+Related: [[areas/visual-polish]] · [[07-TESTS]] · [[08-RISKS]] · [[04-DECISIONS]] · [[23-GIT-E-WORKTREES]]
+
 ## MCP — FASE 1 (dominio) + FASE 2 (tools read-only) — 2026-09-13
 
 - [FATO CONFIRMADO] A camada operacional do MCP existe agora em

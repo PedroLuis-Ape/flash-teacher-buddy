@@ -16,9 +16,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search, List, LayoutGrid, MoreHorizontal, Star } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VideoList } from "@/components/VideoList";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
@@ -27,7 +28,17 @@ import { ScrollingTitle } from "@/components/ui/scrolling-title";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useListAttention, useToggleListAttention } from "@/hooks/useListAttention";
 import { ListMarkerButtons } from "@/features/study/components/ListMarkerButtons";
-import { sortListsWithFavoritesFirst } from "@/features/study/lib/listMarkers";
+import {
+  getBrowserStorage,
+  LISTS_VIEW_MODE_KEY,
+  moveResourceWithinFavoriteGroups,
+  persistListOrder,
+  persistViewMode,
+  readListOrder,
+  readViewMode,
+  sortListsWithLocalOrder,
+  type LibraryViewMode,
+} from "@/features/library/viewPreferences";
 import { getFolderListGamesPath } from "./folderNavigation";
 
 interface ListType {
@@ -86,6 +97,7 @@ const Folder = () => {
   const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [listToDelete, setListToDelete] = useState<ListType | null>(null);
   // Text tab state
   const [isEditingText, setIsEditingText] = useState(false);
   const [editTextTitle, setEditTextTitle] = useState("");
@@ -645,12 +657,37 @@ const Folder = () => {
   };
 
   const [listSearch, setListSearch] = useState("");
+  const [listViewMode, setListViewMode] = useState<LibraryViewMode>(() =>
+    readViewMode(getBrowserStorage(), LISTS_VIEW_MODE_KEY, "list"),
+  );
+  const [listLocalOrder, setListLocalOrder] = useState<string[]>(() => readListOrder(getBrowserStorage(), id ?? ""));
+  const [listOrdering, setListOrdering] = useState(false);
+  useEffect(() => {
+    setListLocalOrder(readListOrder(getBrowserStorage(), id ?? ""));
+  }, [id]);
+  const handleListViewModeChange = (mode: LibraryViewMode) => {
+    setListViewMode(mode);
+    persistViewMode(getBrowserStorage(), LISTS_VIEW_MODE_KEY, mode);
+  };
+  const orderedLists = useMemo(
+    () => sortListsWithLocalOrder(lists, listFavorites, listLocalOrder),
+    [listFavorites, listLocalOrder, lists],
+  );
   const sortedLists = useMemo(() => {
-    const sorted = sortListsWithFavoritesFirst(lists, listFavorites);
+    const sorted = orderedLists;
     if (!listSearch.trim()) return sorted;
     const q = listSearch.toLowerCase();
     return sorted.filter((l) => l.title.toLowerCase().includes(q));
-  }, [lists, listSearch, listFavorites]);
+  }, [listSearch, orderedLists]);
+  const getListOrderGroup = (listId: string) => {
+    const isFavorite = listFavorites.includes(listId);
+    return orderedLists.filter((list) => listFavorites.includes(list.id) === isFavorite).map((list) => list.id);
+  };
+  const moveList = (listId: string, direction: -1 | 1) => {
+    const nextOrder = moveResourceWithinFavoriteGroups(lists, listFavorites, listLocalOrder, listId, direction);
+    setListLocalOrder(nextOrder);
+    if (id) persistListOrder(getBrowserStorage(), id, nextOrder);
+  };
 
   if (!folder) {
     return (
@@ -897,18 +934,60 @@ const Folder = () => {
               </div>
             )}
 
-            {/* Search lists */}
-            {lists.length > 3 && (
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={listSearch}
-                  onChange={(e) => setListSearch(e.target.value)}
-                  placeholder={t("library.folder.searchList")}
-                  className="pl-9 h-10"
-                />
+            {/* Search and view mode */}
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              {lists.length > 3 && (
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={listSearch}
+                    onChange={(e) => setListSearch(e.target.value)}
+                    placeholder={t("library.folder.searchList")}
+                    className="pl-9 h-10"
+                  />
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+                <div className="inline-flex min-h-11 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das listas">
+                <Button
+                  type="button"
+                  variant={listViewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="min-h-9 gap-1.5 px-3"
+                  aria-label="Visualizar listas em lista"
+                  aria-pressed={listViewMode === "list"}
+                  onClick={() => handleListViewModeChange("list")}
+                >
+                  <List className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only">Lista</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={listViewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="min-h-9 gap-1.5 px-3"
+                  aria-label="Visualizar listas em grade"
+                  aria-pressed={listViewMode === "grid"}
+                  onClick={() => handleListViewModeChange("grid")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only">Grade</span>
+                </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant={listOrdering ? "secondary" : "outline"}
+                  size="sm"
+                  className="min-h-11 gap-1.5"
+                  aria-label="Ordenar listas nesta pasta"
+                  aria-pressed={listOrdering}
+                  onClick={() => setListOrdering((value) => !value)}
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span>{listOrdering ? "Ordenar nesta pasta" : "Ordenar"}</span>
+                </Button>
               </div>
-            )}
+            </div>
 
             {loading ? (
               <p className="text-center text-sm text-muted-foreground py-4">{t("common.loading")}</p>
@@ -923,12 +1002,154 @@ const Folder = () => {
                   </CardDescription>
                 </CardHeader>
               </Card>
+            ) : listViewMode === "grid" ? (
+              <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
+                {sortedLists.map((list) => {
+                  const isSelected = selectedLists.has(list.id);
+                  const isFavorite = listFavorites.includes(list.id);
+                  const isAttention = attentionListIds.includes(list.id);
+                  const orderGroup = getListOrderGroup(list.id);
+                  const orderIndex = orderGroup.indexOf(list.id);
+                  return (
+                    <Card
+                      key={list.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Abrir lista ${list.title}`}
+                      onClick={() => {
+                        if (selectionMode) toggleListSelection(list.id);
+                        else navigate(getFolderListGamesPath(list.id, isPublicPortal));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          if (selectionMode) toggleListSelection(list.id);
+                          else navigate(getFolderListGamesPath(list.id, isPublicPortal));
+                        }
+                      }}
+                      className={`group relative min-w-0 cursor-pointer transition-all duration-200 active:scale-[0.98] ${isSelected ? 'ring-2 ring-primary' : ''} ${isAttention ? 'border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15' : 'md:hover:border-primary/30 md:hover:bg-primary/5'}`}
+                    >
+                      <CardContent className="flex min-h-[12rem] flex-col gap-3 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          {selectionMode ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-11 w-11 shrink-0"
+                              aria-label={`${isSelected ? "Desmarcar" : "Marcar"} lista ${list.title}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleListSelection(list.id);
+                              }}
+                            >
+                              {isSelected ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5 text-muted-foreground" />}
+                            </Button>
+                          ) : (
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isAttention ? 'bg-red-500/15' : 'bg-secondary/20'}`}>
+                              <FileText className={`h-5 w-5 ${isAttention ? 'text-red-500' : 'text-secondary-foreground'}`} />
+                            </div>
+                          )}
+                          {listOrdering && !selectionMode && (
+                            <div className="flex shrink-0 items-center gap-1" aria-label={`Ordenar lista ${list.title}`}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 rounded-xl"
+                                aria-label={`Mover ${list.title} para cima`}
+                                disabled={orderIndex === 0}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  moveList(list.id, -1);
+                                }}
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 rounded-xl"
+                                aria-label={`Mover ${list.title} para baixo`}
+                                disabled={orderIndex === orderGroup.length - 1}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  moveList(list.id, 1);
+                                }}
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {!selectionMode && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11 shrink-0 rounded-xl"
+                                  aria-label={`Ações da lista ${list.title}`}
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-5 w-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56" onClick={(event) => event.stopPropagation()}>
+                                {userId && !isSystemFolder && (
+                                  <>
+                                    <DropdownMenuItem onSelect={() => toggleFavorite.mutate({ resourceId: list.id, resourceType: "list", isFavorite })}>
+                                      <Star className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current text-yellow-500" : ""}`} />
+                                      {isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => toggleListAttention.mutate({ listId: list.id, isAttention })}>
+                                      <AlertTriangle className={`mr-2 h-4 w-4 ${isAttention ? "text-red-500" : ""}`} />
+                                      {isAttention ? "Remover ponto de atenção" : "Adicionar ponto de atenção"}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {canEdit && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Editar lista
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Excluir lista
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-semibold leading-tight">{list.title}</p>
+                          <p className={`mt-2 text-xs ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
+                            {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
+                          </p>
+                        </div>
+                        <div className="flex min-h-5 flex-wrap items-center gap-1.5">
+                          {isFavorite && <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">Favorita</span>}
+                          {isAttention && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">Revisar</span>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             ) : (
               <div className={`space-y-2 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
                 {sortedLists.map((list) => {
                   const isSelected = selectedLists.has(list.id);
                   const isFavorite = listFavorites.includes(list.id);
                   const isAttention = attentionListIds.includes(list.id);
+                  const orderGroup = getListOrderGroup(list.id);
+                  const orderIndex = orderGroup.indexOf(list.id);
                   return (
                     <div
                       key={list.id}
@@ -949,6 +1170,38 @@ const Folder = () => {
                         }`}
                       >
                         <CardContent className="p-3 flex flex-wrap items-center gap-3">
+                          {listOrdering && !selectionMode && (
+                            <div className="flex shrink-0 items-center gap-1" aria-label={`Ordenar lista ${list.title}`}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 rounded-xl"
+                                aria-label={`Mover ${list.title} para cima`}
+                                disabled={orderIndex === 0}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  moveList(list.id, -1);
+                                }}
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 rounded-xl"
+                                aria-label={`Mover ${list.title} para baixo`}
+                                disabled={orderIndex === orderGroup.length - 1}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  moveList(list.id, 1);
+                                }}
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                           {/* Selection checkbox */}
                           {selectionMode && (
                             <div 
@@ -1260,6 +1513,28 @@ const Folder = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={Boolean(listToDelete)} onOpenChange={(open) => !open && setListToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("library.folder.deleteList")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (listToDelete) void handleDeleteList(listToDelete.id);
+                  setListToDelete(null);
+                }}
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Bulk Delete Confirmation Dialog */}
         <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>

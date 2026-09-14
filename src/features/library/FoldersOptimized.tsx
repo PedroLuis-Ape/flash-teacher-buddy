@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CircleAlert, CheckSquare, FolderInput, FolderPlus, MoreHorizontal, RefreshCcw, Search, Square, Star, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CircleAlert, CheckSquare, FolderInput, FolderPlus, LayoutGrid, List, MoreHorizontal, RefreshCcw, Search, Square, Star, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
@@ -50,7 +50,24 @@ import {
   removeFoldersFromSnapshot,
   type LibrarySnapshot,
 } from "@/features/library/libraryQueries";
-import { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarkers";
+import {
+  applyLocalFolderOrder,
+  FOLDERS_VIEW_MODE_KEY,
+  getBrowserStorage,
+  persistFolderOrder,
+  persistViewMode,
+  readFolderOrder,
+  readViewMode,
+  sortFoldersWithLocalOrder,
+  type LibraryViewMode,
+} from "@/features/library/viewPreferences";
+import {
+  DEFAULT_FOLDER_EMOJI,
+  FOLDER_EMOJI_CHOICES,
+  persistLocalEmoji,
+  readLocalEmoji,
+  resolveFolderEmoji,
+} from "@/features/library/folderEmoji";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";
@@ -122,6 +139,72 @@ export default function FoldersOptimized() {
   const [moveDestination, setMoveDestination] = useState("general");
   const [isMoving, setIsMoving] = useState(false);
   const [folderSearch, setFolderSearch] = useState("");
+  const [folderViewMode, setFolderViewMode] = useState<LibraryViewMode>(() =>
+    readViewMode(getBrowserStorage(), FOLDERS_VIEW_MODE_KEY, "grid"),
+  );
+  const folderOrderScope = `${userId ?? "anonymous"}:${institutionId ?? "general"}`;
+  const [folderLocalOrder, setFolderLocalOrder] = useState<string[]>(() => readFolderOrder(getBrowserStorage(), folderOrderScope));
+  const [localOrdering, setLocalOrdering] = useState(false);
+  const [localFolderEmojis, setLocalFolderEmojis] = useState<Record<string, string>>(() => readLocalEmoji(getBrowserStorage()));
+  const [emojiFolderId, setEmojiFolderId] = useState<string | null>(null);
+  const [draftFolderEmoji, setDraftFolderEmoji] = useState("");
+  const [isSavingEmoji, setIsSavingEmoji] = useState(false);
+
+  useEffect(() => {
+    setFolderLocalOrder(readFolderOrder(getBrowserStorage(), folderOrderScope));
+  }, [folderOrderScope]);
+
+  const emojiFolder = folders.find((folder) => folder.id === emojiFolderId) ?? null;
+  const getFolderEmoji = (folder: { id: string; emoji?: string | null }) =>
+    resolveFolderEmoji(folder.emoji, localFolderEmojis[folder.id]);
+
+  const openFolderEmojiDialog = (folder: { id: string; emoji?: string | null }) => {
+    setEmojiFolderId(folder.id);
+    setDraftFolderEmoji(folder.emoji?.trim() || localFolderEmojis[folder.id] || "");
+  };
+
+  const saveFolderEmoji = async (emoji: string | null) => {
+    if (!emojiFolderId || isSavingEmoji) return;
+    const folderId = emojiFolderId;
+    const normalizedEmoji = emoji?.trim() || null;
+
+    persistLocalEmoji(getBrowserStorage(), folderId, normalizedEmoji);
+    setLocalFolderEmojis(readLocalEmoji(getBrowserStorage()));
+    setIsSavingEmoji(true);
+
+    try {
+      const { error } = await (supabase as any)
+        .from("folders")
+        .update({ emoji: normalizedEmoji })
+        .eq("id", folderId);
+      if (error) throw error;
+
+      toast.success(normalizedEmoji ? `Emoji ${normalizedEmoji} salvo na pasta.` : "Emoji padrão restaurado.");
+    } catch (error) {
+      console.error("Error saving folder emoji:", error);
+      toast.warning("Salvo neste dispositivo; sincroniza quando a coluna emoji estiver aplicada");
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: snapshotKey });
+      setIsSavingEmoji(false);
+      setEmojiFolderId(null);
+    }
+  };
+
+  const handleFolderViewModeChange = (mode: LibraryViewMode) => {
+    setFolderViewMode(mode);
+    persistViewMode(getBrowserStorage(), FOLDERS_VIEW_MODE_KEY, mode);
+  };
+
+  // Ordem em nuvem exigiria uma coluna order_index em folders (migration); fica local nesta missão.
+  const moveFolder = (folderId: string, direction: -1 | 1) => {
+    const currentIds = applyLocalFolderOrder(folders, folderLocalOrder).map((folder) => folder.id);
+    const currentIndex = currentIds.indexOf(folderId);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentIds.length) return;
+    [currentIds[currentIndex], currentIds[targetIndex]] = [currentIds[targetIndex], currentIds[currentIndex]];
+    setFolderLocalOrder(currentIds);
+    persistFolderOrder(getBrowserStorage(), currentIds, folderOrderScope);
+  };
 
   const refreshCurrent = () => queryClient.invalidateQueries({ queryKey: snapshotKey });
 
@@ -284,12 +367,14 @@ export default function FoldersOptimized() {
   };
 
   const filteredFolders = useMemo(
-    () => sortResourcesWithFavoritesFirst(
+    () => sortFoldersWithLocalOrder(
       folders.filter((folder) => folder.title.toLocaleLowerCase().includes(folderSearch.toLocaleLowerCase())),
       folderFavorites,
+      folderLocalOrder,
     ),
-    [folderFavorites, folderSearch, folders],
+    [folderFavorites, folderLocalOrder, folderSearch, folders],
   );
+  const localFolderIds = applyLocalFolderOrder(folders, folderLocalOrder).map((folder) => folder.id);
   const favoritedFolders = folders.filter((folder) => folderFavorites.includes(folder.id));
   const favoritedLists = lists.filter((list) => listFavorites.includes(list.id));
   const totalFavorites = favoritedFolders.length + favoritedLists.length;
@@ -306,14 +391,38 @@ export default function FoldersOptimized() {
       <p className="text-sm">Nenhuma pasta ainda</p>
       <p className="mt-1 text-xs">Crie sua primeira pasta de estudos</p>
     </div>
-  ) : (
-    <div className="grid grid-cols-1 gap-3 auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  ) : folderViewMode === "grid" ? (
+    <div className="grid grid-cols-1 gap-3 auto-rows-fr min-[360px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {filteredFolders.map((folder) => {
         const isFavorite = folderFavorites.includes(folder.id);
         const isAttention = folderAttention.includes(folder.id);
         const isSelected = selectedFolders.has(folder.id);
         return (
-          <div key={folder.id} className="flex items-center gap-2">
+          <div key={folder.id} className="flex min-w-0 items-center gap-2">
+            {localOrdering && !selectMode && (
+              <div className="flex shrink-0 flex-col gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-xl"
+                  aria-label={`Mover ${folder.title} para cima`}
+                  disabled={localFolderIds.indexOf(folder.id) === 0}
+                  onClick={() => moveFolder(folder.id, -1)}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-xl"
+                  aria-label={`Mover ${folder.title} para baixo`}
+                  disabled={localFolderIds.indexOf(folder.id) === localFolderIds.length - 1}
+                  onClick={() => moveFolder(folder.id, 1)}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             {selectMode && (
               <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => toggleFolderSelection(folder.id)}>
                 {isSelected ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5 text-muted-foreground" />}
@@ -324,6 +433,7 @@ export default function FoldersOptimized() {
                 title={folder.title}
                 listCount={folder.list_count}
                 cardCount={folder.card_count}
+                emoji={getFolderEmoji(folder)}
                 className={isAttention ? "border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15" : undefined}
                 onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}
               />
@@ -354,8 +464,12 @@ export default function FoldersOptimized() {
                       <MoreHorizontal className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onSelect={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }}>
+                   <DropdownMenuContent align="end" className="w-56">
+                     <DropdownMenuItem onSelect={() => openFolderEmojiDialog(folder)}>
+                       <span className="mr-2 w-5 text-center text-lg" aria-hidden>{getFolderEmoji(folder)}</span>
+                       Emoji
+                     </DropdownMenuItem>
+                     <DropdownMenuItem onSelect={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }}>
                       <FolderInput className="mr-2 h-4 w-4" />
                       Mover pasta
                     </DropdownMenuItem>
@@ -372,6 +486,77 @@ export default function FoldersOptimized() {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir pasta
                     </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="space-y-2">
+      {filteredFolders.map((folder) => {
+        const isFavorite = folderFavorites.includes(folder.id);
+        const isAttention = folderAttention.includes(folder.id);
+        const isSelected = selectedFolders.has(folder.id);
+        const localIndex = localFolderIds.indexOf(folder.id);
+        return (
+          <div key={folder.id} className={`flex min-w-0 items-center gap-2 rounded-xl border bg-card p-1.5 ${isAttention ? "border-red-500/60 bg-red-500/10" : ""}`}>
+            {localOrdering && !selectMode && (
+              <div className="flex shrink-0 flex-col gap-0.5">
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl" aria-label={`Mover ${folder.title} para cima`} disabled={localIndex === 0} onClick={() => moveFolder(folder.id, -1)}>
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl" aria-label={`Mover ${folder.title} para baixo`} disabled={localIndex === localFolderIds.length - 1} onClick={() => moveFolder(folder.id, 1)}>
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {selectMode && (
+              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label={`${isSelected ? "Desmarcar" : "Marcar"} pasta ${folder.title}`} onClick={() => toggleFolderSelection(folder.id)}>
+                {isSelected ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5 text-muted-foreground" />}
+              </Button>
+            )}
+            <button type="button" className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 text-left transition-colors md:hover:bg-primary/5" onClick={() => selectMode ? toggleFolderSelection(folder.id) : navigate(`/folder/${folder.id}`)}>
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl ${isAttention ? "bg-red-500/15" : "bg-primary/15"}`} aria-hidden="true">{getFolderEmoji(folder)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{folder.title}</span>
+                <span className="mt-1 block truncate text-xs text-muted-foreground">{folder.list_count} {folder.list_count === 1 ? "lista" : "listas"} • {folder.card_count} {folder.card_count === 1 ? "card" : "cards"}</span>
+              </span>
+              {isFavorite && <Star className="h-4 w-4 shrink-0 fill-current text-yellow-500" aria-label="Favorita" />}
+              {isAttention && <CircleAlert className="h-4 w-4 shrink-0 text-red-500" aria-label="Ponto de atenção" />}
+            </button>
+            {!selectMode && (
+              <>
+                <Button variant="ghost" size="icon" className="hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex" onClick={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }} title="Mover pasta" aria-label={`Mover pasta ${folder.title}`}>
+                  <FolderInput className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className={`hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex ${isFavorite ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}`} onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite })} aria-label={`${isFavorite ? "Remover" : "Adicionar"} ${folder.title} dos favoritos`}>
+                  <Star className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+                </Button>
+                <Button variant="ghost" size="icon" className={`hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex ${isAttention ? "bg-red-500/15 text-red-500" : "text-muted-foreground hover:text-red-500"}`} onClick={() => userId && toggleFolderAttention.mutate({ userId, resourceType: "folder", resourceId: folder.id, isAttention })} aria-label={`${isAttention ? "Remover" : "Adicionar"} ponto de atenção de ${folder.title}`}>
+                  <CircleAlert className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="hidden h-11 w-11 shrink-0 rounded-xl text-destructive sm:inline-flex" onClick={() => setFolderToDelete(folder.id)} aria-label={`Excluir pasta ${folder.title}`}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl sm:hidden" aria-label={`Ações da pasta ${folder.title}`}>
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                   <DropdownMenuContent align="end" className="w-56">
+                     <DropdownMenuItem onSelect={() => openFolderEmojiDialog(folder)}>
+                       <span className="mr-2 w-5 text-center text-lg" aria-hidden>{getFolderEmoji(folder)}</span>
+                       Emoji
+                     </DropdownMenuItem>
+                     <DropdownMenuItem onSelect={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }}><FolderInput className="mr-2 h-4 w-4" />Mover pasta</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite })}><Star className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current text-yellow-500" : ""}`} />{isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => userId && toggleFolderAttention.mutate({ userId, resourceType: "folder", resourceId: folder.id, isAttention })}><CircleAlert className={`mr-2 h-4 w-4 ${isAttention ? "text-red-500" : ""}`} />{isAttention ? "Remover dos pontos de atenção" : "Adicionar aos pontos de atenção"}</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setFolderToDelete(folder.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir pasta</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
@@ -403,6 +588,20 @@ export default function FoldersOptimized() {
             </DialogContent>
           </Dialog>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex min-h-11 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das pastas">
+            <Button type="button" variant={folderViewMode === "list" ? "secondary" : "ghost"} size="sm" className="min-h-9 gap-1.5 px-3" aria-label="Visualizar pastas em lista" aria-pressed={folderViewMode === "list"} onClick={() => handleFolderViewModeChange("list")}>
+              <List className="h-4 w-4" /><span className="sr-only sm:not-sr-only">Lista</span>
+            </Button>
+            <Button type="button" variant={folderViewMode === "grid" ? "secondary" : "ghost"} size="sm" className="min-h-9 gap-1.5 px-3" aria-label="Visualizar pastas em grade" aria-pressed={folderViewMode === "grid"} onClick={() => handleFolderViewModeChange("grid")}>
+              <LayoutGrid className="h-4 w-4" /><span className="sr-only sm:not-sr-only">Grade</span>
+            </Button>
+          </div>
+          <Button type="button" variant={localOrdering ? "secondary" : "outline"} size="sm" className="min-h-11 gap-1.5" aria-pressed={localOrdering} aria-label="Ordenar pastas neste dispositivo" onClick={() => setLocalOrdering((value) => !value)}>
+            <ArrowUpDown className="h-4 w-4" />
+            <span>{localOrdering ? "Ordenar neste dispositivo" : "Ordenar"}</span>
+          </Button>
+        </div>
       </div>
       {folders.length > 3 && <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={folderSearch} onChange={(event) => setFolderSearch(event.target.value)} placeholder="Buscar pasta..." className="h-10 pl-9" /></div>}
       {folderGrid}
@@ -413,7 +612,7 @@ export default function FoldersOptimized() {
   const favoritesTab = (
     <div className="space-y-6 p-4">
       {loading ? <div className="py-4 text-center text-sm text-muted-foreground">Carregando...</div> : totalFavorites === 0 ? <div className="py-8 text-center text-muted-foreground"><Star className="mx-auto mb-3 h-12 w-12 opacity-30" /><p className="text-sm">Nenhum favorito ainda</p></div> : <>
-        {favoritedFolders.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Pastas favoritas</h3><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{favoritedFolders.map((folder) => <div key={folder.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><ApeCardFolder title={folder.title} listCount={folder.list_count} cardCount={folder.card_count} onClick={() => navigate(`/folder/${folder.id}`)} /></div><Button variant="ghost" size="icon" className="h-11 w-11 text-yellow-500" onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite: true })}><Star className="h-4 w-4 fill-current" /></Button></div>)}</div></div>}
+        {favoritedFolders.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Pastas favoritas</h3><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{favoritedFolders.map((folder) => <div key={folder.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><ApeCardFolder title={folder.title} listCount={folder.list_count} cardCount={folder.card_count} emoji={getFolderEmoji(folder)} onClick={() => navigate(`/folder/${folder.id}`)} /></div><Button variant="ghost" size="icon" className="h-11 w-11 text-yellow-500" aria-label={`Remover ${folder.title} dos favoritos`} onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite: true })}><Star className="h-4 w-4 fill-current" /></Button></div>)}</div></div>}
         {favoritedLists.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Listas favoritas</h3><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{favoritedLists.map((list) => <div key={list.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><ApeCardList title={list.title} subtitle={list.folder_title ?? undefined} cardCount={list.card_count} onClick={() => navigate(`/list/${list.id}`)} onPlayClick={() => navigate(`/list/${list.id}/games`)} /></div><Button variant="ghost" size="icon" className="h-11 w-11 text-yellow-500" onClick={() => toggleFavorite.mutate({ resourceId: list.id, resourceType: "list", isFavorite: true })}><Star className="h-4 w-4 fill-current" /></Button></div>)}</div></div>}
       </>}
     </div>
@@ -455,6 +654,65 @@ export default function FoldersOptimized() {
 
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent><DialogHeader><DialogTitle>Mover {foldersToMove.length > 1 ? `${foldersToMove.length} pastas` : "pasta"}</DialogTitle><DialogDescription>Selecione o destino</DialogDescription></DialogHeader><div className="py-4"><Label htmlFor="destination">Destino</Label><Select value={moveDestination} onValueChange={setMoveDestination}><SelectTrigger id="destination" className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="general">📚 Biblioteca Geral</SelectItem>{institutions.map((institution) => <SelectItem key={institution.id} value={institution.id}>🏫 {institution.name}</SelectItem>)}</SelectContent></Select></div><DialogFooter><Button variant="outline" onClick={() => setMoveDialogOpen(false)} disabled={isMoving}>Cancelar</Button><Button onClick={handleMoveFolders} disabled={isMoving}>{isMoving ? "Movendo..." : "Mover"}</Button></DialogFooter></DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(emojiFolderId)}
+        onOpenChange={(open) => {
+          if (!open && !isSavingEmoji) setEmojiFolderId(null);
+        }}
+      >
+        <DialogContent aria-label="Seletor de emoji da pasta" className="max-h-[min(90dvh,calc(100svh-1rem))] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Emoji da pasta</DialogTitle>
+            <DialogDescription>
+              Escolha um símbolo para identificar {emojiFolder?.title ?? "esta pasta"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4" role="group" aria-label="Emojis disponíveis para a pasta">
+            {FOLDER_EMOJI_CHOICES.map((group) => (
+              <div key={group.label} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                <div className="grid grid-cols-6 gap-2 min-[360px]:grid-cols-7 sm:grid-cols-8">
+                  {group.emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className={`flex min-h-11 min-w-0 items-center justify-center rounded-xl border text-2xl leading-none transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${draftFolderEmoji.trim() === emoji ? "border-primary bg-primary/15" : "border-border bg-card hover:bg-accent"}`}
+                      aria-label={`Usar emoji ${emoji}`}
+                      aria-pressed={draftFolderEmoji.trim() === emoji}
+                      onClick={() => setDraftFolderEmoji(emoji)}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="folder-emoji-custom">Outro emoji</Label>
+            <Input
+              id="folder-emoji-custom"
+              value={draftFolderEmoji}
+              onChange={(event) => setDraftFolderEmoji(event.target.value)}
+              placeholder={`Ex.: ${DEFAULT_FOLDER_EMOJI}`}
+              aria-label="Cole qualquer emoji para a pasta"
+              className="text-2xl"
+            />
+            <p className="text-xs text-muted-foreground">
+              Atual: <span aria-label={`Emoji atual ${emojiFolder ? getFolderEmoji(emojiFolder) : DEFAULT_FOLDER_EMOJI}`}>{emojiFolder ? getFolderEmoji(emojiFolder) : DEFAULT_FOLDER_EMOJI}</span>
+            </p>
+          </div>
+          <DialogFooter className="sm:flex-row sm:justify-between">
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => void saveFolderEmoji(null)} disabled={isSavingEmoji}>
+              Usar padrão
+            </Button>
+            <Button type="button" className="min-h-11" onClick={() => void saveFolderEmoji(draftFolderEmoji)} disabled={isSavingEmoji}>
+              {isSavingEmoji ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Excluir {selectedFolders.size} pasta(s) e todo o conteúdo?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={bulkDeleteFolders} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">{isDeleting ? "Excluindo..." : "Excluir"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
