@@ -142,10 +142,82 @@ export function studySettingsFromPreset(
   preset: StudyPreset,
   extra: { redFocus?: boolean } = {},
 ): StudySettingsSnapshotV2 {
-  return normalizeStudySettingsSnapshotV2({
-    ...preset,
-    redFocus: extra.redFocus ?? false,
+  return applyStudySettingsConstraints(
+    normalizeStudySettingsSnapshotV2({
+      ...preset,
+      redFocus: extra.redFocus ?? false,
+    }),
+  );
+}
+
+/**
+ * Campos que o Foco Vermelho controla enquanto está ativo.
+ *
+ * O Foco Vermelho é uma restrição TEMPORÁRIA de fila, não uma preferência:
+ * enquanto ativo, o estado EFETIVO é `order = sequential` +
+ * `studyFlowMode = continuous`, e a UI e o motor leem o mesmo estado. O preset
+ * base do usuário (com a ordem/formato que ele escolheu) fica intocado, então
+ * desligar o Foco Vermelho restaura o estado anterior sem guardar nada extra e
+ * sem sobrescrever a preferência salva — ver [06] em [[01-CURRENT-STATE]].
+ */
+export const RED_FOCUS_CONSTRAINED_SETTINGS = ["order", "studyFlowMode"] as const;
+
+export function applyStudySettingsConstraints(
+  snapshot: StudySettingsSnapshotV2,
+): StudySettingsSnapshotV2 {
+  if (!snapshot.redFocus) return snapshot;
+  if (snapshot.order === "sequential" && snapshot.studyFlowMode === "continuous") return snapshot;
+  return { ...snapshot, order: "sequential", studyFlowMode: "continuous" };
+}
+
+/**
+ * Ao SAIR do Foco Vermelho, ordem e formato voltam para a preferência base do
+ * usuário (preset da lista/modo). É o único lugar que precisa conhecer o base:
+ * a restrição nunca foi gravada como preferência, então basta reaplicá-la.
+ */
+export function releaseRedFocusConstraints(
+  next: StudySettingsSnapshotV2,
+  basePreset: Pick<StudyPreset, "order" | "studyFlowMode">,
+): StudySettingsSnapshotV2 {
+  if (next.redFocus) return next;
+  if (next.order === basePreset.order && next.studyFlowMode === basePreset.studyFlowMode) return next;
+  return { ...next, order: basePreset.order, studyFlowMode: basePreset.studyFlowMode };
+}
+
+/**
+ * Override do preset que contém SOMENTE as decisões do usuário.
+ *
+ * O runtime recebe o snapshot efetivo completo, mas a persistência registra
+ * apenas o que o usuário mudou de fato. Campos derivados de restrição ativa
+ * (Foco Vermelho) são descartados: persistir a restrição como se fosse escolha
+ * do usuário é exatamente o que fazia o preset normal ser sobrescrito.
+ */
+export function studySettingsSemanticOverride(
+  next: StudySettingsSnapshotV2,
+  requested: StudySettingsPatchV2,
+): StudyPresetOverride {
+  const full = studySettingsToPresetOverride(next);
+  const interested = new Set<keyof StudyPresetOverride>();
+
+  (Object.keys(requested) as (keyof StudySettingsPatchV2)[]).forEach((key) => {
+    if (key === "redFocus") return;
+    interested.add(key as keyof StudyPresetOverride);
+    // Direção e lado da reescrita são a MESMA decisão (sincronização atômica).
+    if (key === "direction" || key === "writeRewriteSide") {
+      interested.add("direction");
+      interested.add("writeRewriteSide");
+    }
   });
+
+  if (next.redFocus) {
+    RED_FOCUS_CONSTRAINED_SETTINGS.forEach((key) => interested.delete(key));
+  }
+
+  const override: Record<string, unknown> = {};
+  interested.forEach((key) => {
+    if (full[key] !== undefined) override[key] = full[key];
+  });
+  return override as StudyPresetOverride;
 }
 
 /** Overrides efêmeros aplicados quando uma sessão salva vence o preset atual. */
@@ -204,9 +276,8 @@ export function applyStudySettingsPatch(
     current,
     { syncRewriteDirection: false },
   );
-  // Foco Vermelho usa fila única e sequencial.
-  if (merged.redFocus) merged.order = "sequential";
-  return merged;
+  // Foco Vermelho usa fila única e sequencial, no formato extenso.
+  return applyStudySettingsConstraints(merged);
 }
 
 export function diffStudySettings(

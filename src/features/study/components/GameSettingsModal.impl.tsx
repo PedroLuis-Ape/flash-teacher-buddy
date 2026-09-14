@@ -81,7 +81,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [isChangingFlow, setIsChangingFlow] = useState(false);
-  type SettingsPage = "home" | "flow" | "direction" | "correction" | "order" | "audio";
+  type SettingsPage = "home" | "flow" | "direction" | "correction" | "order" | "content" | "audio";
   const [page, setPage] = useState<SettingsPage>("home");
   useEffect(() => { if (!open) setPage("home"); }, [open]);
   const playRuntime = usePlayPresetRuntime();
@@ -140,7 +140,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleRedFocusChange = (checked: boolean) => {
-    onSettingsChange({ redFocus: checked, ...(checked ? { order: "sequential" as const } : {}) });
+    // Ordem/formato efetivos do Foco Vermelho vêm do contrato
+    // (applyStudySettingsConstraints); o modal não reescreve ordem por conta.
+    onSettingsChange({ redFocus: checked });
   };
 
   const handleFastModeChange = (checked: boolean) => {
@@ -171,17 +173,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     : currentDirection === "b-a"
       ? `Responder em ${playRuntime.labelA}`
       : "Misto (alternado)";
-  const orderSummary = `${
-    redFocusActive ? "Sequencial (Foco Vermelho)" : settings.order === "random" ? "Aleatória" : "Sequencial"
-  } · ${favoritesActive ? "Apenas favoritos" : "Todos os cards"}`;
-  const deckSummary = redFocusActive
-    ? "Foco Vermelho"
-    : favoritesActive
-      ? "Apenas favoritos"
-      : "Todos os cards";
-  const flowSummary = redFocusActive
-    ? "Modo extenso · Foco Vermelho"
-    : `${currentFlowMode === "mastery_rounds" ? "Modo gamificado" : "Modo extenso"} · ${deckSummary}`;
+  // Cada resumo mostra SOMENTE os valores da própria categoria: ordem não
+  // repete filtros, formato não repete conteúdo, e quem fala de Foco Vermelho é
+  // o conteúdo. O formato vem do snapshot efetivo (já com a restrição aplicada).
+  const orderSummary = settings.order === "random" ? "Aleatória" : "Sequencial";
+  const deckSummary = favoritesActive ? "Apenas favoritos" : "Todos os cards";
+  const contentSummary = redFocusActive ? `${deckSummary} · Foco Vermelho` : deckSummary;
+  const flowSummary = settings.studyFlowMode === "mastery_rounds" ? "Modo gamificado" : "Modo extenso";
+  // Áudio e exibição fala de comportamento (tocar/mostrar), nunca de
+  // English/Português — isso é papel exclusivo de "Direção da prática".
+  const audioSummary = `${settings.fastMode ? "Mostra os dois lados" : "Um lado por vez"} · ${
+    settings.playMode === "single" ? "Toca só a pergunta" : "Toca pergunta e resposta"
+  }`;
 
   const CategoryRow: React.FC<{
     icon: React.ReactNode;
@@ -224,6 +227,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     </div>
   );
 
+  const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <p className="px-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</p>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -245,6 +252,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
         <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-0 sm:pt-0">
           {page === "home" && (
             <div className="space-y-2">
+              <SectionLabel>Sessão</SectionLabel>
               {supportsFlowModes && (
                 <CategoryRow
                   icon={<Layers className="h-4 w-4" />}
@@ -253,13 +261,20 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   onClick={() => setPage("flow")}
                 />
               )}
-              {supportsWriteCorrection && (
-                <WriteActivitySettings
-                  activityMode={settings.writeActivityMode}
-                  rewriteSide={settings.writeRewriteSide}
-                  onChange={onSettingsChange}
-                />
-              )}
+              <CategoryRow
+                icon={<Filter className="h-4 w-4" />}
+                title="Ordem da fila"
+                summary={orderSummary}
+                onClick={() => setPage("order")}
+              />
+
+              <SectionLabel>Conteúdo e direção</SectionLabel>
+              <CategoryRow
+                icon={<Flame className="h-4 w-4" />}
+                title="Conteúdo"
+                summary={contentSummary}
+                onClick={() => setPage("content")}
+              />
               {listSession && (
                 <CategoryRow
                   icon={<ArrowLeftRight className="h-4 w-4" />}
@@ -268,29 +283,34 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   onClick={() => setPage("direction")}
                 />
               )}
+
               {supportsWriteCorrection && (
-                <CategoryRow
-                  icon={<SpellCheck className="h-4 w-4" />}
-                  title="Correção da escrita"
-                  summary={correctionMode === "hard" ? "Hard" : "Flexível"}
-                  onClick={() => setPage("correction")}
-                />
+                <>
+                  <SectionLabel>Escrita</SectionLabel>
+                  <WriteActivitySettings
+                    activityMode={settings.writeActivityMode}
+                    rewriteSide={settings.writeRewriteSide}
+                    onChange={onSettingsChange}
+                  />
+                  <CategoryRow
+                    icon={<SpellCheck className="h-4 w-4" />}
+                    title="Correção da escrita"
+                    summary={correctionMode === "hard" ? "Hard" : "Flexível"}
+                    onClick={() => setPage("correction")}
+                  />
+                </>
               )}
-              <CategoryRow
-                icon={<Filter className="h-4 w-4" />}
-                title="Ordem e filtros"
-                summary={orderSummary}
-                onClick={() => setPage("order")}
-              />
+
               {showFastMode && (
-                <CategoryRow
-                  icon={<Volume2 className="h-4 w-4" />}
-                  title="Áudio e ritmo"
-                  summary={`Play: ${settings.playMode === "single" ? "um lado" : "dois lados"}${
-                    settings.fastMode ? " · Fast Mode" : ""
-                  }`}
-                  onClick={() => setPage("audio")}
-                />
+                <>
+                  <SectionLabel>Áudio e exibição</SectionLabel>
+                  <CategoryRow
+                    icon={<Volume2 className="h-4 w-4" />}
+                    title="Áudio e exibição"
+                    summary={audioSummary}
+                    onClick={() => setPage("audio")}
+                  />
+                </>
               )}
 
               <div className="pt-2 space-y-2">
@@ -453,7 +473,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 
           {page === "order" && (
             <div className="space-y-4">
-              <SubpageHeader title="Ordem e filtros" />
+              <SubpageHeader title="Ordem da fila" />
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
@@ -469,7 +489,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   disabled={redFocusActive}
                 />
               </div>
+            </div>
+          )}
 
+          {page === "content" && (
+            <div className="space-y-4">
+              <SubpageHeader title="Conteúdo" />
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
@@ -491,7 +516,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                     <Label htmlFor="red-focus" className="font-medium">Foco Vermelho</Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Estuda só a Lista Vermelha, em fila única, sem repetir.
+                    Estuda só a Lista Vermelha, em fila única e no modo extenso, sem repetir. Ao desligar, a sua ordem e o seu formato anteriores voltam.
                   </p>
                 </div>
                 <Switch
@@ -506,7 +531,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 
           {page === "audio" && showFastMode && (
             <div className="space-y-4">
-              <SubpageHeader title="Áudio e ritmo" />
+              <SubpageHeader title="Áudio e exibição" />
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
