@@ -17,6 +17,9 @@ function snapshot(overrides: Partial<StudySettingsSnapshotV3> = {}): StudySettin
 
 /** Preferência base do usuário: gamificado + aleatório. */
 const BASE_GAMIFIED = snapshot({ order: "random", studyFlowMode: "mastery_rounds" });
+// No Modo gamificado a direção efetiva é sempre automática, então os casos que
+// escolhem lado fixo (direção/reescrita) rodam no formato extenso.
+const BASE = snapshot({ order: "random", studyFlowMode: "continuous" });
 
 describe("Foco Vermelho — restrição temporária, não preferência", () => {
   it("enquanto ativo, o estado EFETIVO é fila sequencial no modo extenso", () => {
