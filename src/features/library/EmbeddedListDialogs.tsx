@@ -228,7 +228,7 @@ export function EmbeddedListManageDialog({
     enabled: open && Boolean(listId),
   });
 
-  const members = membersQuery.data ?? [];
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
 
   const groups = useMemo<SourceGroup[]>(() => {
     const map = new Map<string, SourceGroup>();
