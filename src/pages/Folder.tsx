@@ -1193,6 +1193,15 @@ const Folder = () => {
                                 {canEdit && (
                                   <>
                                     <DropdownMenuSeparator />
+                                    {list.is_embedded && isOwner && (
+                                      <DropdownMenuItem
+                                        data-testid="embedded-list-manage-action"
+                                        onSelect={() => setManagingEmbeddedList(list)}
+                                      >
+                                        <Layers className="mr-2 h-4 w-4" />
+                                        Gerenciar cards incorporados
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onSelect={() => handleEditList(list)}>
                                       <Pencil className="mr-2 h-4 w-4" />
                                       Editar lista
@@ -1203,6 +1212,7 @@ const Folder = () => {
                                     </DropdownMenuItem>
                                   </>
                                 )}
+
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
