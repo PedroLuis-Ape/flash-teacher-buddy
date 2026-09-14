@@ -213,8 +213,7 @@ export default function MixedStudy() {
       scope: subset,
       fastMode: settings.fastMode,
       studyFlowMode: settings.studyFlowMode,
-      ...(settings.playMode ? { playMode: settings.playMode } : {}),
-      ...(settings.playSide ? { playSide: settings.playSide } : {}),
+      playTarget: legacyPlayToTarget(settings.playMode, settings.playSide, settings.direction),
       ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
       ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
       ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
@@ -615,8 +614,7 @@ export default function MixedStudy() {
         redFocus: gameSettings.redFocus,
         fastMode: gameSettings.fastMode,
         direction: baseDirection,
-        playMode: effectivePreset.playMode,
-        playSide: effectivePreset.playSide,
+        playTarget: effectivePreset.playTarget,
         studyFlowMode: selectedFlowMode,
       }),
       current_index: state.currentIndex,
@@ -694,7 +692,7 @@ export default function MixedStudy() {
       studySessionIdRef.current = createdSessionId;
       setStudySessionId(createdSessionId);
     }
-  }, [baseDirection, effectivePreset.playMode, effectivePreset.playSide, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
+  }, [baseDirection, effectivePreset.playTarget, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
 
   const flushMixedStudyOutbox = useCallback(async () => {
     if (!userId) return;
