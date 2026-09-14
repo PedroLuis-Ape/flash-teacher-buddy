@@ -681,6 +681,72 @@ export type Database = {
           },
         ]
       }
+      embedded_list_cards: {
+        Row: {
+          embedded_at: string
+          embedded_list_id: string
+          flashcard_id: string
+          source_list_id: string
+        }
+        Insert: {
+          embedded_at?: string
+          embedded_list_id: string
+          flashcard_id: string
+          source_list_id: string
+        }
+        Update: {
+          embedded_at?: string
+          embedded_list_id?: string
+          flashcard_id?: string
+          source_list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "embedded_list_cards_embedded_list_id_fkey"
+            columns: ["embedded_list_id"]
+            isOneToOne: false
+            referencedRelation: "embedded_lists"
+            referencedColumns: ["list_id"]
+          },
+          {
+            foreignKeyName: "embedded_list_cards_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "embedded_list_cards_source_list_id_fkey"
+            columns: ["source_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      embedded_lists: {
+        Row: {
+          created_at: string
+          list_id: string
+        }
+        Insert: {
+          created_at?: string
+          list_id: string
+        }
+        Update: {
+          created_at?: string
+          list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "embedded_lists_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: true
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equip_logs: {
         Row: {
           created_at: string
@@ -3548,6 +3614,10 @@ export type Database = {
         Args: { _batch_id: string; _payload: Json }
         Returns: number
       }
+      assert_owned_embedded_list: {
+        Args: { _embedded_list_id: string }
+        Returns: string
+      }
       bulk_soft_delete_folders: {
         Args: { p_folder_ids: string[]; p_user_id: string }
         Returns: Json
@@ -3606,11 +3676,31 @@ export type Database = {
         }
         Returns: Json
       }
+      clear_embedded_list: {
+        Args: { _embedded_list_id: string }
+        Returns: {
+          removed: number
+        }[]
+      }
       create_class_folder_with_assignment: {
         Args: { _description?: string; _title: string; _turma_id: string }
         Returns: {
           assignment_id: string
           folder_id: string
+        }[]
+      }
+      create_embedded_list: {
+        Args: {
+          _description?: string
+          _folder_id: string
+          _source_list_ids?: string[]
+          _title: string
+        }
+        Returns: {
+          added: number
+          already_present: number
+          list_id: string
+          requested: number
         }[]
       }
       create_notification: {
@@ -3622,6 +3712,22 @@ export type Database = {
           p_titulo: string
         }
         Returns: string
+      }
+      embed_cards: {
+        Args: { _embedded_list_id: string; _flashcard_ids: string[] }
+        Returns: {
+          added: number
+          already_present: number
+          requested: number
+        }[]
+      }
+      embed_source_lists: {
+        Args: { _embedded_list_id: string; _source_list_ids: string[] }
+        Returns: {
+          added: number
+          already_present: number
+          requested: number
+        }[]
       }
       equip_skin_atomic: {
         Args: {
@@ -3659,6 +3765,68 @@ export type Database = {
           side: string
           translated_text: string
           updated_at: string
+        }[]
+      }
+      get_embedded_list_card_count: {
+        Args: { _list_id: string }
+        Returns: {
+          playable_count: number
+          raw_count: number
+          resource_exists: boolean
+        }[]
+      }
+      get_embedded_list_flashcards: {
+        Args: { _list_id: string }
+        Returns: {
+          accepted_answers_en: string[] | null
+          accepted_answers_pt: string[] | null
+          audio_url: string | null
+          collection_id: string | null
+          common_mistakes: string | null
+          context_tag: string | null
+          created_at: string
+          deleted_at: string | null
+          detailed_explanation: string | null
+          display_text: string | null
+          eval_text: string | null
+          example_text: string | null
+          example_translation: string | null
+          hint: string | null
+          id: string
+          image_url_a: string | null
+          image_url_b: string | null
+          lang: string | null
+          layer_index: number | null
+          list_id: string | null
+          note_text: string[] | null
+          parent_card_id: string | null
+          short_explanation: string | null
+          status_group_uid: string | null
+          term: string
+          translation: string
+          updated_at: string
+          usage_notes: string | null
+          user_id: string
+          word_hints: Json | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "flashcards"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_embedded_list_members: {
+        Args: { _embedded_list_id: string }
+        Returns: {
+          embedded_at: string
+          flashcard_id: string
+          is_playable: boolean
+          source_list_id: string
+          source_list_title: string
+          source_reference_id: string
+          term: string
+          translation: string
         }[]
       }
       get_exchange_config: { Args: never; Returns: Json }
@@ -3747,11 +3915,13 @@ export type Database = {
           folder_id: string
           id: string
           institution_id: string
+          is_embedded: boolean
           lang: string
           last_activity: string
           order_index: number
           owner_id: string
           reference_id: string
+          source_count: number
           title: string
           updated_at: string
           visibility: string
@@ -4536,6 +4706,19 @@ export type Database = {
       }
       undo_global_import_v1: { Args: { _batch_id: string }; Returns: Json }
       undo_global_import_v2: { Args: { _batch_id: string }; Returns: undefined }
+      unembed_cards: {
+        Args: { _embedded_list_id: string; _flashcard_ids: string[] }
+        Returns: {
+          removed: number
+          requested: number
+        }[]
+      }
+      unembed_source_list: {
+        Args: { _embedded_list_id: string; _source_list_id: string }
+        Returns: {
+          removed: number
+        }[]
+      }
       unmerge_flashcard_from_group: {
         Args: { p_card_id: string }
         Returns: Json
