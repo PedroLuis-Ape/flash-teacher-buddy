@@ -21,9 +21,10 @@ import {
 } from "./embeddedLists";
 
 const SQL = readFileSync(
-  path.join(process.cwd(), "docs/sql/migrations-pending/20260914200000_embedded_lists_v1.sql"),
+  path.join(process.cwd(), "supabase/migrations/20260914200000_embedded_lists_v1.sql"),
   "utf8",
 );
+
 
 describe("embedded lists SQL contract", () => {
   it("keeps membership reference-based with a unique card per embedded list", () => {
