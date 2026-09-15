@@ -211,6 +211,23 @@ export const WriteStudyView = ({
     return () => clearShortcutScope("write-answer");
   }, [evaluation]);
 
+  // Foco por digitação (não autofocus): a primeira tecla imprimível cai no
+  // campo de resposta, uma única vez, sem exigir clique e sem abrir o teclado
+  // virtual sozinho no celular.
+  useTypeToAnswer({
+    enabled: evaluation === null,
+    inputRef,
+    onCapture: (character) => {
+      setAnswer((current) => {
+        const next = `${current}${character}`;
+        if (isRewriteActivity) setRewriteState((state) => updateRewriteDraft(state, next));
+        return next;
+      });
+    },
+  });
+
+
+
   // Central advance gate — every "next"/"skip" path goes through this
   // controller so we can (a) demand a finalized status before advancing and
   // (b) prevent duplicate onAdvance calls for the same attempt.
