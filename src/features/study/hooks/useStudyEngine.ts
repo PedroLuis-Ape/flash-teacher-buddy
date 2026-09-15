@@ -613,13 +613,24 @@ export function useStudyEngine(
     const uid = userScope || 'anon';
     return `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${legacySessionScopeKey}`;
   }, [userScope, localResourceId, mode, legacySessionScopeKey]);
+  // LEGACY WIRE (somente leitura): todas as variantes plausíveis do par físico
+  // do Play que existiam no envelope v1.
+  const legacyFlipProgressKeys = useMemo(() => {
+    const uid = userScope || 'anon';
+    return buildLegacyStudySessionScopeKeyCandidates(sessionContext).map(
+      (candidate) => `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${candidate}`,
+    );
+  }, [userScope, localResourceId, mode, sessionContext]);
 
   // Load flip mode progress from localStorage (scoped)
   const loadFlipProgress = useCallback(() => {
     if (!localResourceId) return null;
     try {
       const saved = localStorage.getItem(flipProgressKey)
-        ?? localStorage.getItem(legacyFlipProgressKey);
+        ?? legacyFlipProgressKeys.reduce<string | null>(
+          (found, key) => found ?? localStorage.getItem(key),
+          null,
+        );
       if (saved) {
         return JSON.parse(saved);
       }
@@ -627,7 +638,8 @@ export function useStudyEngine(
       console.error('Error loading flip progress:', e);
     }
     return null;
-  }, [localResourceId, flipProgressKey, legacyFlipProgressKey]);
+  }, [localResourceId, flipProgressKey, legacyFlipProgressKeys]);
+
 
   // Save flip mode progress to localStorage (scoped)
   const saveFlipProgress = useCallback(() => {
