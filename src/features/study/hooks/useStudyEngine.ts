@@ -41,6 +41,8 @@ import {
 } from "@/features/study/lib/masterySessionSnapshot";
 import {
   buildLegacyStudySessionScopeKey,
+  buildLegacyStudySessionScopeKeyCandidates,
+
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
   isPersistedStudySessionCompatible,
