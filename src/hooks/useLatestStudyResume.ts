@@ -28,6 +28,14 @@ export { STUDY_RESUME_QUERY_KEY };
 
 const resumeClient = supabase as unknown as StudyResumeQueryClient;
 
+function resolveResumeStorage(): Storage | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function useLatestStudyResume() {
   const { userId } = useAuthUser();
   const { selectedInstitution } = useInstitution();
@@ -44,6 +52,10 @@ export function useLatestStudyResume() {
       userId: userId as string,
       institutionId,
       client: resumeClient,
+      // P0 2026-09-15: o hook real da Home PRECISA fornecer a fonte local. Sem
+      // isso o ponteiro do aparelho não participava da seleção e o card podia
+      // ignorar a sessão que o usuário acabou de jogar.
+      storage: resolveResumeStorage(),
     }),
     enabled: !!userId,
     // A Home deve refletir imediatamente a última sessão praticada. Uma janela
