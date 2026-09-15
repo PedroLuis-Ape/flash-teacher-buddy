@@ -736,7 +736,7 @@ const Folder = () => {
             Voltar
           </Button>
           
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
             {isEditingTitle ? (
               <div className="flex items-center gap-2 flex-1">
                 <Input
@@ -758,7 +758,7 @@ const Folder = () => {
               </div>
             ) : (
               <>
-                <h1 className="text-3xl font-bold">{folder.title}</h1>
+                <h1 className="min-w-0 break-words text-2xl font-bold sm:text-3xl">{folder.title}</h1>
                 <ReferenceIdControl entityLabel="pasta" referenceId={folder.reference_id} />
                 {canEdit && (
                   <Button
@@ -797,9 +797,9 @@ const Folder = () => {
 
           <TabsContent value="lists">
             {canEdit && (
-              <div className="ape-action-cluster mb-4 flex-wrap">
+              <div className="ape-action-cluster mb-4 !grid w-full grid-cols-2 gap-2 sm:!flex sm:w-auto sm:flex-wrap">
                 {/* Folder language settings button */}
-                <Button variant="outline" size="sm" onClick={handleOpenFolderSettings}>
+                <Button variant="outline" size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={handleOpenFolderSettings}>
                   <Settings className="mr-1.5 h-4 w-4" />
                   Idiomas
                 </Button>
@@ -809,6 +809,7 @@ const Folder = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="min-h-11 w-full min-w-0 justify-center sm:w-auto"
                       data-testid="embedded-list-create-trigger"
                       onClick={() => setEmbeddedCreateOpen(true)}
                     >
@@ -851,7 +852,7 @@ const Folder = () => {
                 
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" onClick={handleOpenNewListDialog}>
+                    <Button size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={handleOpenNewListDialog}>
                       <ListPlus className="mr-1.5 h-4 w-4" />
                       Nova Lista
                     </Button>
@@ -903,7 +904,7 @@ const Folder = () => {
 
                 <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm">
+                    <Button variant="secondary" size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto">
                       <Share2 className="mr-1.5 h-4 w-4" />
                       Compartilhar
                     </Button>
@@ -948,6 +949,7 @@ const Folder = () => {
                   <Button 
                     variant={selectionMode ? "default" : "outline"} 
                     size="sm"
+                    className="min-h-11 w-full min-w-0 justify-center sm:w-auto"
                     onClick={() => {
                       setSelectionMode(!selectionMode);
                       setSelectedLists(new Set());
@@ -1016,7 +1018,7 @@ const Folder = () => {
                   />
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+              <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-end">
                 <div className="inline-flex min-h-11 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das listas">
                 <Button
                   type="button"
@@ -1047,7 +1049,7 @@ const Folder = () => {
                   type="button"
                   variant={listOrdering ? "secondary" : "outline"}
                   size="sm"
-                  className="min-h-11 gap-1.5"
+                  className="min-h-11 min-w-0 flex-1 gap-1.5 sm:flex-none"
                   aria-label="Ordenar listas nesta pasta"
                   aria-pressed={listOrdering}
                   onClick={() => setListOrdering((value) => !value)}
@@ -1257,7 +1259,7 @@ const Folder = () => {
                             : 'md:hover:bg-primary/5 md:hover:border-primary/30'
                         }`}
                       >
-                        <CardContent className="p-3 flex flex-wrap items-center gap-3">
+                        <CardContent className="flex min-w-0 items-start gap-3 p-3 sm:items-center">
                           {listOrdering && !selectionMode && (
                             <div className="flex shrink-0 items-center gap-1" aria-label={`Ordenar lista ${list.title}`}>
                               <Button
@@ -1313,7 +1315,7 @@ const Folder = () => {
                             </div>
                           )}
                           
-                          <div className="flex-1 min-w-[9rem]">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 min-w-0">
                               <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
                               {isFavorite && (
@@ -1338,7 +1340,59 @@ const Folder = () => {
                           {/* Play button removed - entire row now navigates to games */}
 
                           {!selectionMode && (
-                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <div className="shrink-0 sm:hidden" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-11 w-11 shrink-0 rounded-xl"
+                                    aria-label={`Ações da lista ${list.title}`}
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <MoreHorizontal className="h-5 w-5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-60" onClick={(event) => event.stopPropagation()}>
+                                  {userId && !isSystemFolder && (
+                                    <>
+                                      <DropdownMenuItem onSelect={() => toggleFavorite.mutate({ resourceId: list.id, resourceType: "list", isFavorite })}>
+                                        <Star className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current text-yellow-500" : ""}`} />
+                                        {isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onSelect={() => toggleListAttention.mutate({ listId: list.id, isAttention })}>
+                                        <AlertTriangle className={`mr-2 h-4 w-4 ${isAttention ? "text-red-500" : ""}`} />
+                                        {isAttention ? "Remover ponto de atenção" : "Adicionar ponto de atenção"}
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {list.is_embedded && isOwner && (
+                                    <DropdownMenuItem onSelect={() => setManagingEmbeddedList(list)}>
+                                      <Layers className="mr-2 h-4 w-4" />
+                                      Gerenciar cards incorporados
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canEdit && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Editar lista
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Excluir lista
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+
+                          {!selectionMode && (
+                            <div className="hidden shrink-0 gap-1 sm:flex" onClick={(e) => e.stopPropagation()}>
                               {userId && !isSystemFolder && (
                                 <ListMarkerButtons
                                   isFavorite={isFavorite}

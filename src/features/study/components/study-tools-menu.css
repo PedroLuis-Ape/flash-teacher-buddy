@@ -97,3 +97,41 @@
     min-width: 0 !important;
   }
 }
+
+@media (max-width: 767px) {
+  .study-tools-portal-slot > div:first-child {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .study-tools-rate-button {
+    flex: 0 0 4.25rem !important;
+    width: 4.25rem !important;
+    min-width: 4.25rem !important;
+  }
+
+  .study-tools-attention-button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  .study-tools-floating-trigger {
+    flex: 0 0 2.75rem !important;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .study-tools-attention-button > span:last-child {
+    display: none;
+  }
+
+  .study-tools-attention-button {
+    flex: 0 0 2.75rem !important;
+    width: 2.75rem !important;
+  }
+}

@@ -380,12 +380,12 @@ export function StudyToolsMenu({
   );
 
   const mobileMenu = (
-    <div className="flex w-full min-w-0 items-center justify-center gap-1.5 md:hidden">
+    <div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden md:hidden">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="study-tools-inline-button h-9 min-w-[3.75rem] shrink-0 gap-1 px-2"
+        className="study-tools-inline-button study-tools-rate-button h-9 !w-[4.25rem] !min-w-[4.25rem] !flex-none gap-1 px-2"
         title={rateLabel}
         aria-label={`${rateLabel}. Toque para alternar.`}
         onPointerDown={stopCardInteraction}
@@ -403,7 +403,7 @@ export function StudyToolsMenu({
           type="button"
           variant={isSpecial ? "secondary" : "outline"}
           size="sm"
-          className="study-tools-inline-button study-tools-attention-button h-9 min-w-0 flex-1 gap-1 px-2"
+          className="study-tools-inline-button study-tools-attention-button h-9 min-w-0 flex-1 gap-1 overflow-hidden px-2"
           disabled={specialPending}
           title={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
           aria-label={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
@@ -426,7 +426,7 @@ export function StudyToolsMenu({
             variant="outline"
             size="sm"
             className={cn(
-              "study-tools-floating-trigger h-9 w-10 px-0 shrink-0",
+              "study-tools-floating-trigger h-9 !w-11 !min-w-11 shrink-0 px-0",
               anyActive && "border-primary/60",
               className,
             )}

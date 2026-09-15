@@ -18,7 +18,7 @@ export default function FolderWorkspace() {
     <>
       {user && id && (
         <div
-          className="pointer-events-none fixed bottom-20 right-3 z-40 md:bottom-6 md:right-6"
+          className="pointer-events-none fixed bottom-20 right-3 z-40 hidden md:block md:bottom-6 md:right-6"
           data-testid="folder-export-primary-action"
         >
           <FolderExportDialog
@@ -42,6 +42,15 @@ export default function FolderWorkspace() {
                 <p className="text-xs text-muted-foreground">{t("library.folder.toolsDescription")}</p>
               </div>
               <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+                <div className="md:hidden">
+                  <FolderExportDialog
+                    sources={[{ id }]}
+                    label="Exportar flashcards"
+                    className="min-h-11 w-full justify-center rounded-xl shadow-none"
+                    variant="outline"
+                    size="default"
+                  />
+                </div>
                 <ListSequenceDialog
                   folderId={id}
                   triggerClassName="!static !bottom-auto !right-auto !z-auto !max-w-none min-h-[40px] w-full justify-center rounded-xl px-3 shadow-none sm:w-auto"
