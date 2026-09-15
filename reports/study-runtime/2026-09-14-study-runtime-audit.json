@@ -1,15 +1,15 @@
 {
   "schema": "ape.study-runtime-audit",
   "version": 2,
-  "generated_at": "2026-09-14T00:00:00Z",
+  "generated_at": "2026-09-15T00:44:44+00:00",
   "project": {
     "app": "App Piteco / ApeEducation",
     "repository": "PedroLuis-Ape/flash-teacher-buddy",
-    "production_data_project_ref": "ymahldldyxvwjeruaxpr"
+    "production_data_project_ref": "xrnfhhoxmmstagmelvyi"
   },
   "commits_base": ["b593d73df86d3bc8eb4573fca026c961b1e33a0e"],
-  "commits_finais": [],
-  "executive_summary": "Segunda e última rodada estrutural do runtime de estudo. Fechou a compatibilidade real de sessões antigas (candidate legacy keys em vez de um único mapeamento semântico), tornou o autoplay do Flip event-driven no onend real do TTS (sem relógio fixo de 7s), auditou os SSOTs das configurações confirmando que playMode/playSide só sobrevivem como legacy wire/migração, e reduziu o custo do primeiro paint de listas grandes com progressive load de semântica explícita. Responsividade in-game e paginação server-side permanecem como dívidas declaradas.",
+  "commits_finais": ["248c411ab80652f03efad18757f55532809a3158"],
+  "executive_summary": "Segunda e última rodada estrutural do runtime de estudo. Fechou a compatibilidade real de sessões antigas (candidate legacy keys em vez de um único mapeamento semântico), tornou o autoplay do Flip event-driven no onend real do TTS (sem relógio fixo de 7s), auditou os SSOTs das configurações confirmando que playMode/playSide só sobrevivem como legacy wire/migração, e reduziu o custo do primeiro paint de listas grandes com progressive load de semântica explícita. Responsividade in-game e paginação/busca server-side permanecem como dívidas declaradas.",
   "problems_found": [
     {
       "id": "P0-legacy-scope-key",
@@ -68,7 +68,8 @@
       "Fetcher de página único compartilhado (fetchFlashcardPage) entre primeira página e carga completa, evitando duplicação.",
       "Primeira página real de 200 cards em query própria para paint rápido.",
       "Conjunto completo continua carregado porque busca, camadas, seleção, bulk actions e exportação prometem a lista inteira.",
-      "Selecionar todos bloqueado com aviso enquanto a lista completa carrega, em vez de operar em conjunto parcial silenciosamente."
+      "Selecionar todos é bloqueado com aviso enquanto a lista completa carrega, em vez de operar em conjunto parcial silenciosamente.",
+      "A busca continua cliente-side; durante o progressive load a UI avisa que a lista completa ainda está carregando, portanto paginação/busca server-side real permanece dívida aberta."
     ],
     "persistence_database": [
       "Migration play_target confirmada aplicada na rodada anterior; nenhuma nova migration foi necessária nesta rodada.",
@@ -117,6 +118,7 @@
   },
   "risks_remaining": [
     "Paginação server-side verdadeira e busca no servidor em ListDetail não foram implementadas; listas muito grandes ainda carregam o conjunto completo em segundo plano.",
+    "Enquanto a carga completa do ListDetail não termina, a busca cliente-side ainda pode estar baseada no subconjunto carregado; a UI informa o carregamento, mas busca server-side continua recomendada para eliminar qualquer falso negativo transitório.",
     "space-ui-game.css continua acoplado a classes utilitárias e !important; o shell in-game compartilhado não foi criado.",
     "Nenhum smoke visual autenticado em mobile estreito e desktop foi executado nesta rodada.",
     "Compatibilidade legada é provada por testes de contrato, não por dados reais de usuários antigos em produção."
@@ -126,7 +128,8 @@
     "performed_by_agent": false,
     "status": "pending_external_publish"
   },
-  "cost_credits": null,
+  "cost_credits": 9.2,
+  "cost_credits_scope": "segunda rodada estrutural no Lovable Max Mode",
   "next_steps": [
     "Paginação/busca server-side em ListDetail com seleção modelada por consulta.",
     "Shell in-game compartilhado para remover o acoplamento de space-ui-game.css.",
