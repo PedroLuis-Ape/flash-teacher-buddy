@@ -1,0 +1,135 @@
+{
+  "schema": "ape.study-runtime-audit",
+  "version": 2,
+  "generated_at": "2026-09-14T00:00:00Z",
+  "project": {
+    "app": "App Piteco / ApeEducation",
+    "repository": "PedroLuis-Ape/flash-teacher-buddy",
+    "production_data_project_ref": "ymahldldyxvwjeruaxpr"
+  },
+  "commits_base": ["b593d73df86d3bc8eb4573fca026c961b1e33a0e"],
+  "commits_finais": [],
+  "executive_summary": "Segunda e última rodada estrutural do runtime de estudo. Fechou a compatibilidade real de sessões antigas (candidate legacy keys em vez de um único mapeamento semântico), tornou o autoplay do Flip event-driven no onend real do TTS (sem relógio fixo de 7s), auditou os SSOTs das configurações confirmando que playMode/playSide só sobrevivem como legacy wire/migração, e reduziu o custo do primeiro paint de listas grandes com progressive load de semântica explícita. Responsividade in-game e paginação server-side permanecem como dívidas declaradas.",
+  "problems_found": [
+    {
+      "id": "P0-legacy-scope-key",
+      "severity": "high",
+      "title": "Compatibilidade byte-a-byte de sessões v1 não estava provada",
+      "root_cause": "A chave v1 era o JSON do envelope inteiro e incluía o par físico playMode/playSide. No contrato antigo playMode=both podia coexistir com qualquer playSide, independente da direction, então playTargetToLegacyWire produzia apenas UMA das chaves possíveis e sessões antigas de parte dos usuários nunca seriam encontradas.",
+      "status": "fixed"
+    },
+    {
+      "id": "P1-autoplay-fixed-clock",
+      "severity": "high",
+      "title": "Autoplay do Flip usava AUTO_PLAY_DELAY_MS = 7000 como relógio da fala",
+      "root_cause": "O avanço era agendado por timeout fixo, cortando falas longas e atrasando falas curtas, mesmo com useTTS já expondo promessa e geração/token.",
+      "status": "fixed"
+    },
+    {
+      "id": "P4-listdetail-full-payload",
+      "severity": "medium",
+      "title": "ListDetail buscava o conjunto completo antes de qualquer paint",
+      "root_cause": "Uma única query paginada carregava todos os cards com select('*') antes de renderizar as primeiras 200 linhas.",
+      "status": "mitigated"
+    },
+    {
+      "id": "P3-in-game-css-coupling",
+      "severity": "medium",
+      "title": "CSS in-game acoplado a classes utilitárias e !important",
+      "root_cause": "space-ui-game.css seleciona por .max-w-6xl, .max-w-2xl e [class*=\"border\"], tornando o layout do jogo frágil a mudanças de markup.",
+      "status": "open"
+    }
+  ],
+  "changes": {
+    "settings_ssot": [
+      "Auditoria confirmou direction como autoridade única de prompt/answer e playTarget como único contrato semântico de Play no runtime.",
+      "playMode/playSide permanecem apenas em legacyPlayToTarget, na leitura de linhas antigas do repositório de preferências e no envelope v1 de sessão — classificados como LEGACY WIRE/MIGRATION.",
+      "Restrições temporárias (Foco Vermelho e mastery_rounds) continuam sem destruir a preferência base."
+    ],
+    "legacy_session_compatibility": [
+      "Nova função buildLegacyStudySessionScopeKeyCandidates gera todas as variantes plausíveis do envelope v1 (semântica, both+a, both+b, single+a, single+b e envelope pré-Play).",
+      "useStudyEngine passou a ler snapshot de sessão e progresso do Flip pela primeira chave candidata existente (legacyStudySnapshotKeys, legacyFlipProgressKeys).",
+      "A escrita continua exclusivamente com buildStudySessionScopeKey e playTarget."
+    ],
+    "tts": [
+      "useTTS confirmado como owner único: promessa por request, geração/token, resolução em onstart/onend/onerror e cancelamento com reason.",
+      "AUTO_PLAY_DELAY_MS removido; o autoplay do Flip encadeia speak -> onend real -> pausa de UI (600 ms) -> próximo passo, com geração por passo para que fala antiga não avance nem cancele passo novo.",
+      "Sem fala (TTS off/erro/texto vazio) usa tempo de leitura explícito de 3000 ms; failsafe de 20000 ms só cobre promessa pendente.",
+      "Nenhum disparo de áudio por clique em DOM."
+    ],
+    "gestures_input": [
+      "Nenhuma alteração: swipe com dono único e keyboard router P0 preservados e cobertos pelos testes existentes."
+    ],
+    "responsiveness": [
+      "Auditoria feita: modos já usam min-height responsiva com variantes sm e touch targets >= 44px.",
+      "Refatoração do shell in-game e remoção do acoplamento de space-ui-game.css NÃO foram executadas (dívida declarada); smoke visual autenticado não foi possível neste ambiente."
+    ],
+    "listdetail_performance": [
+      "Fetcher de página único compartilhado (fetchFlashcardPage) entre primeira página e carga completa, evitando duplicação.",
+      "Primeira página real de 200 cards em query própria para paint rápido.",
+      "Conjunto completo continua carregado porque busca, camadas, seleção, bulk actions e exportação prometem a lista inteira.",
+      "Selecionar todos bloqueado com aviso enquanto a lista completa carrega, em vez de operar em conjunto parcial silenciosamente."
+    ],
+    "persistence_database": [
+      "Migration play_target confirmada aplicada na rodada anterior; nenhuma nova migration foi necessária nesta rodada.",
+      "Repositório de preferências continua lendo play_target com fallback para as colunas legadas.",
+      "Nenhum reset, drop, alteração de project ref ou de auth."
+    ]
+  },
+  "settings_architecture": {
+    "base_preferences": ["direction", "order", "scope", "fastMode", "studyFlowMode", "playTarget", "writeActivityMode", "writeRewriteSide", "writeCorrectionMode"],
+    "temporary_constraints": ["redFocus", "mastery_rounds => effectiveDirection = any"],
+    "derived_state": ["resolveEffectiveStudyDirection", "resolveStudySides", "playModeEffective", "playFixedSide", "playPresetRuntime (apenas rótulos A/B)"],
+    "ephemeral_state": ["flip atual", "feedback do card", "passo de autoplay em curso"],
+    "legacy_wire": ["playMode", "playSide", "envelope study-session-v1", "colunas play_mode/play_side"]
+  },
+  "migrations": {
+    "applied_this_round": [],
+    "previously_applied_and_verified": ["play_target em user_study_preferences e user_list_study_preferences, com constraints e backfill idempotente"]
+  },
+  "files_changed": [
+    "src/features/study/lib/studySessionContext.ts",
+    "src/features/study/lib/studySessionContext.test.ts",
+    "src/features/study/hooks/useStudyEngine.ts",
+    "src/features/study/components/FlipStudyView.impl.tsx",
+    "src/features/study/ttsEventDrivenAutoplay.contract.test.ts",
+    "src/features/study/largeCollectionPagination.contract.test.ts",
+    "src/pages/ListDetail.tsx",
+    "docs/brain/areas/study-runtime.md",
+    "reports/study-runtime/2026-09-14-study-runtime-audit.json"
+  ],
+  "tests_added": [
+    "studySessionContext.test.ts: cobertura de todas as combinações históricas playMode/playSide para direction a-b, b-a e any, e garantia de que decks/fluxos diferentes não compartilham candidatos",
+    "ttsEventDrivenAutoplay.contract.test.ts: owner único com geração/token, avanço no onend real, ausência de relógio fixo, cancelamento não avança, sem clique DOM",
+    "largeCollectionPagination.contract.test.ts: primeira página rápida real, carga completa preservada, semântica explícita de selecionar todos, fetcher único"
+  ],
+  "gates": {
+    "typecheck": {"command": "tsgo --noEmit -p tsconfig.app.json", "result": "pass", "errors": 0},
+    "focused_tests": {"command": "vitest run src/features/study src/hooks src/pages", "files": 132, "tests": 1080, "result": "pass"},
+    "full_suite": {"command": "vitest run", "files": 327, "tests": 2110, "result": "pass"},
+    "build": {"command": "npm run build", "result": "pass", "notes": "orçamento de bundle aprovado; SEO visibility score 100/100"},
+    "lint_touched_files": {"result": "pass", "errors": 0, "warnings": 5, "notes": "warnings de react-hooks/exhaustive-deps preexistentes em useStudyEngine e dependência 't' em callbacks de ListDetail"},
+    "visual_smoke": {"result": "not_run", "reason": "ambiente sem validação visual autenticada nesta rodada"}
+  },
+  "compatibility": {
+    "backward": "Sessões e snapshots antigos (todas as variantes v1 de playMode/playSide, além do envelope pré-Play) voltam a ser encontrados na leitura. Preferências com play_mode/play_side continuam migradas para playTarget.",
+    "forward": "Escrita é exclusivamente moderna (playTarget + chave v3); nenhum caminho novo reintroduz o par físico."
+  },
+  "risks_remaining": [
+    "Paginação server-side verdadeira e busca no servidor em ListDetail não foram implementadas; listas muito grandes ainda carregam o conjunto completo em segundo plano.",
+    "space-ui-game.css continua acoplado a classes utilitárias e !important; o shell in-game compartilhado não foi criado.",
+    "Nenhum smoke visual autenticado em mobile estreito e desktop foi executado nesta rodada.",
+    "Compatibilidade legada é provada por testes de contrato, não por dados reais de usuários antigos em produção."
+  ],
+  "deployment": {
+    "requested": true,
+    "performed_by_agent": false,
+    "status": "pending_external_publish"
+  },
+  "cost_credits": null,
+  "next_steps": [
+    "Paginação/busca server-side em ListDetail com seleção modelada por consulta.",
+    "Shell in-game compartilhado para remover o acoplamento de space-ui-game.css.",
+    "Smoke visual autenticado em ~390px e ~1366px nos seis modos."
+  ]
+}
