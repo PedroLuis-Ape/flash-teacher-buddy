@@ -442,7 +442,7 @@ export default function TurmaPublicPage() {
                 Esta atividade ainda não possui listas públicas disponíveis.
               </Card>
             ) : (
-              <div className="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 md:grid-cols-2 md:gap-3 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:gap-3 xl:grid-cols-3">
                 {selected.lists.map((list) => (
                   <button
                     key={list.list_id}

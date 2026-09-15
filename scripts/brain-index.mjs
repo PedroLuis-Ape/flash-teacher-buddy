@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * brain-index.mjs - manifesto de METADADOS do Segundo Cerebro do App Piteco.
  *

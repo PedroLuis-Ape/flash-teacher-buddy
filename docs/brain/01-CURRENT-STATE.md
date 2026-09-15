@@ -87,6 +87,25 @@ related:
   (`git cat-file -e origin/main:<path>`). Nesta rodada eu sobrescrevi
   `src/pages/ReviewCards.tsx` — que outra sessão já havia mergeado — e revertí
   em seguida. O `main` é multi-sessão: criar por cima apaga trabalho alheio.
+- [FATO CONFIRMADO 2026-09-15] **Segunda checagem de coerência concluída.** A
+  suíte completa ficou **100% verde: 337 arquivos / 2183 testes**, com `tsc` exit 0
+  nos dois projetos, `eslint` 0 erros e `vite build` ✓. Antes desta rodada havia
+  duas falhas de contrato e uma suíte vermelha há semanas — as três com causa-raiz
+  identificada e corrigida:
+  - **CRLF x contratos de texto**: `flipAssessmentContract.test.ts` compara trechos
+    multi-linha do fonte; o checkout Windows entrega `\r\n` e o teste esperava `\n`
+    (por isso era verde no CI Linux e vermelho aqui). Agora o teste normaliza EOL.
+  - **Shebang quebra o runner do Vitest**: `scripts/contextPacket.test.mjs` estava
+    vermelho porque os módulos importados por ele (`brain-index.mjs`,
+    `brain-telemetry.mjs`, `context-packet.mjs`) começam com `#!/usr/bin/env node`,
+    que o Vitest não avalia. Comprovado com probe mínimo (irmão `.mjs` sem shebang
+    carrega; com shebang falha). O shebang foi removido dos três — ninguém os
+    executa direto, sempre via `node scripts/...` (`process.execPath`).
+- [FATO CONFIRMADO] A varredura da regra “card de conteúdo = 1 coluna < 640px”
+  achou **2 violações reais** além das já corrigidas: `TurmaPublicPage` (listas
+  públicas ainda com `min-[360px]:grid-cols-2`) e `Store` (`ApeGrid` com
+  `default: 2`). Ambas corrigidas. As demais ocorrências de `grid-cols-2` são
+  formulários, estatísticas e clusters de botões — exceção prevista pela spec.
 
 - **Finalizado:** reforma do **runtime de estudo** em duas rodadas estruturais e
   **publicada**: uma autoridade por decisão (`direction` define o lado da
