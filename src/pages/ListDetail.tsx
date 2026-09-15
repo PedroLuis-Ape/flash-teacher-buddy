@@ -1382,8 +1382,14 @@ const ListDetail = () => {
                     placeholder={t("library.list.searchCard")}
                     className="pl-9 h-10"
                   />
+                  {isFullListLoading && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {t("library.list.loadingFullList", { defaultValue: "Carregando a lista completa para busca e seleção…" })}
+                    </p>
+                  )}
                 </div>
               )}
+
 
               {/* ── PERF: Memoized filtered list + memoized card rows ── */}
               <MemoizedCardList
