@@ -667,16 +667,23 @@ const ListDetail = () => {
   const toggleSelectAll = useCallback(() => {
     if (allVisibleSelected) {
       setSelectedCards([]);
-    } else {
-      if (filteredFlashcardIds.length > 500) {
-        const ok = window.confirm(
-          `Você está prestes a selecionar ${filteredFlashcardIds.length} cards. Continuar?`
-        );
-        if (!ok) return;
-      }
-      setSelectedCards(filteredFlashcardIds);
+      return;
     }
-  }, [allVisibleSelected, filteredFlashcardIds]);
+    // Semântica explícita: "selecionar todos" significa a lista inteira, então
+    // não permitimos a ação enquanto a lista completa ainda está carregando.
+    if (isFullListLoading) {
+      toast.info(t("library.list.loadingFullList", { defaultValue: "Carregando a lista completa. Aguarde para selecionar todos." }));
+      return;
+    }
+    if (filteredFlashcardIds.length > 500) {
+      const ok = window.confirm(
+        `Você está prestes a selecionar ${filteredFlashcardIds.length} cards. Continuar?`
+      );
+      if (!ok) return;
+    }
+    setSelectedCards(filteredFlashcardIds);
+  }, [allVisibleSelected, filteredFlashcardIds, isFullListLoading, t]);
+
 
   const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
