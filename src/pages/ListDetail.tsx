@@ -464,7 +464,11 @@ const ListDetail = () => {
 
   // Enquanto o conjunto completo não chega, a página renderiza a primeira
   // página real (nunca dados inventados) e sinaliza o carregamento.
-  const flashcards: Flashcard[] = allFlashcards ?? firstFlashcardPage ?? [];
+  const flashcards: Flashcard[] = useMemo(
+    () => allFlashcards ?? firstFlashcardPage ?? [],
+    [allFlashcards, firstFlashcardPage],
+  );
+
   const flashcardsLoading = allFlashcardsLoading && !firstFlashcardPage;
   const isFullListLoading = allFlashcardsLoading && !!firstFlashcardPage
     && (firstFlashcardPage?.length ?? 0) >= PAGE_SIZE;
