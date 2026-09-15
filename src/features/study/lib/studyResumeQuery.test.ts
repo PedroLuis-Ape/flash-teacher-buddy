@@ -302,12 +302,15 @@ describe("card 'Voltar para onde parou' — última sessão real", () => {
     const { client, queries } = createClient([listA, listB]);
     await fetchLatestStudyResume({ userId: "u1", institutionId: null, client, storage, now: at(90) });
 
-    expect(queries.length).toBe(2);
+    // ponteiro + atividade real + fallback legado
+    expect(queries.length).toBe(3);
     for (const query of queries) {
       expect(query.table).toBe("study_sessions");
       expect(query.filters).toContainEqual(["user_id", "u1"]);
-      expect(query.filters).toContainEqual(["completed", false]);
     }
+    // A consulta de atividade real NÃO pode filtrar `completed`: uma sessão
+    // concluída pode ser a última atividade e nesse caso o card fica vazio.
+    expect(queries.filter((query) => query.filters.some(([column]) => column === "completed")).length).toBe(2);
   });
 
   it("degrada sem mentir: falha na lista remota mantém a sessão do aparelho", async () => {
