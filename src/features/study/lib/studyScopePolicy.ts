@@ -48,8 +48,16 @@ export function resolvePersonalStudySubset(
   };
 }
 
-export function shouldInjectRedPriority(settings: StudyScopeSettings): boolean {
-  return resolveStudyScope(settings) === "favorites";
+/**
+ * Legacy generic red-card repetition is intentionally disabled.
+ *
+ * Repetition belongs to the engines that explicitly own it: Mixed keeps its
+ * adaptive failed-card reinjection and mastery_rounds keeps its round/retry
+ * engine. A plain/extensive queue must never grow hidden duplicate entries just
+ * because a favorite card is also red.
+ */
+export function shouldInjectRedPriority(_settings: StudyScopeSettings): boolean {
+  return false;
 }
 
 /**
@@ -104,6 +112,17 @@ function cardMatchesIds(card: StudyScopeCard, ids: ReadonlySet<string>): boolean
   });
 }
 
+function dedupePlayableCards<TCard extends StudyScopeCard>(cards: ReadonlyArray<TCard>): TCard[] {
+  const seen = new Set<string>();
+  const unique: TCard[] = [];
+  for (const card of cards) {
+    if (!card.id || seen.has(card.id)) continue;
+    seen.add(card.id);
+    unique.push(card);
+  }
+  return unique;
+}
+
 export function filterCardsForStudyScope<TCard extends StudyScopeCard>({
   cards,
   favoriteIds,
@@ -116,8 +135,14 @@ export function filterCardsForStudyScope<TCard extends StudyScopeCard>({
   settings: StudyScopeSettings;
 }): TCard[] {
   const scope = resolveStudyScope(settings);
-  if (scope === "all") return [...cards];
+  const scoped = scope === "all"
+    ? [...cards]
+    : cards.filter((card) => cardMatchesIds(
+      card,
+      new Set(scope === "red" ? redListIds : favoriteIds),
+    ));
 
-  const ids = new Set(scope === "red" ? redListIds : favoriteIds);
-  return cards.filter((card) => cardMatchesIds(card, ids));
+  // A deck represents playable identities, not database rows. Duplicate rows
+  // with the same playable id must never become duplicate turns in Extenso.
+  return dedupePlayableCards(scoped);
 }
