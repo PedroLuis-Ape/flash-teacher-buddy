@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# One-shot finalizer used only on the isolated validation branch.
 study = Path("src/pages/Study.tsx")
 text = study.read_text()
 marker = 'import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";\n'
