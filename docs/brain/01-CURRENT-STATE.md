@@ -34,6 +34,36 @@ related:
 > Ele existe para não reler o vault inteiro a cada tarefa. Histórico e detalhe
 > ficam nas notas de sessão linkadas; aqui fica só o estado datado.
 
+### FECHAMENTO 2026-09-15
+
+- **Finalizado:** reforma do **runtime de estudo** em duas rodadas estruturais e
+  **publicada**: uma autoridade por decisão (`direction` define o lado da
+  pergunta/resposta, `playTarget` define o que reproduzir, e `playMode`/`playSide`
+  viraram apenas ponte de leitura), restrições temporárias que não destroem a
+  preferência base (Foco Vermelho e `mastery_rounds`), compatibilidade com
+  sessões antigas por candidatos de chave v1, TTS/Play dirigido por evento (fim do
+  relógio fixo de 7 s), roteador único de teclado, dono único de swipe e
+  progressive loading em ListDetail.
+- **Pronto até:** `main` = `bf1a9638`; conhecimento durável em
+  [[areas/study-runtime]] e relatório versionado em
+  `reports/study-runtime/2026-09-14-study-runtime-audit.json`; **publicado** em
+  https://ape-flashcards.lovable.app (custo Lovable das duas rodadas: 22,7
+  créditos). Processo completo preservado em
+  `docs/brain/imports/processo-atual-app-piteco-2026-09-15.json`.
+- **Pendente, para alinhar antes de começar:** paginação e busca **server-side**
+  em ListDetail; shell responsivo in-game (StudyViewportShell) e remoção do CSS
+  acoplado a classes utilitárias; smoke visual autenticado (mobile estreito,
+  desktop e teclado virtual aberto); métricas de TTS (`requestedAt`, `startedAt`,
+  `endedAt`, `cancelReason`, `mode`, `cardId`); paridade Study × MixedStudy.
+- **[CONFLITO] a resolver:** o processo enviado declara
+  `supabase_project_ref = xrnfhhoxmmstagmelvyi`, mas o repositório aponta
+  `ymahldldyxvwjeruaxpr` como `PRODUCTION_DATA_PROJECT_ID`, e a verificação de
+  2026-09-14 mostrou que o `xrnf…` tem **0 pastas, 0 listas e 0 cards** — o banco
+  real da aplicação é o `ymah…`. Confirmar o alvo antes de qualquer migration ou
+  deploy novo; ver [[sessions/2026-09-14-publicacao-mcp-producao]].
+- **Não entrou:** nada foi alterado no vault local do Obsidian por aquela sessão
+  (o vault canônico é o versionado em `docs/brain`).
+
 ### FECHAMENTO 2026-09-14
 
 - **Finalizado:** MCP com as 3 migrations aplicadas e verificadas em produção
