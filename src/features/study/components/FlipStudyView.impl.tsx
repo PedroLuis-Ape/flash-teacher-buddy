@@ -25,7 +25,17 @@ import { getRedListCardClass } from "./RedListIndicator";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import "./flipStudyMobileCompact.css";
 
-const AUTO_PLAY_DELAY_MS = 7000;
+/**
+ * Autoplay é EVENT-DRIVEN: a duração da fala vem do `onend` real do TTS
+ * (`useTTS` resolve a promessa com geração/token própria). Estes valores são
+ * apenas pausa de UI entre passos e o tempo de leitura quando NÃO há fala
+ * (TTS desligado, sem suporte ou texto vazio). Nunca são relógio da fala.
+ */
+const AUTO_PLAY_UI_GAP_MS = 600;
+const AUTO_PLAY_SILENT_READ_MS = 3000;
+/** Failsafe: só usado se a promessa de fala nunca resolver. */
+const AUTO_PLAY_FAILSAFE_MS = 20000;
+
 const MOUSE_DRAG_THRESHOLD_PX = 6;
 
 type ManualFlipAnswer = "knew" | "didntKnow" | null;
