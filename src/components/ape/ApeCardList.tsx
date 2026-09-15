@@ -69,7 +69,12 @@ export function ApeCardList({
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <ScrollingTitle text={title} className="ape-card-title min-w-0 flex-1" />
+          <ScrollingTitle
+            text={title}
+            className="ape-card-title min-w-0 flex-1"
+            mobileBehavior="wrap"
+            mobileLines={2}
+          />
           {badge && (
             <Badge
               variant="secondary"

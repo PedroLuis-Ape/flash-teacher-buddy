@@ -3,6 +3,11 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getPerfSettings } from "@/lib/performanceSettings";
 import {
+  resolveTitlePresentation,
+  type MobileTitleBehavior,
+  type MobileTitleLines,
+} from "./scrollingTitleBehavior";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -12,17 +17,30 @@ import {
 interface ScrollingTitleProps {
   text: string;
   className?: string;
+  /**
+   * Mobile: `wrap`/`truncate` mantêm o texto parado e legível (default).
+   * `marquee` só existe para quem pedir explicitamente — nunca é automático.
+   */
+  mobileBehavior?: MobileTitleBehavior;
+  /** Linhas visíveis quando `mobileBehavior="wrap"`. */
+  mobileLines?: MobileTitleLines;
 }
 
 /**
  * Componente que exibe texto com animação de scroll horizontal (marquee)
  * quando o conteúdo é maior que o container.
  *
- * - Mobile: auto-scroll quando visível na viewport (IntersectionObserver).
+ * - Mobile: texto PARADO por padrão (`wrap` com 1–2 linhas ou `truncate`).
+ *   Marquee no mobile só sob pedido explícito (`mobileBehavior="marquee"`).
  * - Desktop: scroll somente em hover/focus.
  * - Respeita prefers-reduced-motion: sem animação, mostra tooltip.
  */
-export function ScrollingTitle({ text, className }: ScrollingTitleProps) {
+export function ScrollingTitle({
+  text,
+  className,
+  mobileBehavior = "truncate",
+  mobileLines = 1,
+}: ScrollingTitleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [overflows, setOverflows] = useState(false);
@@ -67,18 +85,30 @@ export function ScrollingTitle({ text, className }: ScrollingTitleProps) {
     return () => io.disconnect();
   }, []);
 
-  // Determine if animation should play
-  const shouldAnimate =
-    overflows &&
-    !prefersReducedMotion &&
-    isVisible &&
-    (isMobile || isHovered);
+  // Semântica pura e testada (mobile nunca anima sem opt-in explícito).
+  const presentation = resolveTitlePresentation({
+    isMobile,
+    mobileBehavior,
+    mobileLines,
+    overflows,
+    prefersReducedMotion,
+    isHovered,
+    isVisible,
+  });
+  const shouldAnimate = presentation.animate;
 
   // For reduced-motion users who have overflow, wrap in tooltip
   const content = (
     <div
       ref={containerRef}
-      className={cn("overflow-hidden whitespace-nowrap", className)}
+      data-mobile-behavior={mobileBehavior}
+      data-wrap={presentation.wrap ? "true" : "false"}
+      className={cn(
+        "overflow-hidden",
+        presentation.wrap ? "whitespace-normal" : "whitespace-nowrap",
+        presentation.wrap && (presentation.lines === 2 ? "line-clamp-2" : "line-clamp-1"),
+        className,
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsHovered(true)}
@@ -92,7 +122,8 @@ export function ScrollingTitle({ text, className }: ScrollingTitleProps) {
         ref={textRef}
         className={cn(
           "inline-block",
-          !shouldAnimate && "truncate max-w-full"
+          presentation.wrap && "w-full break-words align-top",
+          !shouldAnimate && !presentation.wrap && "truncate max-w-full",
         )}
         style={
           shouldAnimate
@@ -114,7 +145,7 @@ export function ScrollingTitle({ text, className }: ScrollingTitleProps) {
   );
 
   // Wrap in tooltip for reduced-motion users
-  if (prefersReducedMotion && overflows) {
+  if (presentation.showFullTextTooltip) {
     return (
       <TooltipProvider delayDuration={300}>
         <Tooltip>
