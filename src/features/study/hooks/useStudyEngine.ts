@@ -1060,7 +1060,12 @@ export function useStudyEngine(
         const restored = restoreStudySession({
           session: continuing ? { ...row, session_snapshot: continuing } : row,
           eligibleIds: flashcards.map(card => card.id),
-          local: readRawStudySnapshot(studySnapshotKey) ?? readRawStudySnapshot(legacyStudySnapshotKey),
+          local: readRawStudySnapshot(studySnapshotKey)
+            ?? legacyStudySnapshotKeys.reduce<ReturnType<typeof readRawStudySnapshot>>(
+              (found, key) => found ?? readRawStudySnapshot(key),
+              null,
+            ),
+
           unique: !!gameSettings.redFocus, resultCardIds,
         });
         const snapshot = { ...restored.snapshot, settingsSnapshot: sessionSettingsSnapshot };
