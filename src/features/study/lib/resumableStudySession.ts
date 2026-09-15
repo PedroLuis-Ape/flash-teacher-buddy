@@ -30,6 +30,19 @@ export interface ResumableStudySession {
   institutionId: string | null;
   updatedAt: number;
   source: "local-pointer" | "remote-session";
+  /**
+   * Última INTERAÇÃO REAL do usuário nesta sessão (`study_sessions.last_activity_at`
+   * ou o ponteiro local publicado por atividade). `null` = sessão legada, sem
+   * atividade rastreada pelo contrato novo.
+   *
+   * `updatedAt` NÃO serve para isso: ele também muda por persistência, outbox,
+   * reconciliação e restauração (gravação técnica).
+   */
+  lastActivityAt: number | null;
+  /** Revisão monotônica da atividade; resposta atrasada nunca volta o ponteiro. */
+  activityRevision: number;
+  /** Sessão já concluída: pode ser a última atividade, mas não é retomável. */
+  completed: boolean;
 }
 
 export interface RemoteStudySessionRow {
@@ -43,6 +56,11 @@ export interface RemoteStudySessionRow {
   session_snapshot?: unknown;
   updated_at?: unknown;
   completed?: unknown;
+  last_activity_at?: unknown;
+  last_activity_revision?: unknown;
+  last_activity_card_id?: unknown;
+  last_activity_index?: unknown;
+  last_activity_layer_index?: unknown;
   lists?: unknown;
 }
 
