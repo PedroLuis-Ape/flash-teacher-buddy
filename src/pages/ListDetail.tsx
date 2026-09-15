@@ -422,32 +422,53 @@ const ListDetail = () => {
     [list, folder]
   );
 
-  const { data: flashcards = [], isLoading: flashcardsLoading, refetch: loadFlashcards } = useQuery({
-    queryKey: ["flashcards", id],
+  // PERF: a primeira página é buscada isoladamente para primeiro paint rápido
+  // em listas grandes; o conjunto completo continua sendo carregado em seguida
+  // porque busca, seleção, camadas e exportação operam na lista inteira.
+  const fetchFlashcardPage = useCallback(async (from: number, to: number) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return (supabase as any)
+        .rpc('get_portal_flashcards', { _list_id: id })
+        .range(from, to);
+    }
+    return (supabase as any)
+      .from("flashcards")
+      .select("*")
+      .eq("list_id", id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
+  }, [id]);
+
+  const { data: firstFlashcardPage } = useQuery({
+    queryKey: ["flashcards", id, "first-page"],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        return fetchAllSupabaseRows<Flashcard>((from, to) =>
-          (supabase as any)
-            .rpc('get_portal_flashcards', { _list_id: id })
-            .range(from, to),
-        );
-      }
-
-      return fetchAllSupabaseRows<Flashcard>((from, to) =>
-        (supabase as any)
-          .from("flashcards")
-          .select("*")
-          .eq("list_id", id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to),
-      );
+      const page = await fetchFlashcardPage(0, FIRST_PAGE_SIZE - 1);
+      if (page.error) throw page.error;
+      return (page.data ?? []) as Flashcard[];
     },
     staleTime: 30_000,
   });
+
+  const {
+    data: allFlashcards,
+    isLoading: allFlashcardsLoading,
+    refetch: loadFlashcards,
+  } = useQuery({
+    queryKey: ["flashcards", id],
+    queryFn: async () => fetchAllSupabaseRows<Flashcard>(fetchFlashcardPage),
+    staleTime: 30_000,
+  });
+
+  // Enquanto o conjunto completo não chega, a página renderiza a primeira
+  // página real (nunca dados inventados) e sinaliza o carregamento.
+  const flashcards: Flashcard[] = allFlashcards ?? firstFlashcardPage ?? [];
+  const flashcardsLoading = allFlashcardsLoading && !firstFlashcardPage;
+  const isFullListLoading = allFlashcardsLoading && !!firstFlashcardPage
+    && (firstFlashcardPage?.length ?? 0) >= FIRST_PAGE_SIZE;
+
 
   const viewingLayers = useMemo(() => {
     if (!viewingLayeredCard) return [];
