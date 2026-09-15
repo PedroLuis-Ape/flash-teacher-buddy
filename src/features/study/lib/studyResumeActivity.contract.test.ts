@@ -108,12 +108,11 @@ describe("retomada pela última interação real", () => {
     const row: RemoteStudySessionRow = {
       id: "s-b",
       list_id: "lista-b",
-      collection_id: null,
+      lists: { id: "lista-b", title: "Lista B", institution_id: null, deleted_at: null },
       mode: "flip",
       current_index: 1,
       total_cards: 20,
-      settings: null,
-      institution_id: null,
+      settings_snapshot: null,
       updated_at: new Date(T0).toISOString(),
       completed: false,
       last_activity_at: new Date(T0 + 30_000).toISOString(),
@@ -122,7 +121,7 @@ describe("retomada pela última interação real", () => {
       last_activity_index: 9,
       last_activity_layer_index: 1,
     } as unknown as RemoteStudySessionRow;
-    const remote = resumableFromRemoteSession(row, { titles: { "lista-b": "Lista B" } } as never);
+    const remote = resumableFromRemoteSession(row);
     expect(remote?.currentIndex).toBe(9);
     expect(remote?.currentCardId).toBe("card-9");
     expect(remote?.layerIndex).toBe(1);
