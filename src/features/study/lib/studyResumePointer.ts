@@ -30,6 +30,12 @@ export interface StudyResumeSnapshotV2 {
   currentCardId: string | null;
   layerIndex: number | null;
   updatedAt: number;
+  /**
+   * Revisão monotônica da ÚLTIMA INTERAÇÃO REAL (contrato novo). Presente só em
+   * ponteiros escritos por atividade; ponteiro legado (sem revisão) continua
+   * sendo apenas cache de navegação e não autoriza vencer a atividade remota.
+   */
+  activityRevision?: number;
 }
 
 const STORAGE_PREFIX = "ape_state_study_resume:v2:";
@@ -87,6 +93,9 @@ export function writeStudyResumePointer(
     currentIndex: Number.isFinite(input.currentIndex) ? Math.max(0, Math.trunc(input.currentIndex)) : 0,
     currentCardId: input.currentCardId ?? null,
     layerIndex: Number.isFinite(input.layerIndex as number) ? (input.layerIndex as number) : null,
+    activityRevision: Number.isFinite(input.activityRevision as number) && (input.activityRevision as number) > 0
+      ? Math.trunc(input.activityRevision as number)
+      : undefined,
     updatedAt: Date.now(),
   };
 
@@ -145,6 +154,9 @@ export function readStudyResumePointer(
       currentIndex: typeof parsed.currentIndex === "number" ? parsed.currentIndex : 0,
       currentCardId: typeof parsed.currentCardId === "string" ? parsed.currentCardId : null,
       layerIndex: typeof parsed.layerIndex === "number" ? parsed.layerIndex : null,
+      activityRevision: typeof parsed.activityRevision === "number" && parsed.activityRevision > 0
+        ? parsed.activityRevision
+        : undefined,
       updatedAt: parsed.updatedAt as number,
     };
   } catch {
