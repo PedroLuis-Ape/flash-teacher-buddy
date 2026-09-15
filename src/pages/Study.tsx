@@ -1898,10 +1898,22 @@ const Study = () => {
     return subscribeWriteAnswerLock(setWriteShortcutsLocked);
   }, []);
 
+  // FONTE ÚNICA de comandos: a UI ("Comandos") e o teclado usam este contexto.
+  const studyCommandContext = useMemo<StudyCommandContext>(() => ({
+    mode: (effectiveMode === "mixed" ? "flip" : effectiveMode) as StudyCommandContext["mode"],
+    flowMode: masteryProgressActive ? "mastery_rounds" : "continuous",
+    canGoNext,
+    canGoPrevious: currentIndex > 0,
+    hasLayers,
+    ttsEnabled: effectiveStudySettings.ttsEnabled !== false,
+    awaitingTextAnswer: effectiveMode === "write",
+  }), [canGoNext, currentIndex, effectiveMode, effectiveStudySettings.ttsEnabled, hasLayers, masteryProgressActive]);
+
   useStudyShortcuts(
     {
       nextCard: () => {
         if (writeShortcutsLocked) return;
+        if (!isStudyCommandAvailable("nextCard", studyCommandContext)) return;
         // Flip extenso (`continuous`): navegação LIVRE, sem avaliação e sem
         // Advance Gate. O modo gamificado continua obrigando Sabia/Não Sabia.
         if (flipFreeNavigation) {
@@ -1912,10 +1924,12 @@ const Study = () => {
         if (currentCard) requestSkip();
       },
       prevCard: () => {
+        if (!isStudyCommandAvailable("prevCard", studyCommandContext)) return;
         goToPrevious();
       },
       nextLayer: () => {
         if (writeShortcutsLocked) return;
+        if (!isStudyCommandAvailable("nextLayer", studyCommandContext)) return;
         if (hasLayers && cardLayers) {
           setLayerIdx((i) => (i + 1) % cardLayers.length);
         }
@@ -1924,6 +1938,7 @@ const Study = () => {
         handleRestartWithSettings();
       },
     },
+
     {
       disabled: showExitDialog || showCompletionModal || showSkipDialog,
     },
@@ -2428,6 +2443,11 @@ const Study = () => {
                 }
                 canEditCurrentCard={!!displayedCard && !isSystemCollection}
               />
+
+              {/* Comandos: mesma registry consultada pelo teclado. */}
+              <StudyCommandsPanel context={studyCommandContext} />
+
+
               
               {/* Direction selector for flip mode — uses dynamic labels */}
               {effectiveMode === "flip" && (
