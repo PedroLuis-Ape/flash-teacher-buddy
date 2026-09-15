@@ -13,6 +13,9 @@ function session(input: {
   updatedAt: number;
   institutionId?: string | null;
   source?: ResumableStudySession["source"];
+  lastActivityAt?: number | null;
+  activityRevision?: number;
+  completed?: boolean;
 }): ResumableStudySession {
   const resourceId = input.resourceId ?? input.sessionId;
   return {
@@ -32,6 +35,9 @@ function session(input: {
     institutionId: input.institutionId ?? null,
     updatedAt: input.updatedAt,
     source: input.source ?? "remote-session",
+    lastActivityAt: input.lastActivityAt ?? null,
+    activityRevision: input.activityRevision ?? 0,
+    completed: input.completed === true,
   };
 }
 
