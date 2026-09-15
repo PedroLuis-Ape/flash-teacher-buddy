@@ -2416,13 +2416,15 @@ const Study = () => {
           </div>
         )}
         <div className="mb-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
+          {/* Mobile: duas faixas (Sair em cima; ações abaixo, com quebra controlada).
+              Desktop: volta a ser uma linha única. Nenhum handler foi alterado. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" size="sm" onClick={() => setShowExitDialog(true)}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               Sair
             </Button>
 
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:gap-4">
               {userId && displayedCard && canToggleReinforcement && (
                 <Button
                   type="button"

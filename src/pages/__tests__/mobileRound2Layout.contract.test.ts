@@ -46,4 +46,34 @@ describe("segunda rodada mobile — legibilidade e densidade", () => {
     expect(list).toContain('mobileBehavior="wrap"');
     expect(list).not.toContain('mobileBehavior="marquee"');
   });
+
+  it("o header in-game do Study tem duas faixas no mobile e volta a uma linha no desktop", () => {
+    const study = source("src/pages/Study.tsx");
+    // Faixa 1 (Sair) + faixa 2 (ações) no mobile.
+    expect(study).toContain("flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between");
+    // Cluster de ações ocupa a largura e quebra com respiro em vez de espremer.
+    expect(study).toContain("flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:gap-4");
+    // Comportamento preservado: o Sair continua abrindo o diálogo de saída.
+    expect(study).toContain("setShowExitDialog(true)");
+  });
+
+  it("a grade de pastas da biblioteca não força duas colunas em telas muito estreitas", () => {
+    const responsive = source("src/styles/library-responsive.css");
+    // Uma coluna abaixo de 360px e duas colunas a partir daí.
+    expect(responsive).toContain("@media (max-width: 359px)");
+    expect(responsive).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+
+  it("os containers ajustados não introduzem rolagem horizontal intencional", () => {
+    for (const file of [
+      "src/pages/Index.tsx",
+      "src/pages/Study.tsx",
+      "src/components/ape/ApeCardFolder.tsx",
+      "src/components/ape/ApeCardList.tsx",
+    ]) {
+      const text = source(file);
+      expect(text, file).not.toContain("overflow-x-scroll");
+      expect(text, file).not.toContain("w-screen");
+    }
+  });
 });
