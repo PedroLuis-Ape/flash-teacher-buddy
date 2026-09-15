@@ -57,13 +57,29 @@ related:
 
 ### FECHAMENTO 2026-09-15
 
-- **Próximo passo já preparado (não iniciado):** implementar **“Revisar cards /
-  Revisar depois”** (marcador one-click no card + fila de revisão privada +
-  edição do flashcard ORIGINAL). A spec está registrada e o baseline foi
-  conferido — todos os arquivos citados existem, `EditFlashcardDialog` tem a
-  assinatura esperada e rotas privadas ficam em `src/App.tsx`. Plano completo,
-  modelo de dados e ordem de execução em
+- **“Revisar cards / Revisar depois” — CONCLUÍDO no `main`:** marcador one-click
+  no card (Flip, Write/Rewrite, Multiple Choice, Unscramble, Pronunciation),
+  fila privada em `/review-cards` com edição do flashcard ORIGINAL via
+  `EditFlashcardDialog`, Mixed Study wired e contratos de feature
+  (`reviewCardsFeature.contract.test.ts`). Arquivos: `src/pages/ReviewCards.tsx`,
+  `src/hooks/useFlashcardReviewFlags.ts`, `StudyReviewFlagButton.tsx`,
+  `src/App.tsx` (`/review-cards`). Plano original em
   [[sessions/2026-09-15-plano-revisar-cards]].
+- [PENDENTE] A migration `20260915120000_user_flashcard_review_flags.sql` **ainda
+  não foi aplicada** em produção (`ymahldldyxvwjeruaxpr`). Sem ela a marcação
+  falha com aviso honesto; aplicação é decisão do Pedro.
+- **Rodada 2 de responsividade mobile — CONCLUÍDA** (PRs #426, #427, #428):
+  `ScrollingTitle` parado e legível no mobile (fim do marquee automático, com
+  semântica pura testada), recentes da Home em 1 coluna abaixo de 480px, métrica
+  “Listas” com símbolo estável (📋), card de pasta denso (ícone 36px, título em 2
+  linhas) e header in-game do Study em duas faixas no mobile.
+- [PENDENTE] **Smoke visual autenticado** nos viewports 320/360/375/390/412/430/
+  768/1366 (§15 da spec) — não há sessão/browser autenticado no ambiente Codex.
+  Único item da rodada sem evidência visual.
+- [LIÇÃO] Antes de criar arquivo novo, confirme que ele não existe no `main`
+  (`git cat-file -e origin/main:<path>`). Nesta rodada eu sobrescrevi
+  `src/pages/ReviewCards.tsx` — que outra sessão já havia mergeado — e revertí
+  em seguida. O `main` é multi-sessão: criar por cima apaga trabalho alheio.
 
 - **Finalizado:** reforma do **runtime de estudo** em duas rodadas estruturais e
   **publicada**: uma autoridade por decisão (`direction` define o lado da
