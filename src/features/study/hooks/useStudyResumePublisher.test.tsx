@@ -144,7 +144,7 @@ describe("publicação do ponteiro de retomada (camada comum de todas as superf�
 
     // settings mudaram, atividade não
     await act(async () => {
-      renderer?.update(<Harness {...input} settingsSummary={{ ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, translate: true }} />);
+      renderer?.update(<Harness {...input} settingsSummary={{ ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, fastMode: true }} />);
     });
     expect(touches.length).toBe(1);
 
