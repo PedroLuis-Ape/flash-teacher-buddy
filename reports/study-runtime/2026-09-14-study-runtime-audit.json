@@ -1,7 +1,7 @@
 {
   "schema": "ape.study-runtime-audit",
   "version": 2,
-  "generated_at": "2026-09-15T00:44:44+00:00",
+  "generated_at": "2026-09-15T00:47:24+00:00",
   "project": {
     "app": "App Piteco / ApeEducation",
     "repository": "PedroLuis-Ape/flash-teacher-buddy",
@@ -9,7 +9,11 @@
   },
   "commits_base": ["b593d73df86d3bc8eb4573fca026c961b1e33a0e"],
   "commits_finais": ["248c411ab80652f03efad18757f55532809a3158"],
-  "executive_summary": "Segunda e última rodada estrutural do runtime de estudo. Fechou a compatibilidade real de sessões antigas (candidate legacy keys em vez de um único mapeamento semântico), tornou o autoplay do Flip event-driven no onend real do TTS (sem relógio fixo de 7s), auditou os SSOTs das configurações confirmando que playMode/playSide só sobrevivem como legacy wire/migração, e reduziu o custo do primeiro paint de listas grandes com progressive load de semântica explícita. Responsividade in-game e paginação/busca server-side permanecem como dívidas declaradas.",
+  "documentation_commits": [
+    "f40050def274046ee3536718a45596fb3cc9de66",
+    "b69eb8b6af3724617f2cf3363d14de8336f17063"
+  ],
+  "executive_summary": "Segunda e última rodada estrutural do runtime de estudo. Fechou a compatibilidade real de sessões antigas (candidate legacy keys em vez de um único mapeamento semântico), tornou o autoplay do Flip event-driven no onend real do TTS (sem relógio fixo de 7s), auditou os SSOTs das configurações confirmando que playMode/playSide só sobrevivem como legacy wire/migração, e reduziu o custo do primeiro paint de listas grandes com progressive load de semântica explícita. Responsividade in-game e paginação/busca server-side permanecem como dívidas declaradas. O projeto foi publicado após os gates da rodada.",
   "problems_found": [
     {
       "id": "P0-legacy-scope-key",
@@ -126,7 +130,12 @@
   "deployment": {
     "requested": true,
     "performed_by_agent": false,
-    "status": "pending_external_publish"
+    "performed_externally_by_assistant": true,
+    "status": "published",
+    "deployment_id": "4f2bac59-97d6-44ac-889b-be15d8d9f20e",
+    "live_url": "https://ape-flashcards.lovable.app",
+    "publish_verified": true,
+    "published_at": "2026-09-15T00:47:24+00:00"
   },
   "cost_credits": 9.2,
   "cost_credits_scope": "segunda rodada estrutural no Lovable Max Mode",
