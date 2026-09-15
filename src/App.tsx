@@ -84,6 +84,7 @@ const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
 const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
 const SpecialCards = lazy(() => import("./pages/SpecialCards"));
+const ReviewCards = lazy(() => import("./pages/ReviewCards"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus"));
 const Glossary = lazy(() => import("./pages/Glossary"));
 const TermCheck = lazy(() => import("./pages/TermCheck"));
@@ -240,6 +241,7 @@ const App = () => {
                           <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
                           <Route path="/audit" element={<AuditRepair />} />
                           <Route path="/special-cards" element={<SpecialCards />} />
+                          <Route path="/review-cards" element={<ReviewCards />} />
                           <Route path="/system-status" element={<SystemStatus />} />
                           <Route path="/reportar-problema" element={<BugReport />} />
                           <Route path="*" element={<NotFound />} />

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
-  Home, Library, Store, User, GraduationCap, Search, Globe, Gem, Sparkles, MessageSquareWarning
+  Home, Library, Store, User, GraduationCap, Search, Globe, Gem, Sparkles, MessageSquareWarning, Flag
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -20,11 +20,15 @@ import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/routePrefetch";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useFlashcardReviewFlagCount } from "@/hooks/useFlashcardReviewFlags";
 
 export function AppSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { userId } = useAuthUser();
+  const reviewFlagCount = useFlashcardReviewFlagCount(userId);
   const [isOpen, setIsOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newInstitution, setNewInstitution] = useState({
@@ -190,6 +194,27 @@ export function AppSidebar() {
               >
                 <Gem className="h-4 w-4" />
                 <span>Pontos de atenção</span>
+              </Button>
+              <Button
+                variant={location.pathname === '/review-cards' ? "secondary" : "ghost"}
+                className={cn(
+                  "ape-motion-menu-item w-full justify-start gap-3",
+                  location.pathname === '/review-cards' && "bg-primary/10 text-primary font-medium"
+                )}
+                onMouseEnter={() => prefetchRoute('/review-cards')}
+                onTouchStart={() => prefetchRoute('/review-cards')}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/review-cards');
+                }}
+              >
+                <Flag className={cn("h-4 w-4", reviewFlagCount > 0 && "fill-rose-500 text-rose-500")} />
+                <span>Revisar cards</span>
+                {reviewFlagCount > 0 && (
+                  <span className="ml-auto rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-500">
+                    {reviewFlagCount > 99 ? "99+" : reviewFlagCount}
+                  </span>
+                )}
               </Button>
               <Button
                 variant={location.pathname === '/import/super' ? "secondary" : "ghost"}
