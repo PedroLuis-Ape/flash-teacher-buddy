@@ -706,6 +706,9 @@ const Study = () => {
   
   const effectiveMode = normalizedMode === "mixed" ? mixedModeFor(currentIndex) : normalizedMode;
   const isPronunciationMode = effectiveMode === "pronunciation";
+  // Flip extenso: navegação livre (botão, teclado e swipe), sem avaliação.
+  const flipFreeNavigation = effectiveMode === "flip" && !masteryProgressActive;
+
 
   // Reload flashcards ONLY when the underlying list/collection changes.
   // Order/direction/favorites are applied locally (in effectiveFlashcards or by
@@ -1899,6 +1902,12 @@ const Study = () => {
     {
       nextCard: () => {
         if (writeShortcutsLocked) return;
+        // Flip extenso (`continuous`): navegação LIVRE, sem avaliação e sem
+        // Advance Gate. O modo gamificado continua obrigando Sabia/Não Sabia.
+        if (flipFreeNavigation) {
+          if (canGoNext) navigateNext();
+          return;
+        }
         // A global next is a skip request, not an automatic wrong answer.
         if (currentCard) requestSkip();
       },
@@ -2539,6 +2548,7 @@ const Study = () => {
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
+              studyFlowMode={effectivePreset.studyFlowMode === "mastery_rounds" ? "mastery_rounds" : "continuous"}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={masteryProgressActive ? undefined : navigateNext}

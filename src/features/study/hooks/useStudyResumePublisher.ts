@@ -1,16 +1,32 @@
 /**
- * Camada comum de publicação do ponteiro de retomada.
+ * Camada comum de publicação da ÚLTIMA INTERAÇÃO REAL do usuário.
  *
- * Toda superfície que estuda uma lista/coleção precisa publicar a MESMA
- * identidade de sessão (`aperto local` -> `StudyResumeSnapshotV2`). Antes só o
- * Study normal fazia isso; a Prática Mista salvava a sessão durável mas deixava
- * o card da Home apontando para a lista anterior.
+ * Toda superfície que estuda uma lista/coleção publica a MESMA identidade de
+ * atividade: sessão + recurso + modo + card/índice + camada. A publicação vai
+ * para duas camadas:
+ *
+ * - local (`StudyResumeSnapshotV2`): resposta imediata no próprio aparelho;
+ * - remota (`touch_study_session_activity_v1`): autoridade durável, cross-device.
+ *
+ * REGRA P0: só publica quando a IDENTIDADE DE ATIVIDADE muda (sessão, deck
+ * atual, card/índice ou camada) ou quando alguém pede explicitamente
+ * (`publish()`, ex.: "Salvar e sair"). Rerender técnico, mudança de settings,
+ * cache e reconciliação não são atividade e não podem mover o ponteiro.
  */
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { writeStudyResumePointer } from "@/features/study/lib/studyResumePointer";
+import { touchStudySessionActivity } from "@/features/study/lib/studySessionActivity";
 import type { StudySettingsSnapshotV3 } from "@/features/study/lib/studySettingsSnapshotV3";
 
 export type StudyResumePublisherStorage = Pick<Storage, "setItem" | "removeItem">;
+
+export type StudyResumeActivityTouch = (input: {
+  sessionId: string;
+  revision: number;
+  cardId?: string | null;
+  cardIndex?: number | null;
+  layerIndex?: number | null;
+}) => void | Promise<unknown>;
 
 export interface StudyResumePublisherInput {
   userId?: string | null;
@@ -35,6 +51,8 @@ export interface StudyResumePublisherInput {
   deckReady: boolean;
   /** Rodada/deck encerrado: mantém o ponteiro anterior, nunca republica. */
   finished?: boolean;
+  /** Injetável em teste; produção usa o RPC de atividade. */
+  touchActivity?: StudyResumeActivityTouch;
 }
 
 function resolveDefaultStorage(): StudyResumePublisherStorage | null {
@@ -43,6 +61,10 @@ function resolveDefaultStorage(): StudyResumePublisherStorage | null {
   } catch {
     return null;
   }
+}
+
+function defaultTouch(input: Parameters<StudyResumeActivityTouch>[0]): void {
+  void touchStudySessionActivity(input);
 }
 
 export function useStudyResumePublisher(
@@ -63,11 +85,20 @@ export function useStudyResumePublisher(
     currentCardId,
     layerIndex,
     deckReady,
+    touchActivity,
   } = input;
+
+  const lastRevisionRef = useRef(0);
 
   const publish = useCallback(() => {
     if (!target || !userId || !sessionId || !resourceId || !gameMode || !path) return;
     if (!deckReady) return;
+
+    // Revisão monotônica: uma resposta atrasada do card anterior nunca pode
+    // voltar o ponteiro (local ou remoto) para trás.
+    const revision = Math.max(Date.now(), lastRevisionRef.current + 1);
+    lastRevisionRef.current = revision;
+
     writeStudyResumePointer({
       userId,
       sessionId,
@@ -80,7 +111,17 @@ export function useStudyResumePublisher(
       currentIndex,
       currentCardId: currentCardId ?? null,
       layerIndex: layerIndex ?? null,
+      activityRevision: revision,
     }, target);
+
+    const touch = touchActivity ?? defaultTouch;
+    void touch({
+      sessionId,
+      revision,
+      cardId: currentCardId ?? null,
+      cardIndex: currentIndex,
+      layerIndex: layerIndex ?? null,
+    });
   }, [
     currentCardId,
     currentIndex,
@@ -94,14 +135,33 @@ export function useStudyResumePublisher(
     sessionId,
     settingsSummary,
     target,
+    touchActivity,
     userId,
   ]);
 
   const finished = input.finished === true;
+  // Identidade de ATIVIDADE. Settings/cache/rerender ficam de fora de propósito.
+  const activityKey = [
+    userId ?? "",
+    sessionId ?? "",
+    resourceKind,
+    resourceId ?? "",
+    gameMode ?? "",
+    deckReady ? "ready" : "loading",
+    String(currentIndex),
+    currentCardId ?? "",
+    layerIndex === null || layerIndex === undefined ? "" : String(layerIndex),
+  ].join("|");
+  const publishedKeyRef = useRef<string | null>(null);
+  const publishRef = useRef(publish);
+  publishRef.current = publish;
+
   useEffect(() => {
     if (finished) return;
-    publish();
-  }, [finished, publish]);
+    if (publishedKeyRef.current === activityKey) return;
+    publishedKeyRef.current = activityKey;
+    publishRef.current();
+  }, [activityKey, finished]);
 
   return { publish };
 }

@@ -30,6 +30,19 @@ export interface ResumableStudySession {
   institutionId: string | null;
   updatedAt: number;
   source: "local-pointer" | "remote-session";
+  /**
+   * Última INTERAÇÃO REAL do usuário nesta sessão (`study_sessions.last_activity_at`
+   * ou o ponteiro local publicado por atividade). `null` = sessão legada, sem
+   * atividade rastreada pelo contrato novo.
+   *
+   * `updatedAt` NÃO serve para isso: ele também muda por persistência, outbox,
+   * reconciliação e restauração (gravação técnica).
+   */
+  lastActivityAt: number | null;
+  /** Revisão monotônica da atividade; resposta atrasada nunca volta o ponteiro. */
+  activityRevision: number;
+  /** Sessão já concluída: pode ser a última atividade, mas não é retomável. */
+  completed: boolean;
 }
 
 export interface RemoteStudySessionRow {
@@ -43,6 +56,11 @@ export interface RemoteStudySessionRow {
   session_snapshot?: unknown;
   updated_at?: unknown;
   completed?: unknown;
+  last_activity_at?: unknown;
+  last_activity_revision?: unknown;
+  last_activity_card_id?: unknown;
+  last_activity_index?: unknown;
+  last_activity_layer_index?: unknown;
   lists?: unknown;
 }
 
@@ -146,14 +164,25 @@ export function resumableFromPointer(
     institutionId: pointer.institutionId,
     updatedAt: pointer.updatedAt,
     source: "local-pointer",
+    // O ponteiro v2 só é escrito quando a identidade de atividade muda, então
+    // seu `updatedAt` É atividade real — mas somente quando ele carrega a
+    // revisão do contrato novo. Ponteiro antigo continua sendo apenas cache.
+    lastActivityAt: typeof pointer.activityRevision === "number" && pointer.activityRevision > 0
+      ? pointer.updatedAt
+      : null,
+    activityRevision: typeof pointer.activityRevision === "number" ? pointer.activityRevision : 0,
+    completed: false,
   };
 }
 
 /** Reconstrói uma retomada segura a partir da sessão remota aberta mais recente. */
 export function resumableFromRemoteSession(
   row: RemoteStudySessionRow | null | undefined,
+  options: { allowCompleted?: boolean } = {},
 ): ResumableStudySession | null {
-  if (!row || row.completed === true) return null;
+  if (!row) return null;
+  const completed = row.completed === true;
+  if (completed && options.allowCompleted !== true) return null;
   const sessionId = typeof row.id === "string" ? row.id : null;
   const listId = typeof row.list_id === "string" ? row.list_id : null;
   const mode = typeof row.mode === "string" && row.mode.length > 0 ? row.mode : null;
@@ -176,6 +205,10 @@ export function resumableFromRemoteSession(
   });
 
   const updatedAtMs = Date.parse(String(row.updated_at ?? ""));
+  const activityMs = Date.parse(String(row.last_activity_at ?? ""));
+  const lastActivityAt = Number.isFinite(activityMs) ? activityMs : null;
+  const activityIndex = Number(row.last_activity_index);
+  const activityLayer = Number(row.last_activity_layer_index);
 
   return {
     sessionId,
@@ -184,18 +217,27 @@ export function resumableFromRemoteSession(
     title: typeof list?.title === "string" && list.title.trim().length > 0 ? list.title : "Sessão de estudo",
     gameMode: mode,
     path,
-    currentIndex: Math.max(0, Number(row.current_index) || 0),
+    // A posição exata da última interação vence `current_index` (que também é
+    // reescrito por persistência técnica) quando o servidor a conhece.
+    currentIndex: Number.isFinite(activityIndex) && activityIndex >= 0
+      ? Math.trunc(activityIndex)
+      : Math.max(0, Number(row.current_index) || 0),
     totalCards: progress.totalCards,
     progressCount: progress.progressCount,
     progressUnit: progress.progressUnit,
-    currentCardId: null,
-    layerIndex: null,
+    currentCardId: typeof row.last_activity_card_id === "string" ? row.last_activity_card_id : null,
+    layerIndex: Number.isFinite(activityLayer) ? Math.trunc(activityLayer) : null,
     settings,
     institutionId: typeof list?.institution_id === "string" ? list.institution_id : null,
     updatedAt: Number.isFinite(updatedAtMs) ? updatedAtMs : 0,
     source: "remote-session",
+    lastActivityAt,
+    activityRevision: Number.isFinite(Number(row.last_activity_revision))
+      ? Number(row.last_activity_revision)
+      : 0,
+    completed,
   };
 }
 
 export const RESUMABLE_STUDY_SESSION_COLUMNS =
-  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, lists(id, title, institution_id, deleted_at)";
+  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, last_activity_at, last_activity_revision, last_activity_card_id, last_activity_index, last_activity_layer_index, lists(id, title, institution_id, deleted_at)";

@@ -8,9 +8,12 @@
  * card permanecia preso na lista antiga, mesmo com a sessão nova aberta em
  * `study_sessions`.
  *
- * Agora: o ponteiro continua sendo a identidade exata da sessão do aparelho,
- * mas a decisão é por ÚLTIMA ATIVIDADE REAL (`updated_at` das sessões abertas
- * do usuário) e o ponteiro é realinhado para a sessão vencedora.
+ * Agora (P0 2026-09-15): o ponteiro continua sendo a identidade exata da sessão
+ * do aparelho, mas a decisão é por ÚLTIMA INTERAÇÃO REAL DO USUÁRIO
+ * (`study_sessions.last_activity_at`, escrito só pelo RPC de atividade). O
+ * `updated_at` só participa como fallback legado, para usuários que ainda não
+ * têm nenhuma atividade rastreada. Sessão concluída pode ser a última atividade
+ * — nesse caso o card fica vazio e nenhuma sessão antiga ressuscita.
  */
 import {
   clearStudyResumePointer,
@@ -27,7 +30,7 @@ import {
   resumableFromRemoteSession,
   type ResumableStudySession,
 } from "./resumableStudySession";
-import { selectLatestStudyResume } from "./studyResumeSelection";
+import { selectStudyResumeByActivity } from "./studyResumeSelection";
 
 type StudyResumeRow = Record<string, any>;
 
@@ -39,7 +42,7 @@ export interface StudyResumeResponse {
 export interface StudyResumeQueryBuilder extends PromiseLike<StudyResumeResponse> {
   select(columns: string): StudyResumeQueryBuilder;
   eq(column: string, value: unknown): StudyResumeQueryBuilder;
-  order(column: string, options: { ascending: boolean }): StudyResumeQueryBuilder;
+  order(column: string, options: { ascending: boolean; nullsFirst?: boolean }): StudyResumeQueryBuilder;
   limit(count: number): StudyResumeQueryBuilder;
   maybeSingle(): PromiseLike<StudyResumeResponse>;
 }
@@ -60,6 +63,8 @@ export interface LatestStudyResumeInput {
 
 /** Mesmo limite histórico: sessões abertas recentes são poucas por usuário. */
 const RECENT_OPEN_SESSION_LIMIT = 10;
+/** Últimas atividades reais rastreadas (inclui sessões concluídas). */
+const RECENT_ACTIVITY_SESSION_LIMIT = 10;
 
 function listFromRow(row: StudyResumeRow): StudyResumeRow | null {
   const list = Array.isArray(row?.lists) ? row.lists[0] : row?.lists;
@@ -145,6 +150,38 @@ async function readRecentOpenSessions(input: {
   return candidates;
 }
 
+/**
+ * Últimas INTERAÇÕES REAIS do usuário (`last_activity_at`), incluindo sessões
+ * concluídas: uma sessão concluída pode ser a última atividade e, nesse caso, o
+ * card precisa ficar vazio em vez de ressuscitar uma sessão antiga aberta.
+ */
+async function readRecentActivitySessions(input: {
+  userId: string;
+  client: StudyResumeQueryClient;
+  storage: StudyResumeStorage | null;
+}): Promise<ResumableStudySession[] | null> {
+  const { data, error } = await input.client
+    .from("study_sessions")
+    .select(RESUMABLE_STUDY_SESSION_COLUMNS)
+    .eq("user_id", input.userId)
+    .order("last_activity_at", { ascending: false, nullsFirst: false })
+    .limit(RECENT_ACTIVITY_SESSION_LIMIT);
+  if (error) return null;
+
+  const rows = Array.isArray(data) ? (data as StudyResumeRow[]) : [];
+  const candidates: ResumableStudySession[] = [];
+  for (const row of rows) {
+    const resume = resumableFromRemoteSession(row, { allowCompleted: true });
+    if (!resume) continue;
+    if (resume.lastActivityAt === null) continue;
+    const locallyCompleted = Boolean(
+      input.storage && isStudySessionCompleted(input.userId, resume.sessionId, input.storage),
+    );
+    candidates.push(locallyCompleted ? { ...resume, completed: true } : resume);
+  }
+  return candidates;
+}
+
 export async function fetchLatestStudyResume(
   input: LatestStudyResumeInput,
 ): Promise<ResumableStudySession | null> {
@@ -158,8 +195,9 @@ export async function fetchLatestStudyResume(
     ? storedPointer
     : null;
 
-  const [pointerOutcome, remoteSessions] = await Promise.all([
+  const [pointerOutcome, activitySessions, legacySessions] = await Promise.all([
     pointer ? readPointerCandidate({ userId, pointer, client }) : Promise.resolve(null),
+    readRecentActivitySessions({ userId, client, storage }),
     readRecentOpenSessions({ userId, client, storage }),
   ]);
 
@@ -168,18 +206,32 @@ export async function fetchLatestStudyResume(
   const pointerSession = pointerOutcome
     ? (pointerOutcome.missing ? null : pointerOutcome.session)
     : (pointer ? resumableFromPointer(pointer) : null);
-  const remote = remoteSessions ?? [];
+  // A mesma sessão pode aparecer nas duas consultas; a versão com atividade
+  // rastreada tem precedência.
+  const remote: ResumableStudySession[] = [...(activitySessions ?? [])];
+  const seen = new Set(remote.map((session) => session.sessionId));
+  for (const session of legacySessions ?? []) {
+    if (seen.has(session.sessionId)) continue;
+    seen.add(session.sessionId);
+    remote.push(session);
+  }
   // Sem nenhuma das duas fontes confiáveis, o card não pode inventar sessão.
-  if (!remoteSessions && !pointerSession) throw new Error("study-resume-unavailable");
+  if (!activitySessions && !legacySessions && !pointerSession) throw new Error("study-resume-unavailable");
 
-  const winner = selectLatestStudyResume({
+  const selection = selectStudyResumeByActivity({
     pointer: pointerSession,
     remote,
     institutionId: input.institutionId,
   });
+  const winner = selection.resume;
 
   if (storage) {
     if (pointer && pointerOutcome?.missing) clearStudyResumePointer(userId, storage);
+    // A última atividade é de uma sessão concluída: o ponteiro do aparelho não
+    // pode continuar apontando para uma sessão que não é mais retomável.
+    if (pointer && !winner && selection.contract === "activity") {
+      clearStudyResumePointer(userId, storage);
+    }
     const winnerCameFromPointer = Boolean(pointerSession && winner && winner.sessionId === pointerSession.sessionId);
     if (winner && !winnerCameFromPointer) {
       // O ponteiro é um cache da sessão exata do aparelho: realinhar mantém o
@@ -196,6 +248,7 @@ export async function fetchLatestStudyResume(
         currentIndex: winner.currentIndex,
         currentCardId: winner.currentCardId,
         layerIndex: winner.layerIndex,
+        activityRevision: winner.activityRevision,
       }, storage);
     }
   }

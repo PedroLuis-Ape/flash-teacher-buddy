@@ -144,6 +144,13 @@ interface FlipStudyViewProps {
   canGoPrevious?: boolean;
   canGoNext?: boolean;
   direction: string;
+  /**
+   * CONTRATO DE AVALIAÇÃO DO FLIP (P1 2026-09-15):
+   * - `mastery_rounds` (Gamificado): Sabia/Não Sabia existem e governam o avanço;
+   * - `continuous` (Extenso): NÃO existe julgamento. Nada de Sabia/Não Sabia na
+   *   tela nem no teclado; navegação livre para frente e para trás.
+   */
+  studyFlowMode?: "continuous" | "mastery_rounds";
   /** Alvo semântico do Play: both | prompt | answer (nunca lado físico). */
   playTarget?: StudyPlayTargetPreset;
   /** Fala o lado visível ao trocar de card (sem clique no DOM, sem delay). */
@@ -186,6 +193,7 @@ export const FlipStudyView = ({
   canGoPrevious = true,
   canGoNext = true,
   direction,
+  studyFlowMode = "mastery_rounds",
   playTarget = "both",
   autoSpeakOnCardChange = false,
   fastMode = false,
@@ -204,6 +212,8 @@ export const FlipStudyView = ({
   onToggleDifficulty,
   difficultyPending = false,
 }: FlipStudyViewProps) => {
+  // Único dono da decisão "existe avaliação neste Flip?".
+  const assessmentEnabled = studyFlowMode === "mastery_rounds";
   const restoredAutoPlay = useRef(readFlipAutoPlayState());
   const [isFlipped, setIsFlipped] = useState(false);
   const [manualAnswer, setManualAnswer] = useState<ManualFlipAnswer>(null);
@@ -326,6 +336,7 @@ export const FlipStudyView = ({
   };
 
   const handleKnew = () => {
+    if (!assessmentEnabled) return;
     pauseAutoPlay();
     playCorrect();
     setManualAnswer("knew");
@@ -333,6 +344,7 @@ export const FlipStudyView = ({
   };
 
   const handleDidntKnow = () => {
+    if (!assessmentEnabled) return;
     pauseAutoPlay();
     playWrong();
     setManualAnswer("didntKnow");
@@ -483,22 +495,27 @@ export const FlipStudyView = ({
       const knewKey = normalizeKey(shortcuts.knew);
       const didntKey = normalizeKey(shortcuts.didntKnow);
       const audioKey = normalizeKey(shortcuts.playAudio);
-      const nextKey = normalizeKey(shortcuts.nextCard);
-      const prevKey = normalizeKey(shortcuts.prevCard);
 
       if (k === flipKey) {
         e.preventDefault();
+        // Extenso: virar o card NUNCA marca "sabia".
+        if (!assessmentEnabled) {
+          handleFlip();
+          return;
+        }
         if (fastMode) handleKnew();
         else if (!isFlipped) handleFlip();
         else handleKnew();
         return;
       }
       if (k === knewKey) {
+        if (!assessmentEnabled) return;
         e.preventDefault();
         handleKnew();
         return;
       }
       if (k === didntKey) {
+        if (!assessmentEnabled) return;
         e.preventDefault();
         handleDidntKnow();
         return;
@@ -507,23 +524,15 @@ export const FlipStudyView = ({
         e.preventDefault();
         if (fastMode || !isFlipped) handlePlayTop();
         else handlePlayBottom();
-        return;
       }
-      if (k === nextKey && onNext && canGoNext) {
-        e.preventDefault();
-        handleNextCard();
-        return;
-      }
-      if (k === prevKey && onPrevious && canGoPrevious) {
-        e.preventDefault();
-        handlePreviousCard();
-      }
+      // DONO ÚNICO DE next/prev: o roteador global de teclado em Study.tsx.
+      // Um segundo dono aqui produzia duas navegações pela mesma seta.
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
+  }, [shortcuts, isFlipped, fastMode, assessmentEnabled, ttsEnabled]);
 
   const autoPlayControls = (
     <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">
@@ -556,7 +565,7 @@ export const FlipStudyView = ({
     />
   );
 
-  const actionButtons = (
+  const actionButtons = !assessmentEnabled ? null : (
     <div className="flip-action-buttons flex w-full flex-row flex-wrap justify-center gap-2 sm:gap-3">
       <Button
         variant="destructive"
@@ -633,7 +642,9 @@ export const FlipStudyView = ({
         </Card>
         {navigationButtons}
         {actionButtons}
-        <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço marcar como sabia • Enter ouvir áudio</p>
+        <p className="hidden text-center text-xs text-muted-foreground sm:block">
+          {assessmentEnabled ? "← → navegar • Espaço marcar como sabia • Enter ouvir áudio" : "← → navegar • Enter ouvir áudio"}
+        </p>
       </div>
     );
   }
@@ -666,8 +677,10 @@ export const FlipStudyView = ({
         </div>
       </div>
       {navigationButtons}
-      <div className="w-full animate-fade-in">{actionButtons}</div>
-      <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço virar/marcar • Enter ouvir áudio</p>
+      {actionButtons && <div className="w-full animate-fade-in">{actionButtons}</div>}
+      <p className="hidden text-center text-xs text-muted-foreground sm:block">
+        {assessmentEnabled ? "← → navegar • Espaço virar/marcar • Enter ouvir áudio" : "← → navegar • Espaço virar o card • Enter ouvir áudio"}
+      </p>
     </div>
   );
 };

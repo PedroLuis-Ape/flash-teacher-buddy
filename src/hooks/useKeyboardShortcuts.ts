@@ -53,6 +53,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers, opts: Options =
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (optsRef.current.disabled) return;
+      // Dono único por comando: se outro dono legítimo já tratou a tecla
+      // (preventDefault), o roteador global não repete a ação. Sem isso a mesma
+      // seta podia navegar duas vezes.
+      if (e.defaultPrevented) return;
       // Dono único do teclado: campo de texto, modal e escopo restrito barram
       // qualquer comando da sessão antes de chegar no mapa de atalhos.
       if (shouldBlockSessionShortcut(e, { allowEnter: optsRef.current.allowEnterInTyping })) return;
