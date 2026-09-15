@@ -34,6 +34,27 @@ related:
 > Ele existe para não reler o vault inteiro a cada tarefa. Histórico e detalhe
 > ficam nas notas de sessão linkadas; aqui fica só o estado datado.
 
+## Regra permanente — BANCO OFICIAL (não esquecer nunca)
+
+- **Dados de produção do App Piteco = `ymahldldyxvwjeruaxpr`.** É lá que ficam
+  usuários, pastas, listas, flashcards, glossários, favoritos e progresso — e é
+  lá que a migration nova precisa ser aplicada.
+- **`xrnfhhoxmmstagmelvyi` é o projeto ADMINISTRADO por ferramentas/transição, não
+  o banco do app.** Ele tem 0 pastas, 0 listas e 0 cards. `supabase/config.toml`
+  aponta para ele — é armadilha, não destino.
+- **Fonte única no código:** `src/integrations/supabase/platformRuntime.ts`
+  (`PRODUCTION_DATA_PROJECT_ID`). O arquivo tem um *AI EDITOR GUARD*: nunca trocar
+  essas constantes nem “consertar” dados sumidos mexendo nelas.
+- **Verificação obrigatória antes de qualquer migration/deploy:**
+  `node scripts/check-platform.mjs` → deve imprimir
+  `production data runtime ymahldldyxvwjeruaxpr`. Detalhe em
+  `docs/orientacao-banco-correto.md` e [[areas/supabase-runtime]].
+- [FATO CONFIRMADO 2026-09-15] Conferido nas duas pontas: o banco do app tem
+  **45 pastas, 155 listas, 7.515 cards** e as colunas `reference_id` (migration de
+  14/09 aplicada ali); o `xrnf…` respondeu **0 / 0 / 0** e sem essas colunas.
+- [CONFLITO RESOLVIDO] O processo de 15/09 declarava `xrnf…` como project ref de
+  produção. Estava errado — o correto é `ymah…`.
+
 ### FECHAMENTO 2026-09-15
 
 - **Próximo passo já preparado (não iniciado):** implementar **“Revisar cards /

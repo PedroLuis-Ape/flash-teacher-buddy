@@ -167,6 +167,22 @@ O agente deve parar e preparar um PR para revisão quando ocorrer qualquer uma d
 - O CI deve usar instalação limpa pelo lockfile e executar o workflow `Preview Safety Gate`.
 - Publicação continua sendo responsabilidade exclusiva da Lovable; o agente prepara e valida o PR, mas não publica nem faz rollback remoto automaticamente.
 
+## Banco oficial — regra dura (App Piteco)
+
+- **Dados de produção = `ymahldldyxvwjeruaxpr`.** É ali que vivem contas, pastas,
+  listas, flashcards, glossários, favoritos, progresso e sessões — e é ali que
+  migration/deploy de dados devem ser aplicados.
+- **`xrnfhhoxmmstagmelvyi` é o projeto administrado por ferramentas/transição**
+  (tem 0 pastas, 0 listas e 0 cards). `supabase/config.toml` aponta para ele: é
+  armadilha de tooling, não destino de dados.
+- Fonte única no código: `src/integrations/supabase/platformRuntime.ts`
+  (`PRODUCTION_DATA_PROJECT_ID`). O arquivo carrega um *AI EDITOR GUARD*: não
+  trocar essas constantes e não “consertar” app vazio mexendo nelas.
+- Antes de qualquer migration, deploy ou diagnóstico de “sumiu dado”, rode
+  `node scripts/check-platform.mjs` e confirme a saída
+  `production data runtime ymahldldyxvwjeruaxpr`. Contexto completo em
+  `docs/orientacao-banco-correto.md` e `docs/brain/areas/supabase-runtime.md`.
+
 ## Time CLARA — subagentes padrão (Codex)
 
 Subagentes neste repositório são, por padrão, as Claras. Ao spawnar, passe sempre `agent_type`

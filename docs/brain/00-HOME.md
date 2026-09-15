@@ -77,6 +77,10 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 [[01-CURRENT-STATE]]. Ele tem, por data, o que ficou finalizado, até onde ficou
 pronto e o que está em espera — é o que evita reler o vault inteiro.
 
+**Antes de tocar em banco:** o backend de produção é **`ymahldldyxvwjeruaxpr`**
+(`xrnf…` é só o projeto administrado, com 0 cards). Confirme com
+`node scripts/check-platform.mjs` e leia [[areas/supabase-runtime]].
+
 Ler primeiro [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
 depois [[01-CURRENT-STATE]] e o checkpoint da sessão.
 
