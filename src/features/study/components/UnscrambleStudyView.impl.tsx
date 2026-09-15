@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 
 interface UnscrambleStudyViewProps {
   front: string;
@@ -34,6 +35,10 @@ interface UnscrambleStudyViewProps {
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
   isSpecial?: boolean;
+  /** Revisar cards (QA de conteúdo) — separado do Ponto de atenção. */
+  isReviewFlagged?: boolean;
+  reviewFlagPending?: boolean;
+  onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
@@ -89,6 +94,9 @@ export const UnscrambleStudyView = ({
   onToggleFavorite,
   onToggleRedList,
   isSpecial = false,
+  isReviewFlagged = false,
+  reviewFlagPending = false,
+  onToggleReviewFlag,
   onToggleSpecial,
   isDifficult = false,
   onToggleDifficulty,
@@ -214,6 +222,14 @@ export const UnscrambleStudyView = ({
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />
+            {onToggleReviewFlag && (
+              <StudyReviewFlagButton
+                isFlagged={isReviewFlagged}
+                isPending={reviewFlagPending}
+                onToggle={onToggleReviewFlag}
+                className="right-3 top-3"
+              />
+            )}
         </div>
         <p className="mb-4 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:mb-3 sm:text-xs">Organize as palavras</p>
         <div className="flex items-start justify-center gap-2">

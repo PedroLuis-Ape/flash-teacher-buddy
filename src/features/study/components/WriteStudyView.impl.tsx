@@ -63,6 +63,7 @@ function normalizeRewriteComparison(value: string | null | undefined): string {
     .toLocaleLowerCase();
 }
 import type { SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 
 interface WriteStudyViewProps {
   front: string;
@@ -90,6 +91,10 @@ interface WriteStudyViewProps {
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
   isSpecial?: boolean;
+  /** Revisar cards (QA de conteúdo) — separado do Ponto de atenção. */
+  isReviewFlagged?: boolean;
+  reviewFlagPending?: boolean;
+  onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
@@ -135,6 +140,9 @@ export const WriteStudyView = ({
   onToggleFavorite,
   onToggleRedList,
   isSpecial = false,
+  isReviewFlagged = false,
+  reviewFlagPending = false,
+  onToggleReviewFlag,
   onToggleSpecial,
   isDifficult = false,
   onToggleDifficulty,
@@ -467,6 +475,14 @@ export const WriteStudyView = ({
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />
+            {onToggleReviewFlag && (
+              <StudyReviewFlagButton
+                isFlagged={isReviewFlagged}
+                isPending={reviewFlagPending}
+                onToggle={onToggleReviewFlag}
+                className="right-3 top-3"
+              />
+            )}
         </div>
 
         <div className={cn(

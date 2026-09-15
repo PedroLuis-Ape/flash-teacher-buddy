@@ -134,6 +134,7 @@ import {
   writeStudyLayerSnapshot,
 } from "@/features/study/lib/studyLayerSnapshot";
 import type { StudySessionSettingsSnapshot } from "@/features/study/lib/studySessionContext";
+import { useFlashcardReviewFlags, useFlashcardReviewFlagMutation } from "@/hooks/useFlashcardReviewFlags";
 
 interface Flashcard {
   id: string;
@@ -1789,6 +1790,16 @@ const Study = () => {
   const canToggleReinforcement = !isSystemCollection || listSystemKind === "reinforcement";
   const specialToggleHandler = isSystemCollection ? undefined : handleToggleSpecial;
 
+  // “Revisar cards”: QA de conteúdo do CARD EXATO exibido (camada visível),
+  // separado de Pontos de atenção. Metadata lateral: não entra na chave da sessão.
+  const { flaggedIds: reviewFlaggedIds } = useFlashcardReviewFlags(authUserId);
+  const reviewFlagMutation = useFlashcardReviewFlagMutation(authUserId);
+  const displayedReviewCardId = displayedCard?.id;
+  const isDisplayedReviewFlagged = Boolean(displayedReviewCardId && reviewFlaggedIds.has(displayedReviewCardId));
+  const reviewFlagToggleHandler = displayedReviewCardId
+    ? () => reviewFlagMutation.mutate({ flashcardId: displayedReviewCardId, enabled: !isDisplayedReviewFlagged })
+    : undefined;
+
   const handleSaveAttentionPoint = useCallback(async (
     targetFlashcardId: string,
     focus: SpecialFocusContext,
@@ -2570,6 +2581,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isReviewFlagged={isDisplayedReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={reviewFlagToggleHandler}
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
@@ -2614,6 +2628,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isReviewFlagged={isDisplayedReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={reviewFlagToggleHandler}
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
@@ -2649,6 +2666,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isReviewFlagged={isDisplayedReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={reviewFlagToggleHandler}
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
@@ -2681,6 +2701,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isReviewFlagged={isDisplayedReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={reviewFlagToggleHandler}
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
@@ -2712,6 +2735,9 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isReviewFlagged={isDisplayedReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={reviewFlagToggleHandler}
               isDifficult={isDisplayedReinforcement}
               onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
               difficultyPending={reinforcementMutation.isPending}
