@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus, RefreshCcw } from "lucide-react";
+import { Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus, RefreshCcw } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -293,7 +293,8 @@ const Index = () => {
 
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className="icon-tile !w-9 !h-9"><BookOpen className="h-4 w-4 text-primary" /></span>
+              {/* Símbolo estável: o ícone anterior herdava a cor do tile e ficava invisível. */}
+              <span className="icon-tile !w-9 !h-9" aria-hidden>📋</span>
               <span className="text-xs text-muted-foreground">{t("home.stats.lists")}</span>
             </div>
             {loading ? (
@@ -503,7 +504,7 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : myFolders.length > 0 ? (
-            <div className="grid grid-cols-1 items-start gap-2.5 min-[360px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 items-start gap-2.5 min-[480px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {myFolders.map((folder) => (
                 <ApeCardFolder
                   key={folder.id}
@@ -542,7 +543,7 @@ const Index = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            <div className="grid grid-cols-1 items-start gap-2.5 min-[360px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 items-start gap-2.5 min-[480px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
