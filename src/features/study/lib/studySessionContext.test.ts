@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLegacyStudySessionScopeKey,
+  buildLegacyStudySessionScopeKeyCandidates,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
   isPersistedStudySessionCompatible,
@@ -130,5 +131,80 @@ describe("study session context", () => {
       writeCorrectionMode: "hard",
     });
     expect(studySessionSettingsToPresetOverride({ version: 2 })).toBeNull();
+  });
+});
+
+describe("legacy v1 scope key compatibility", () => {
+  const legacyKeyFor = (input: {
+    mode: string;
+    subset: "all" | "favorites";
+    order: "random" | "sequential";
+    redFocus: boolean;
+    fastMode: boolean;
+    direction: "a-b" | "b-a" | "any";
+    studyFlowMode: "continuous" | "mastery_rounds";
+    playMode?: "both" | "single";
+    playSide?: "a" | "b";
+  }) => {
+    const snapshot: Record<string, unknown> = {
+      version: 1,
+      mode: input.mode,
+      subset: input.subset,
+      order: input.order,
+      redFocus: input.redFocus,
+      fastMode: input.fastMode,
+      direction: input.direction,
+      studyFlowMode: input.studyFlowMode,
+    };
+    if (input.playMode) snapshot.playMode = input.playMode;
+    if (input.playSide) snapshot.playSide = input.playSide;
+    return `study-session-v1:${encodeURIComponent(JSON.stringify(snapshot))}`;
+  };
+
+  const directions = ["a-b", "b-a", "any"] as const;
+  const plays = [
+    { playMode: "both", playSide: "a" },
+    { playMode: "both", playSide: "b" },
+    { playMode: "single", playSide: "a" },
+    { playMode: "single", playSide: "b" },
+    {},
+  ] as const;
+
+  it("covers every historical playMode/playSide pair for each direction", () => {
+    for (const direction of directions) {
+      const context = {
+        mode: "flip" as const,
+        subset: "all" as const,
+        order: "random" as const,
+        redFocus: false,
+        fastMode: false,
+        direction,
+        studyFlowMode: "continuous" as const,
+      };
+      const candidates = buildLegacyStudySessionScopeKeyCandidates(context);
+      for (const play of plays) {
+        expect(candidates).toContain(legacyKeyFor({ ...context, ...play }));
+      }
+      // A chave semântica atual continua sendo a primeira tentativa.
+      expect(candidates[0]).toBe(buildLegacyStudySessionScopeKey(context));
+      expect(new Set(candidates).size).toBe(candidates.length);
+    }
+  });
+
+  it("never mixes different decks or flows into the same candidate set", () => {
+    const base = {
+      mode: "write" as const,
+      subset: "all" as const,
+      order: "random" as const,
+      redFocus: false,
+      fastMode: false,
+      direction: "a-b" as const,
+      studyFlowMode: "continuous" as const,
+    };
+    const candidates = buildLegacyStudySessionScopeKeyCandidates(base);
+    const favorites = buildLegacyStudySessionScopeKeyCandidates({ ...base, subset: "favorites" });
+    const mastery = buildLegacyStudySessionScopeKeyCandidates({ ...base, studyFlowMode: "mastery_rounds" });
+    expect(candidates.some((key) => favorites.includes(key))).toBe(false);
+    expect(candidates.some((key) => mastery.includes(key))).toBe(false);
   });
 });
