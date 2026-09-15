@@ -159,6 +159,48 @@ export function buildLegacyStudySessionScopeKey(input: StudySessionContextInput)
   return `study-session-v1:${encodeURIComponent(JSON.stringify(buildStudySessionSettingsSnapshot(input)))}`;
 }
 
+/**
+ * LEGACY WIRE — leitura apenas.
+ *
+ * A chave v1 era o JSON do envelope inteiro, incluindo o par físico
+ * `playMode`/`playSide`. No contrato antigo `playMode: "both"` podia coexistir
+ * com QUALQUER `playSide` (o default era "a", mas o usuário podia ter mudado),
+ * de forma independente da `direction`. Logo um único mapeamento semântico
+ * V3 -> wire V1 NÃO reproduz a chave antiga de todos os usuários.
+ *
+ * Portanto, para LEITURA de sessões/snapshots antigos, geramos todas as chaves
+ * candidatas plausíveis (inclusive envelopes anteriores ao Play, sem os campos)
+ * e aceitamos a primeira que existir. O runtime moderno continua escrevendo
+ * apenas com `buildStudySessionScopeKey` e usando somente `playTarget`.
+ */
+export function buildLegacyStudySessionScopeKeyCandidates(
+  input: StudySessionContextInput,
+): string[] {
+  const base = buildStudySessionSettingsSnapshot(input);
+  const semantic = { playMode: base.playMode, playSide: base.playSide };
+  const variants: Array<{ playMode?: "both" | "single"; playSide?: "a" | "b" }> = [
+    semantic,
+    { playMode: "both", playSide: "a" },
+    { playMode: "both", playSide: "b" },
+    { playMode: "single", playSide: "a" },
+    { playMode: "single", playSide: "b" },
+    {},
+  ];
+
+  const keys: string[] = [];
+  for (const variant of variants) {
+    const snapshot: StudySessionSettingsSnapshot = { ...base };
+    delete snapshot.playMode;
+    delete snapshot.playSide;
+    if (variant.playMode) snapshot.playMode = variant.playMode;
+    if (variant.playSide) snapshot.playSide = variant.playSide;
+    const key = `study-session-v1:${encodeURIComponent(JSON.stringify(snapshot))}`;
+    if (!keys.includes(key)) keys.push(key);
+  }
+  return keys;
+}
+
+
 export function isStudySessionSettingsSnapshot(value: unknown): value is StudySessionSettingsSnapshot {
   if (!value || typeof value !== "object") return false;
   const row = value as Partial<StudySessionSettingsSnapshot>;

@@ -41,6 +41,8 @@ import {
 } from "@/features/study/lib/masterySessionSnapshot";
 import {
   buildLegacyStudySessionScopeKey,
+  buildLegacyStudySessionScopeKeyCandidates,
+
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
   isPersistedStudySessionCompatible,
@@ -542,6 +544,20 @@ export function useStudyEngine(
     sessionScopeKey: legacySessionScopeKey,
     cardsSignature,
   }), [userScope, localResourceId, mode, legacySessionScopeKey, cardsSignature]);
+  // LEGACY WIRE (somente leitura): o envelope v1 embutia o par físico do Play,
+  // que podia variar por usuário. Lemos todas as chaves candidatas.
+  const legacyStudySnapshotKeys = useMemo(
+    () => buildLegacyStudySessionScopeKeyCandidates(sessionContext).map((candidate) =>
+      buildLegacyStudySnapshotKey({
+        userScope: userScope || 'anon',
+        listId: localResourceId,
+        mode,
+        sessionScopeKey: candidate,
+        cardsSignature,
+      })),
+    [userScope, localResourceId, mode, sessionContext, cardsSignature],
+  );
+
 
   const masterySnapshotKey = useMemo(
     () => buildMasterySnapshotKey(studySnapshotKey),
@@ -599,13 +615,24 @@ export function useStudyEngine(
     const uid = userScope || 'anon';
     return `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${legacySessionScopeKey}`;
   }, [userScope, localResourceId, mode, legacySessionScopeKey]);
+  // LEGACY WIRE (somente leitura): todas as variantes plausíveis do par físico
+  // do Play que existiam no envelope v1.
+  const legacyFlipProgressKeys = useMemo(() => {
+    const uid = userScope || 'anon';
+    return buildLegacyStudySessionScopeKeyCandidates(sessionContext).map(
+      (candidate) => `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${candidate}`,
+    );
+  }, [userScope, localResourceId, mode, sessionContext]);
 
   // Load flip mode progress from localStorage (scoped)
   const loadFlipProgress = useCallback(() => {
     if (!localResourceId) return null;
     try {
       const saved = localStorage.getItem(flipProgressKey)
-        ?? localStorage.getItem(legacyFlipProgressKey);
+        ?? legacyFlipProgressKeys.reduce<string | null>(
+          (found, key) => found ?? localStorage.getItem(key),
+          null,
+        );
       if (saved) {
         return JSON.parse(saved);
       }
@@ -613,7 +640,8 @@ export function useStudyEngine(
       console.error('Error loading flip progress:', e);
     }
     return null;
-  }, [localResourceId, flipProgressKey, legacyFlipProgressKey]);
+  }, [localResourceId, flipProgressKey, legacyFlipProgressKeys]);
+
 
   // Save flip mode progress to localStorage (scoped)
   const saveFlipProgress = useCallback(() => {
@@ -942,10 +970,14 @@ export function useStudyEngine(
       const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
         resultCardIds,
-      }) ?? readStudySnapshot(legacyStudySnapshotKey, snapshotCardIds, {
-        enforceUniqueOrder: !!gameSettings.redFocus,
-        resultCardIds,
-      });
+      }) ?? legacyStudySnapshotKeys.reduce<ReturnType<typeof readStudySnapshot>>(
+        (found, key) => found ?? readStudySnapshot(key, snapshotCardIds, {
+          enforceUniqueOrder: !!gameSettings.redFocus,
+          resultCardIds,
+        }),
+        null,
+      );
+
       sessionLayerRef.current = localSnapshot?.layer;
       setRestoredSessionLayer(localSnapshot?.layer ?? null);
       fallbackLocalSnapshot = localSnapshot;
@@ -1028,7 +1060,12 @@ export function useStudyEngine(
         const restored = restoreStudySession({
           session: continuing ? { ...row, session_snapshot: continuing } : row,
           eligibleIds: flashcards.map(card => card.id),
-          local: readRawStudySnapshot(studySnapshotKey) ?? readRawStudySnapshot(legacyStudySnapshotKey),
+          local: readRawStudySnapshot(studySnapshotKey)
+            ?? legacyStudySnapshotKeys.reduce<ReturnType<typeof readRawStudySnapshot>>(
+              (found, key) => found ?? readRawStudySnapshot(key),
+              null,
+            ),
+
           unique: !!gameSettings.redFocus, resultCardIds,
         });
         const snapshot = { ...restored.snapshot, settingsSnapshot: sessionSettingsSnapshot };
@@ -1309,7 +1346,7 @@ export function useStudyEngine(
     isMasteryMode,
     listId,
     localResourceId,
-    legacyStudySnapshotKey,
+    legacyStudySnapshotKeys,
     loadFlipProgress,
     masterySnapshotKey,
     mode,

@@ -25,7 +25,17 @@ import { getRedListCardClass } from "./RedListIndicator";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import "./flipStudyMobileCompact.css";
 
-const AUTO_PLAY_DELAY_MS = 7000;
+/**
+ * Autoplay é EVENT-DRIVEN: a duração da fala vem do `onend` real do TTS
+ * (`useTTS` resolve a promessa com geração/token própria). Estes valores são
+ * apenas pausa de UI entre passos e o tempo de leitura quando NÃO há fala
+ * (TTS desligado, sem suporte ou texto vazio). Nunca são relógio da fala.
+ */
+const AUTO_PLAY_UI_GAP_MS = 600;
+const AUTO_PLAY_SILENT_READ_MS = 3000;
+/** Failsafe: só usado se a promessa de fala nunca resolver. */
+const AUTO_PLAY_FAILSAFE_MS = 20000;
+
 const MOUSE_DRAG_THRESHOLD_PX = 6;
 
 type ManualFlipAnswer = "knew" | "didntKnow" | null;
@@ -252,9 +262,13 @@ export const FlipStudyView = ({
     if (!fastMode || (isAutoPlaying && playModeEffective === "single")) {
       setIsFlipped(fixedSideToRenderedSide(side) === "second");
     }
-    if (ttsEnabled) speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
-    else stop();
+    if (!ttsEnabled) {
+      stop();
+      return Promise.resolve(null);
+    }
+    return speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
   }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playModeEffective, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
+
 
   const handlePlayTop = () => {
     pauseAutoPlay();
@@ -400,16 +414,18 @@ export const FlipStudyView = ({
     speakSide(isAFirst ? "a" : "b");
   }, [autoSpeakOnCardChange, back, flashcardId, front, isAFirst, isAutoPlaying, speakSide, ttsEnabled]);
 
+  // Passo do autoplay: fala -> onend REAL -> pausa curta de UI -> próximo passo.
+  // Uma geração por passo garante que uma fala antiga não avance nem cancele
+  // um passo iniciado depois.
+  const autoPlayGenerationRef = useRef(0);
   useEffect(() => {
-    if (!isAutoPlaying) {
-      clearAutoPlayTimeout();
-      return;
-    }
-
+    autoPlayGenerationRef.current += 1;
+    const generation = autoPlayGenerationRef.current;
     clearAutoPlayTimeout();
-    speakSide(autoPlayCurrentSide);
+    if (!isAutoPlaying) return;
 
-    autoPlayTimeoutRef.current = setTimeout(() => {
+    const advance = () => {
+      if (autoPlayGenerationRef.current !== generation) return;
       const step = getNextFlipAutoPlayStep({
         mode: playModeEffective,
         configuredSide: playFixedSide,
@@ -429,10 +445,32 @@ export const FlipStudyView = ({
       setIsAutoPlaying(false);
       writeFlipAutoPlayState(false, playFixedSide);
       stop();
-    }, AUTO_PLAY_DELAY_MS);
+    };
 
-    return clearAutoPlayTimeout;
+    const scheduleAdvance = (delay: number) => {
+      if (autoPlayGenerationRef.current !== generation) return;
+      clearAutoPlayTimeout();
+      autoPlayTimeoutRef.current = setTimeout(advance, delay);
+    };
+
+    // Failsafe: nunca é o relógio da fala, só protege contra promessa pendente.
+    autoPlayTimeoutRef.current = setTimeout(advance, AUTO_PLAY_FAILSAFE_MS);
+
+    void Promise.resolve(speakSide(autoPlayCurrentSide)).then((result) => {
+      if (autoPlayGenerationRef.current !== generation) return;
+      // Fala cancelada por troca de card/pausa: quem cancelou decide o próximo
+      // passo, este passo apenas encerra.
+      if (result && result.reason === "cancelled") return;
+      const spoke = Boolean(result && result.reason === "completed" && result.startedAt !== null);
+      scheduleAdvance(spoke ? AUTO_PLAY_UI_GAP_MS : AUTO_PLAY_SILENT_READ_MS);
+    });
+
+    return () => {
+      autoPlayGenerationRef.current += 1;
+      clearAutoPlayTimeout();
+    };
   }, [autoPlayCurrentSide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, playModeEffective, playFixedSide, speakSide, stop]);
+
 
   useEffect(() => () => clearAutoPlayTimeout(), [clearAutoPlayTimeout]);
 
