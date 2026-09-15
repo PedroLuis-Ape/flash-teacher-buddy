@@ -46,7 +46,7 @@ describe("event-driven TTS ownership", () => {
   it("never triggers audio through DOM clicks and never touches speechSynthesis directly in the modes", () => {
     for (const path of [FLIP, FLIP_WRAPPER, PRONUNCIATION]) {
       const source = read(path);
-      expect(source).not.toContain('title="Ouvir áudio"');
+      expect(source).not.toMatch(/querySelector[\s\S]{0,120}\.click\(\)/);
       expect(source).not.toContain("speechSynthesis.cancel()");
       expect(source).not.toContain("window.speechSynthesis.cancel");
     }
