@@ -41,6 +41,8 @@ export function ApeCardFolder({
         "space-ui-folder-card group card-3d ape-card-row rounded-2xl",
         "bg-card ape-interactive-card",
         "border border-border text-left shadow-sm",
+        // Mobile: menos respiro interno e gap menor para sobrar largura ao nome.
+        "gap-2 px-2.5 py-2.5 md:gap-3 md:px-4 md:py-3",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
         disableAnimation && "opacity-100 translate-y-0",
@@ -48,12 +50,12 @@ export function ApeCardFolder({
         className,
       )}
     >
-      <div data-motion-icon="folder" className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl border border-primary/20 bg-primary/15 flex items-center justify-center shadow-sm transition-colors duration-200 group-hover:bg-primary/25">
+      <div data-motion-icon="folder" className="space-ui-card-icon relative shrink-0 w-9 h-9 rounded-lg border border-primary/20 bg-primary/15 flex items-center justify-center shadow-sm transition-colors duration-200 group-hover:bg-primary/25 md:w-12 md:h-12 md:rounded-xl">
         <span aria-hidden className="absolute inset-1 rounded-full border border-primary/15" />
         {isLocked ? (
-          <Lock className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          <Lock className="relative h-4 w-4 text-primary transition-transform group-hover:scale-110 md:h-5 md:w-5" />
         ) : (
-          <span aria-hidden className="relative text-2xl leading-none transition-transform group-hover:scale-110">
+          <span aria-hidden className="relative text-lg leading-none transition-transform group-hover:scale-110 md:text-2xl">
             {emoji?.trim() || "📁"}
           </span>
         )}
