@@ -35,6 +35,29 @@ Parte das regras do drawer está carregada junto da camada Galaxy; testar paleta
 - [NEXT] Revisar mutation/service canônica, invalidação das queries e cobertura
   de mark/unmark/remarcação/camadas.
 
+## P0 — "Voltar para onde parou" voltava para lista antiga — corrigido em 2026-09-15
+
+- [ROOT-CAUSE] três causas somadas: o hook da Home não fornecia o
+  localStorage (ponteiro local fora da seleção), updated_at técnico era tratado
+  como atividade do usuário, e a consulta ignorava sessões concluídas, deixando
+  uma sessão velha ainda aberta assumir o card.
+- [FIX] marcador dedicado de atividade em study_sessions
+  (last_activity_at/revision/card/index/layer) escrito só pelo RPC
+  touch_study_session_activity_v1, seleção por atividade real, sessão concluída
+  não retomável e publicação apenas por mudança de identidade de atividade.
+- [REGRESSION-CONTRACT] src/features/study/lib/studyResumeActivity.contract.test.ts
+- [NEXT] validação visual em preview autenticado (mobile e desktop).
+
+## P1 — Flip extenso aceitava Sabia/Não Sabia — corrigido em 2026-09-15
+
+- [ROOT-CAUSE] a view do Flip não recebia o fluxo de estudo e renderizava
+  sempre a avaliação; o listener próprio também tratava next/prev, e
+  useKeyboardShortcuts não checava defaultPrevented (duas navegações por seta).
+- [FIX] prop studyFlowMode com dono único da avaliação, avaliação escondida e
+  inerte em continuous, next/prev apenas no roteador global e navegação livre
+  no Flip extenso.
+- [REGRESSION-CONTRACT] src/features/study/components/flipAssessmentContract.test.ts
+
 ## Funcional fora do escopo
 
 Nenhum bug de dados foi comprovado por esta auditoria visual. Problemas de persistência/importação/sessão exigem investigação separada.

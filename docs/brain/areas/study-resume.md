@@ -26,15 +26,23 @@ related:
 Registrar de onde o card da Home tira a retomada, o que cada camada pode
 garantir e como verificar isso sem reler o código a cada retomada.
 
-## Fonte de verdade
+## Fonte de verdade (contrato de atividade real, 2026-09-15)
 
-1. A tabela study_sessions (sessões abertas do usuário, ordenadas por
-   updated_at) é a atividade real de estudo, independente da superfície que a
-   criou.
+1. A atividade real é study_sessions.last_activity_at, escrita SOMENTE pelo RPC
+   touch_study_session_activity_v1 com revisão monotônica. updated_at NÃO é
+   atividade: ele também muda por persistência, outbox, retry, reconciliação e
+   restauração, e por isso uma gravação técnica tardia de uma sessão antiga
+   fazia o card voltar para ela.
+1b. Sessões concluídas participam da leitura da atividade. Se a última atividade
+   pertence a uma sessão concluída ou descartada, o card fica SEM retomada; uma
+   sessão velha ainda aberta nunca ressuscita no lugar dela.
+1c. Usuário sem nenhuma atividade rastreada continua no caminho legado (sessões
+   abertas por updated_at). A partir da primeira atividade nova, o legado deixa
+   de participar da decisão.
 2. A chave local ape_state_study_resume:v2:[escopo] é o cache da sessão exata
    do aparelho (sessionId, card, camada, configurações).
-3. src/features/study/lib/studyResumeSelection.ts decide: vence a maior
-   updatedAt; empate fica com o ponteiro local; diferença dentro de 5s é
+3. src/features/study/lib/studyResumeSelection.ts decide por
+   selectStudyResumeByActivity: vence a maior lastActivityAt; empate fica com o ponteiro local; diferença dentro de 5s é
    tratada como desvio de relógio entre aparelho e servidor.
 4. src/features/study/lib/studyResumeQuery.ts consulta as duas fontes, filtra
    pelo escopo de instituição e realinha o ponteiro para a sessão vencedora,
@@ -43,7 +51,9 @@ garantir e como verificar isso sem reler o código a cada retomada.
 ## Camada comum das superfícies de estudo
 
 src/features/study/hooks/useStudyResumePublisher.ts é a única forma de
-publicar o ponteiro. É usado por src/pages/Study.tsx (flip, write,
+publicar atividade (ponteiro local + RPC remoto), e só publica quando a
+IDENTIDADE DE ATIVIDADE muda (sessão, recurso, modo, card/índice, camada) ou
+por pedido explícito. Rerender técnico, settings e cache não movem o ponteiro. É usado por src/pages/Study.tsx (flip, write,
 multiple-choice, unscramble, pronunciation) e por src/pages/MixedStudy.tsx
 (rota /list/:id/mixed-study, modo durável mixed-adaptive). Uma sessão nova em
 qualquer superfície passa a assumir o card.
@@ -84,3 +94,17 @@ cache.
   divergência só apareceria com outra sessão mais nova da mesma lista e
   escopo. Ver [[08-RISKS]].
 - Nenhum schema, RLS, RPC ou migration foi alterado por esta correção.
+
+## Flip: navegação e avaliação (2026-09-15)
+
+- studyFlowMode = mastery_rounds: Sabia/Não Sabia existem, e a seta para frente
+  não burla a avaliação.
+- studyFlowMode = continuous: nenhum julgamento na tela nem no teclado; Espaço
+  só vira o card; anterior/próximo livres por botão, teclado e swipe, sem gerar
+  resultado nem skip avaliativo.
+- Existe UM dono funcional de next/prev: o roteador global em Study.tsx.
+  useKeyboardShortcuts ignora tecla já tratada (defaultPrevented), e o
+  StudyCardDeck continua apenas preparando a animação.
+- Contratos: src/features/study/components/flipAssessmentContract.test.ts e
+  src/features/study/lib/studyResumeActivity.contract.test.ts.
+- Relatório: reports/study-runtime/2026-09-15-resume-and-flip-navigation.json
