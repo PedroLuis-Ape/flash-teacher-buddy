@@ -48,16 +48,8 @@ export function resolvePersonalStudySubset(
   };
 }
 
-/**
- * Legacy generic red-card repetition is intentionally disabled.
- *
- * Repetition belongs to the engines that explicitly own it: Mixed keeps its
- * adaptive failed-card reinjection and mastery_rounds keeps its round/retry
- * engine. A plain/extensive queue must never grow hidden duplicate entries just
- * because a favorite card is also red.
- */
-export function shouldInjectRedPriority(_settings: StudyScopeSettings): boolean {
-  return false;
+export function shouldInjectRedPriority(settings: StudyScopeSettings): boolean {
+  return resolveStudyScope(settings) === "favorites";
 }
 
 /**
@@ -142,7 +134,9 @@ export function filterCardsForStudyScope<TCard extends StudyScopeCard>({
       new Set(scope === "red" ? redListIds : favoriteIds),
     ));
 
-  // A deck represents playable identities, not database rows. Duplicate rows
-  // with the same playable id must never become duplicate turns in Extenso.
+  // The raw deck can transiently contain the same playable row more than once
+  // (pagination/cache reconciliation, imported legacy data). That must never
+  // create duplicate ordinary turns. Intentional red repetition happens later
+  // in the study engine and therefore remains untouched by this base dedupe.
   return dedupePlayableCards(scoped);
 }
