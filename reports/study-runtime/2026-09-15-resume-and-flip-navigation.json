@@ -1,0 +1,111 @@
+{
+  "schema": "ape.study-runtime.audit",
+  "version": 1,
+  "generated_at": "2026-09-15T01:25:57+00:00",
+  "project": {
+    "name": "App Piteco / ApeEducation",
+    "repository": "PedroLuis-Ape/flash-teacher-buddy",
+    "production_data_project_ref": "xrnfhhoxmmstagmelvyi"
+  },
+  "commits": {
+    "base": "73712dfdc5db35bd2fcefc081fb928a4a677fc81",
+    "final": "pending_commit_of_this_round",
+    "note": "O SHA final é criado ao encerrar este turno; não foi inventado aqui."
+  },
+  "executive_summary": "Duas correções estruturais: (P0) o card 'Voltar para onde parou' passa a seguir a última interação REAL do usuário, com marcador dedicado no banco e revisão monotônica, em vez de updated_at técnico; (P1) o Flip extenso (continuous) deixa de mostrar e de aceitar Sabia/Não Sabia e ganha navegação livre com um único dono de teclado.",
+  "problems": [
+    {
+      "id": "P0-1",
+      "severity": "critical",
+      "title": "Home podia voltar para uma lista antiga",
+      "root_cause": "useLatestStudyResume chamava fetchLatestStudyResume sem storage, então o ponteiro local não participava da seleção."
+    },
+    {
+      "id": "P0-2",
+      "severity": "critical",
+      "title": "updated_at usado como atividade do usuário",
+      "root_cause": "Persistência, outbox, retry, reconciliação e restauração também gravam updated_at; uma gravação técnica tardia de sessão antiga parecia mais recente."
+    },
+    {
+      "id": "P0-3",
+      "severity": "critical",
+      "title": "Sessão concluída deixava sessão velha ressuscitar",
+      "root_cause": "A consulta considerava apenas sessões abertas, então a mais recente concluída era ignorada e uma antiga ainda aberta assumia o card."
+    },
+    {
+      "id": "P1-1",
+      "severity": "high",
+      "title": "Flip extenso mostrava e aceitava Sabia/Não Sabia",
+      "root_cause": "FlipStudyView.impl.tsx renderizava actionButtons sempre e nem recebia o fluxo de estudo; o listener próprio tratava knew/didntKnow e também next/prev."
+    },
+    {
+      "id": "P1-2",
+      "severity": "high",
+      "title": "Dois donos da mesma tecla de navegação",
+      "root_cause": "useKeyboardShortcuts não verificava event.defaultPrevented, então o listener do Flip e o roteador global podiam responder à mesma seta."
+    }
+  ],
+  "contract": {
+    "resume": [
+      "Retomada = sessão/card da última interação real do usuário.",
+      "Sync técnico, retry, outbox, reconciliação e restauração não são atividade.",
+      "Identidade exata: sessionId + recurso + modo + card/índice + camada.",
+      "Autoridade durável é o Supabase; o ponteiro local só responde antes do touch remoto e vence empates até 5s.",
+      "Se a última atividade pertence a sessão concluída/descartada, o card fica vazio; sessão velha aberta nunca ressuscita.",
+      "Com qualquer atividade rastreada, sessões legadas ordenadas por updated_at deixam de participar.",
+      "Lista combinada retoma a lista/sessão jogada, não a lista canônica do flashcard."
+    ],
+    "flip": [
+      "mastery_rounds: Sabia/Não Sabia visíveis e funcionais; a seta para frente não burla a avaliação.",
+      "continuous: nenhum julgamento na tela nem no teclado; Espaço só vira o card; anterior/próximo livres por botão, teclado e swipe; navegar não gera resultado nem skip avaliativo.",
+      "Um único dono funcional de next/prev: o roteador global em Study.tsx."
+    ]
+  },
+  "changes": {
+    "resume_activity": [
+      "src/features/study/lib/resumableStudySession.ts: lastActivityAt/activityRevision/completed e leitura das colunas last_activity_*.",
+      "src/features/study/lib/studyResumeSelection.ts: selectStudyResumeByActivity com contrato activity|legacy e sessão concluída não retomável.",
+      "src/features/study/lib/studyResumeQuery.ts: consulta por last_activity_at DESC NULLS LAST incluindo concluídas, união sem duplicar sessão e realinhamento do ponteiro.",
+      "src/features/study/lib/studySessionActivity.ts (novo): validação e chamada do RPC de atividade.",
+      "src/features/study/hooks/useStudyResumePublisher.ts: publica local+remoto apenas quando a identidade de atividade muda, com revisão monotônica.",
+      "src/features/study/lib/studyResumePointer.ts: activityRevision no ponteiro.",
+      "src/hooks/useLatestStudyResume.ts: o hook real da Home passa a fornecer o localStorage."
+    ],
+    "flip_and_input": [
+      "src/features/study/components/FlipStudyView.impl.tsx: prop studyFlowMode, assessmentEnabled como dono único, avaliação escondida e inerte em continuous, remoção do tratamento de next/prev.",
+      "src/pages/Study.tsx: flipFreeNavigation, nextCard navega livre no Flip extenso e mantém requestSkip nos demais, studyFlowMode passado ao Flip.",
+      "src/hooks/useKeyboardShortcuts.ts: ignora tecla já tratada (defaultPrevented)."
+    ]
+  },
+  "database": {
+    "migration": "aditiva e idempotente em study_sessions: last_activity_at, last_activity_revision, last_activity_card_id, last_activity_index, last_activity_layer_index + índice (user_id, last_activity_at DESC NULLS LAST)",
+    "rpc": "touch_study_session_activity_v1 (SECURITY DEFINER, auth.uid, própria sessão, revisão monotônica, GRANT authenticated/service_role, REVOKE anon/PUBLIC)",
+    "destructive": false,
+    "auth_or_ref_changed": false,
+    "linter": "183 avisos preexistentes do projeto, nenhum específico desta migration"
+  },
+  "tests": {
+    "added": [
+      "src/features/study/lib/studyResumeActivity.contract.test.ts (12 casos)",
+      "src/features/study/components/flipAssessmentContract.test.ts (8 casos)",
+      "src/features/study/hooks/useStudyResumePublisher.test.tsx (+1 caso de atividade x rerender técnico)"
+    ],
+    "gates": {
+      "vitest_full": "329 arquivos / 2131 testes — passou",
+      "typecheck": "tsgo -p tsconfig.app.json — passou",
+      "lint_touched": "0 erros, 12 avisos preexistentes em Study.tsx",
+      "build": "passou (bundle aprovado, SEO 100/100)"
+    }
+  },
+  "risks": [
+    "Não foi possível validar visualmente em preview autenticado (mobile e desktop) neste ambiente.",
+    "Sessões criadas antes desta versão só têm o caminho legado até a primeira atividade nova.",
+    "Testes do Flip são contratuais sobre o código-fonte: o ambiente não tem @testing-library para render real."
+  ],
+  "deployment": {
+    "requested": true,
+    "performed_by_agent": false,
+    "status": "pending_external_publish"
+  },
+  "cost_credits": null
+}
