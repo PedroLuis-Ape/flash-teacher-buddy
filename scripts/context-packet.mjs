@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * context-packet.mjs - CONTEXT PACKET compacto do Segundo Cerebro do App Piteco.
  *

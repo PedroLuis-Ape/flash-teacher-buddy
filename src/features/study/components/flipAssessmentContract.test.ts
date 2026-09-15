@@ -1,10 +1,18 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const impl = readFileSync(new URL("./FlipStudyView.impl.tsx", import.meta.url), "utf8");
-const study = readFileSync(new URL("../../../pages/Study.tsx", import.meta.url), "utf8");
-const shortcuts = readFileSync(new URL("../../../hooks/useKeyboardShortcuts.ts", import.meta.url), "utf8");
-const deck = readFileSync(new URL("./StudyCardDeck.tsx", import.meta.url), "utf8");
+/**
+ * Normaliza EOL: o checkout no Windows entrega CRLF e os contratos abaixo
+ * comparam trechos multi-linha. Sem isso a suíte fica vermelha aqui e verde no
+ * CI Linux — falso negativo de ambiente, não de comportamento.
+ */
+const read = (relative: string) =>
+  readFileSync(new URL(relative, import.meta.url), "utf8").replace(/\r\n/g, "\n");
+
+const impl = read("./FlipStudyView.impl.tsx");
+const study = read("../../../pages/Study.tsx");
+const shortcuts = read("../../../hooks/useKeyboardShortcuts.ts");
+const deck = read("./StudyCardDeck.tsx");
 
 describe("contrato de avaliação do Flip (extenso x gamificado)", () => {
   it("existe um único dono da decisão de avaliação, derivado do fluxo de estudo", () => {

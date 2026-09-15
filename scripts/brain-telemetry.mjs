@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * brain-telemetry.mjs - ledger append-only (JSONL) do custo de contexto por
  * tarefa, mais o comando "report".

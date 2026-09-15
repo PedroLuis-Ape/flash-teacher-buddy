@@ -166,7 +166,7 @@ const Store = () => {
                 <p className="text-muted-foreground">Nenhum pacote publicado no momento.</p>
               </div>
             ) : (
-              <ApeGrid cols={{ default: 2, md: 3, lg: 4, xl: 5 }}>
+              <ApeGrid cols={{ default: 1, sm: 2, md: 3, lg: 4, xl: 5 }}>
                 {skins.map((skin) => (
                   <SkinCard
                     key={skin.id}
