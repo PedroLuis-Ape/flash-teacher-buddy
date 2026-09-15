@@ -22,6 +22,7 @@ import { StudyToolsMenu } from "./StudyToolsMenu";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import { getRedListCardClass } from "./RedListIndicator";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import "./flipStudyMobileCompact.css";
 
@@ -167,6 +168,10 @@ interface FlipStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  /** “Revisar cards”: QA de conteúdo do flashcard — domínio separado do Ponto de atenção. */
+  isReviewFlagged?: boolean;
+  reviewFlagPending?: boolean;
+  onToggleReviewFlag?: () => void;
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
   difficultyPending?: boolean;
@@ -208,6 +213,9 @@ export const FlipStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isReviewFlagged = false,
+  reviewFlagPending = false,
+  onToggleReviewFlag,
   isDifficult = false,
   onToggleDifficulty,
   difficultyPending = false,
@@ -619,6 +627,14 @@ export const FlipStudyView = ({
       <div className="flip-study-mobile-compact mx-auto flex w-full max-w-2xl flex-col items-center gap-3 sm:gap-4">
         {autoPlayControls}
         <Card className={cn("relative w-full overflow-hidden", getRedListCardClass(isRedListed))}>
+          {onToggleReviewFlag && (
+            <StudyReviewFlagButton
+              isFlagged={isReviewFlagged}
+              isPending={reviewFlagPending}
+              onToggle={onToggleReviewFlag}
+              className="right-14 top-2"
+            />
+          )}
           <div className="absolute right-2 top-2 z-10">{toolsButton}</div>
           {singleSidePlay ? (
             <SidePanel
