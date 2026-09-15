@@ -19,6 +19,7 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
 import { clearShortcutScope, setShortcutScope } from "@/features/study/lib/keyboardCommandRouter";
+import { useTypeToAnswer } from "@/features/study/hooks/useTypeToAnswer";
 import {
   evaluateWriteAnswer,
   summarizeDifferences,
