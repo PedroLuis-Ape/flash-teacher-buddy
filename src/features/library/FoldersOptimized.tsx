@@ -572,17 +572,17 @@ export default function FoldersOptimized() {
 
   const foldersTab = (
     <div className="space-y-3 p-4">
-      <div className="flex items-center justify-between gap-2 py-1">
-        <div className="ape-action-cluster">
+      <div className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="ape-action-cluster !grid w-full grid-cols-2 gap-2 sm:!flex sm:w-auto sm:flex-wrap">
           {folders.length > 0 && (
-            <Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-[40px]" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>
+            <Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>
               {selectMode ? <><X className="mr-2 h-4 w-4" />Cancelar</> : <><CheckSquare className="mr-2 h-4 w-4" />Selecionar</>}
             </Button>
           )}
-          <LibraryExportDialog userId={userId} />
+          <LibraryExportDialog userId={userId} label="Exportar" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" />
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild><Button size="sm" className="min-h-[40px]"><FolderPlus className="mr-2 h-4 w-4" />Nova pasta</Button></DialogTrigger>
+            <DialogTrigger asChild><Button size="sm" className="col-span-2 min-h-11 w-full min-w-0 justify-center sm:col-auto sm:w-auto"><FolderPlus className="mr-2 h-4 w-4" />Nova pasta</Button></DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Nova Pasta</DialogTitle><DialogDescription>Crie uma pasta para organizar suas listas de estudo</DialogDescription></DialogHeader>
               <div className="space-y-4">
@@ -593,8 +593,8 @@ export default function FoldersOptimized() {
             </DialogContent>
           </Dialog>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex min-h-11 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das pastas">
+        <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <div className="inline-flex min-h-11 shrink-0 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das pastas">
             <Button type="button" variant={folderViewMode === "list" ? "secondary" : "ghost"} size="sm" className="min-h-9 gap-1.5 px-3" aria-label="Visualizar pastas em lista" aria-pressed={folderViewMode === "list"} onClick={() => handleFolderViewModeChange("list")}>
               <List className="h-4 w-4" /><span className="sr-only sm:not-sr-only">Lista</span>
             </Button>
@@ -602,7 +602,7 @@ export default function FoldersOptimized() {
               <LayoutGrid className="h-4 w-4" /><span className="sr-only sm:not-sr-only">Grade</span>
             </Button>
           </div>
-          <Button type="button" variant={localOrdering ? "secondary" : "outline"} size="sm" className="min-h-11 gap-1.5" aria-pressed={localOrdering} aria-label="Ordenar pastas neste dispositivo" onClick={() => setLocalOrdering((value) => !value)}>
+          <Button type="button" variant={localOrdering ? "secondary" : "outline"} size="sm" className="min-h-11 min-w-0 flex-1 gap-1.5 sm:flex-none" aria-pressed={localOrdering} aria-label="Ordenar pastas neste dispositivo" onClick={() => setLocalOrdering((value) => !value)}>
             <ArrowUpDown className="h-4 w-4" />
             <span>{localOrdering ? "Ordenar neste dispositivo" : "Ordenar"}</span>
           </Button>

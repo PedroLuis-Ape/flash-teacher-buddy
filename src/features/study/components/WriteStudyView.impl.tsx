@@ -557,7 +557,7 @@ export const WriteStudyView = ({
         </Alert>
       )}
 
-      <div className="space-y-4" tabIndex={-1}>
+      <div className="min-w-0 space-y-4" tabIndex={-1}>
         {!hasFeedback && (
         <Textarea
           ref={inputRef}
@@ -577,7 +577,7 @@ export const WriteStudyView = ({
           enterKeyHint="done"
           aria-label={isRewriteActivity && rewriteState.phase === "LISTENING" ? "Digite a frase que você ouviu" : isRewriteActivity ? "Reescreva a frase correta" : "Digite sua resposta"}
           className={cn(
-            "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
+            "w-full min-w-0 min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
             feedbackStatus === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
             feedbackStatus === "almost" && "border-2 border-amber-500 bg-amber-500/8",

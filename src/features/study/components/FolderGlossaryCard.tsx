@@ -21,8 +21,8 @@ export function FolderGlossaryCard({ folderId, className }: FolderGlossaryCardPr
       onClick={() => navigate(`/glossary?folder=${folderId}`)}
     >
       <Card className="border-primary/30 bg-primary/5 transition-all hover:border-primary/60 hover:bg-primary/10 hover:shadow-md active:scale-[0.99]">
-        <CardContent className="flex items-center gap-3 p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <CardContent className="flex min-w-0 items-start gap-3 p-3 sm:items-center">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:mt-0">
             <BookOpen className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -37,7 +37,7 @@ export function FolderGlossaryCard({ folderId, className }: FolderGlossaryCardPr
               Compartilhado por todas as listas desta pasta
             </p>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <ChevronRight className="mt-2 h-5 w-5 shrink-0 text-muted-foreground sm:mt-0" />
         </CardContent>
       </Card>
     </button>
