@@ -217,18 +217,27 @@ export function resumableFromRemoteSession(
     title: typeof list?.title === "string" && list.title.trim().length > 0 ? list.title : "Sessão de estudo",
     gameMode: mode,
     path,
-    currentIndex: Math.max(0, Number(row.current_index) || 0),
+    // A posição exata da última interação vence `current_index` (que também é
+    // reescrito por persistência técnica) quando o servidor a conhece.
+    currentIndex: Number.isFinite(activityIndex) && activityIndex >= 0
+      ? Math.trunc(activityIndex)
+      : Math.max(0, Number(row.current_index) || 0),
     totalCards: progress.totalCards,
     progressCount: progress.progressCount,
     progressUnit: progress.progressUnit,
-    currentCardId: null,
-    layerIndex: null,
+    currentCardId: typeof row.last_activity_card_id === "string" ? row.last_activity_card_id : null,
+    layerIndex: Number.isFinite(activityLayer) ? Math.trunc(activityLayer) : null,
     settings,
     institutionId: typeof list?.institution_id === "string" ? list.institution_id : null,
     updatedAt: Number.isFinite(updatedAtMs) ? updatedAtMs : 0,
     source: "remote-session",
+    lastActivityAt,
+    activityRevision: Number.isFinite(Number(row.last_activity_revision))
+      ? Number(row.last_activity_revision)
+      : 0,
+    completed,
   };
 }
 
 export const RESUMABLE_STUDY_SESSION_COLUMNS =
-  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, lists(id, title, institution_id, deleted_at)";
+  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, last_activity_at, last_activity_revision, last_activity_card_id, last_activity_index, last_activity_layer_index, lists(id, title, institution_id, deleted_at)";
