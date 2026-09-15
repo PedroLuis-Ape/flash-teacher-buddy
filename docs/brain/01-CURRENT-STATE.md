@@ -36,6 +36,14 @@ related:
 
 ### FECHAMENTO 2026-09-15
 
+- **Próximo passo já preparado (não iniciado):** implementar **“Revisar cards /
+  Revisar depois”** (marcador one-click no card + fila de revisão privada +
+  edição do flashcard ORIGINAL). A spec está registrada e o baseline foi
+  conferido — todos os arquivos citados existem, `EditFlashcardDialog` tem a
+  assinatura esperada e rotas privadas ficam em `src/App.tsx`. Plano completo,
+  modelo de dados e ordem de execução em
+  [[sessions/2026-09-15-plano-revisar-cards]].
+
 - **Finalizado:** reforma do **runtime de estudo** em duas rodadas estruturais e
   **publicada**: uma autoridade por decisão (`direction` define o lado da
   pergunta/resposta, `playTarget` define o que reproduzir, e `playMode`/`playSide`
