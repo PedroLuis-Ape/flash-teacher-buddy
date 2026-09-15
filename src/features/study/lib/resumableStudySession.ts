@@ -205,6 +205,10 @@ export function resumableFromRemoteSession(
   });
 
   const updatedAtMs = Date.parse(String(row.updated_at ?? ""));
+  const activityMs = Date.parse(String(row.last_activity_at ?? ""));
+  const lastActivityAt = Number.isFinite(activityMs) ? activityMs : null;
+  const activityIndex = Number(row.last_activity_index);
+  const activityLayer = Number(row.last_activity_layer_index);
 
   return {
     sessionId,
