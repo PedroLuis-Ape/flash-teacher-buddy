@@ -113,8 +113,11 @@ export function selectStudyResumeByActivity(
     // Empate/desvio de relógio fica com o ponteiro: ele é a identidade exata do
     // aparelho (card, índice e camada) e responde antes do touch remoto.
     if (!winner) winner = pointerTracked;
-    else if (winner.sessionId === pointerTracked.sessionId) winner = pointerTracked;
-    else if ((winner.lastActivityAt as number) - (pointerTracked.lastActivityAt as number) <= toleranceMs) {
+    else if (winner.sessionId === pointerTracked.sessionId) {
+      // Mesma sessão: o ponteiro traz a posição exata, mas a conclusão remota
+      // continua valendo — sessão concluída não pode virar retomada.
+      winner = { ...pointerTracked, completed: winner.completed || pointerTracked.completed };
+    } else if ((winner.lastActivityAt as number) - (pointerTracked.lastActivityAt as number) <= toleranceMs) {
       winner = pointerTracked;
     }
   }
