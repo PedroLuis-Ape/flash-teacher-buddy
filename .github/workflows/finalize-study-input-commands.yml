@@ -6,6 +6,7 @@ on:
       - fix/finalize-study-input-commands
     paths:
       - .github/workflows/finalize-study-input-commands.yml
+      - scripts/finalize-study-input-commands.py
 
 permissions:
   contents: write
@@ -26,7 +27,7 @@ jobs:
       - name: Apply final study runtime fixes
         run: python scripts/finalize-study-input-commands.py
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-save --no-audit --no-fund
       - name: Focused study tests
         run: npx vitest run src/features/study/lib/studyCommandRegistry.test.ts src/features/study/lib/typeToAnswer.test.ts src/features/study/components/studyRuntimeInput.contract.test.ts
       - name: Typecheck
