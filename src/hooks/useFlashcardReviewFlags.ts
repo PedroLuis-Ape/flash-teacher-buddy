@@ -17,15 +17,38 @@ export const reviewFlagKeys = {
   count: (userId?: string | null) => ["flashcard-review-flags-count", userId ?? "anon"] as const,
 };
 
+export type FlashcardReviewReason =
+  | "translation"
+  | "context"
+  | "grammar"
+  | "typo"
+  | "naturalness"
+  | "answer"
+  | "audio"
+  | "other";
+
+export const FLASHCARD_REVIEW_REASONS: Array<{ value: FlashcardReviewReason; label: string }> = [
+  { value: "translation", label: "Tradução" },
+  { value: "context", label: "Contexto" },
+  { value: "grammar", label: "Gramática" },
+  { value: "typo", label: "Erro de digitação" },
+  { value: "naturalness", label: "Uso natural" },
+  { value: "answer", label: "Resposta" },
+  { value: "audio", label: "Áudio" },
+  { value: "other", label: "Outro" },
+];
+
 export interface FlashcardReviewFlag {
   id: string;
   flashcard_id: string;
   source_group_uid: string | null;
   source_list_id: string | null;
   institution_id: string | null;
-  reason: string | null;
+  reason: FlashcardReviewReason | null;
   note: string | null;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
   resolved_at: string | null;
 }
 
@@ -38,7 +61,7 @@ const TABLE = "user_flashcard_review_flags";
 export function isMissingReviewFlagsTable(error: unknown): boolean {
   const err = error as { message?: string; details?: string; hint?: string; code?: string } | null | undefined;
   const text = `${err?.message ?? ""} ${err?.details ?? ""} ${err?.hint ?? ""} ${err?.code ?? ""}`.toLowerCase();
-  return text.includes(TABLE) || text.includes("does not exist") || text.includes("pgrst205") || text.includes("42p01");
+  return text.includes(TABLE) || text.includes("set_user_flashcard_review_flag") || text.includes("update_user_flashcard_review_flag_metadata") || text.includes("does not exist") || text.includes("pgrst205") || text.includes("42p01");
 }
 
 function client() {
@@ -50,7 +73,7 @@ export function useFlashcardReviewFlags(userId?: string | null) {
   const query = useQuery({
     queryKey: reviewFlagKeys.ids(userId),
     enabled: Boolean(userId),
-    staleTime: 60_000,
+    staleTime: 30_000,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await client()
         .from(TABLE)
@@ -61,9 +84,11 @@ export function useFlashcardReviewFlags(userId?: string | null) {
         if (isMissingReviewFlagsTable(error)) return [];
         throw error;
       }
-      return (Array.isArray(data) ? data : [])
-        .map((row: { flashcard_id?: unknown }) => (typeof row.flashcard_id === "string" ? row.flashcard_id : null))
-        .filter((id: string | null): id is string => Boolean(id));
+      return Array.from(new Set(
+        (Array.isArray(data) ? data : [])
+          .map((row: { flashcard_id?: unknown }) => (typeof row.flashcard_id === "string" ? row.flashcard_id : null))
+          .filter((id: string | null): id is string => Boolean(id)),
+      ));
     },
   });
 
@@ -75,11 +100,12 @@ export function useFlashcardReviewFlagDetails(userId?: string | null) {
   return useQuery({
     queryKey: reviewFlagKeys.details(userId),
     enabled: Boolean(userId),
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchOnMount: "always" as const,
     queryFn: async (): Promise<FlashcardReviewFlag[]> => {
       const { data, error } = await client()
         .from(TABLE)
-        .select("id,flashcard_id,source_group_uid,source_list_id,institution_id,reason,note,created_at,resolved_at")
+        .select("id,flashcard_id,source_group_uid,source_list_id,institution_id,reason,note,is_active,created_at,updated_at,resolved_at")
         .eq("user_id", userId)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
@@ -93,8 +119,8 @@ export function useFlashcardReviewFlagDetails(userId?: string | null) {
 }
 
 export function useFlashcardReviewFlagCount(userId?: string | null) {
-  const { data } = useFlashcardReviewFlags(userId);
-  return data?.length ?? 0;
+  const query = useFlashcardReviewFlags(userId);
+  return query.data?.length ?? 0;
 }
 
 export function invalidateFlashcardReviewQueries(queryClient: QueryClient, userId?: string | null): void {
@@ -106,7 +132,7 @@ export function invalidateFlashcardReviewQueries(queryClient: QueryClient, userI
 export interface ToggleReviewFlagInput {
   flashcardId: string;
   enabled: boolean;
-  reason?: string | null;
+  reason?: FlashcardReviewReason | null;
   note?: string | null;
   institutionId?: string | null;
 }
@@ -121,6 +147,7 @@ export function useFlashcardReviewFlagMutation(userId?: string | null) {
 
   return useMutation({
     mutationFn: async ({ flashcardId, enabled, reason, note, institutionId }: ToggleReviewFlagInput) => {
+      if (!userId) throw new Error("Não autenticado");
       const { data, error } = await client().rpc("set_user_flashcard_review_flag", {
         _flashcard_id: flashcardId,
         _enabled: enabled,
@@ -149,8 +176,55 @@ export function useFlashcardReviewFlagMutation(userId?: string | null) {
           : "Não foi possível salvar a marcação para revisão.",
       );
     },
+    onSuccess: (_result, variables) => {
+      toast.success(variables.enabled ? "Salvo para revisar depois" : "Revisão concluída");
+    },
     onSettled: () => {
       invalidateFlashcardReviewQueries(queryClient, userId);
     },
+  });
+}
+
+export interface UpdateReviewFlagMetadataInput {
+  flagId: string;
+  reason: FlashcardReviewReason | null;
+  note: string | null;
+}
+
+/** Atualiza somente a classificação/anotação da fila; nunca o flashcard. */
+export function useFlashcardReviewFlagMetadataMutation(userId?: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ flagId, reason, note }: UpdateReviewFlagMetadataInput) => {
+      if (!userId) throw new Error("Não autenticado");
+      const { data, error } = await client().rpc("update_user_flashcard_review_flag_metadata", {
+        _flag_id: flagId,
+        _reason: reason,
+        _note: note,
+      });
+      if (error) throw error;
+      return data as { flag_id?: string; reason?: FlashcardReviewReason | null; note?: string | null } | null;
+    },
+    onMutate: async ({ flagId, reason, note }) => {
+      const key = reviewFlagKeys.details(userId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<FlashcardReviewFlag[]>(key) ?? [];
+      const now = new Date().toISOString();
+      queryClient.setQueryData<FlashcardReviewFlag[]>(key, previous.map((flag) =>
+        flag.id === flagId ? { ...flag, reason, note, updated_at: now } : flag,
+      ));
+      return { previous };
+    },
+    onError: (error, _variables, context) => {
+      if (context) queryClient.setQueryData(reviewFlagKeys.details(userId), context.previous);
+      toast.error(
+        isMissingReviewFlagsTable(error)
+          ? "A fila de revisão ainda não está ativa neste ambiente."
+          : "Não foi possível atualizar os detalhes da revisão.",
+      );
+    },
+    onSuccess: () => toast.success("Detalhes da revisão salvos"),
+    onSettled: () => invalidateFlashcardReviewQueries(queryClient, userId),
   });
 }
