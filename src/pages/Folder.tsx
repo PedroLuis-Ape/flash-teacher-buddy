@@ -1317,7 +1317,12 @@ const Folder = () => {
                           
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 min-w-0">
-                              <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
+                              <ScrollingTitle
+                                text={list.title}
+                                className="font-semibold text-sm leading-tight"
+                                mobileBehavior="wrap"
+                                mobileLines={2}
+                              />
                               {isFavorite && (
                                 <span className="shrink-0 rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">
                                   Favorita

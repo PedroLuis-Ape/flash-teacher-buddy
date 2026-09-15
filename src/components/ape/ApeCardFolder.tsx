@@ -60,7 +60,12 @@ export function ApeCardFolder({
       </div>
 
       <div className="flex-1 min-w-0">
-        <ScrollingTitle text={title} className="ape-card-title" />
+        <ScrollingTitle
+          text={title}
+          className="ape-card-title"
+          mobileBehavior="wrap"
+          mobileLines={2}
+        />
         {referenceId && <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground/80">{referenceId}</span>}
         {(listCount !== undefined || cardCount !== undefined) && (
           <p className="text-[13px] text-muted-foreground leading-tight mt-1 truncate">
