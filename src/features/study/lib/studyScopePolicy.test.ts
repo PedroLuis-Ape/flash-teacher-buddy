@@ -97,6 +97,17 @@ describe("filterCardsForStudyScope", () => {
     });
     expect(result.map((card) => card.id)).toEqual(["SL1"]);
   });
+
+  it("dedupes duplicate playable ids before the engine builds a session queue", () => {
+    const result = filterCardsForStudyScope({
+      cards: [normal, other, { ...normal }, { ...other }, normal],
+      favoriteIds: [],
+      redListIds: [],
+      settings: { subset: "all", redFocus: false },
+    });
+
+    expect(result.map((card) => card.id)).toEqual(["N1", "N2"]);
+  });
 });
 
 describe("resolvePersonalStudySubset", () => {
