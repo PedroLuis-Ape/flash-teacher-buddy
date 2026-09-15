@@ -164,14 +164,25 @@ export function resumableFromPointer(
     institutionId: pointer.institutionId,
     updatedAt: pointer.updatedAt,
     source: "local-pointer",
+    // O ponteiro v2 só é escrito quando a identidade de atividade muda, então
+    // seu `updatedAt` É atividade real — mas somente quando ele carrega a
+    // revisão do contrato novo. Ponteiro antigo continua sendo apenas cache.
+    lastActivityAt: typeof pointer.activityRevision === "number" && pointer.activityRevision > 0
+      ? pointer.updatedAt
+      : null,
+    activityRevision: typeof pointer.activityRevision === "number" ? pointer.activityRevision : 0,
+    completed: false,
   };
 }
 
 /** Reconstrói uma retomada segura a partir da sessão remota aberta mais recente. */
 export function resumableFromRemoteSession(
   row: RemoteStudySessionRow | null | undefined,
+  options: { allowCompleted?: boolean } = {},
 ): ResumableStudySession | null {
-  if (!row || row.completed === true) return null;
+  if (!row) return null;
+  const completed = row.completed === true;
+  if (completed && options.allowCompleted !== true) return null;
   const sessionId = typeof row.id === "string" ? row.id : null;
   const listId = typeof row.list_id === "string" ? row.list_id : null;
   const mode = typeof row.mode === "string" && row.mode.length > 0 ? row.mode : null;
