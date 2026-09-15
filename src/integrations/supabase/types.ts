@@ -2401,6 +2401,11 @@ export type Database = {
           created_at: string
           current_index: number
           id: string
+          last_activity_at: string | null
+          last_activity_card_id: string | null
+          last_activity_index: number | null
+          last_activity_layer_index: number | null
+          last_activity_revision: number
           list_id: string
           mode: string
           schema_version: number
@@ -2417,6 +2422,11 @@ export type Database = {
           created_at?: string
           current_index?: number
           id?: string
+          last_activity_at?: string | null
+          last_activity_card_id?: string | null
+          last_activity_index?: number | null
+          last_activity_layer_index?: number | null
+          last_activity_revision?: number
           list_id: string
           mode: string
           schema_version?: number
@@ -2433,6 +2443,11 @@ export type Database = {
           created_at?: string
           current_index?: number
           id?: string
+          last_activity_at?: string | null
+          last_activity_card_id?: string | null
+          last_activity_index?: number | null
+          last_activity_layer_index?: number | null
+          last_activity_revision?: number
           list_id?: string
           mode?: string
           schema_version?: number
@@ -4701,6 +4716,16 @@ export type Database = {
       sync_folder_glossaries_from_super_import_v1: {
         Args: { _batch_id: string; _payload: Json }
         Returns: Json
+      }
+      touch_study_session_activity_v1: {
+        Args: {
+          p_card_id?: string
+          p_card_index?: number
+          p_layer_index?: number
+          p_revision: number
+          p_session_id: string
+        }
+        Returns: string
       }
       undo_classroom_global_import_v1: {
         Args: { _batch_id: string }
