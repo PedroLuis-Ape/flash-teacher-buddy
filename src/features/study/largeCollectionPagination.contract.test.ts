@@ -26,3 +26,25 @@ describe("large collection pagination contracts", () => {
     expect(read("src/hooks/useRedList.ts")).toContain("fetchAllSupabaseRows<{ group_id: string }>");
   });
 });
+
+describe("list detail progressive loading semantics", () => {
+  const source = read("src/pages/ListDetail.tsx");
+
+  it("renders a fast real first page before the full set arrives", () => {
+    expect(source).toContain('queryKey: ["flashcards", id, "first-page"]');
+    expect(source).toContain("fetchFlashcardPage(0, PAGE_SIZE - 1)");
+    expect(source).toContain("allFlashcards ?? firstFlashcardPage ?? []");
+  });
+
+  it("still loads the whole list so search, layers, selection and export stay correct", () => {
+    expect(source).toContain("fetchAllSupabaseRows<Flashcard>(fetchFlashcardPage)");
+    expect(source).toContain("const isFullListLoading = allFlashcardsLoading");
+    // "Selecionar todos" nunca opera em um conjunto parcial silenciosamente.
+    expect(source).toContain("if (isFullListLoading) {");
+    expect(source).toContain("library.list.loadingFullList");
+  });
+
+  it("shares one page fetcher between first page and full load (no N+1 duplication)", () => {
+    expect(source.match(/const fetchFlashcardPage = useCallback/g)?.length).toBe(1);
+  });
+});
