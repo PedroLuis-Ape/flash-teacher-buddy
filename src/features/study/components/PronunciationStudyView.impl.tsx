@@ -16,6 +16,7 @@ import { StudyToolsMenu } from "./StudyToolsMenu";
 import { getSpeechRate } from "./SpeechRateControl";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 
 interface PronunciationStudyViewProps {
   front: string;
@@ -32,6 +33,10 @@ interface PronunciationStudyViewProps {
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
   isSpecial?: boolean;
+  /** Revisar cards (QA de conteúdo) — separado do Ponto de atenção. */
+  isReviewFlagged?: boolean;
+  reviewFlagPending?: boolean;
+  onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
@@ -64,6 +69,9 @@ export function PronunciationStudyView({
   onToggleFavorite,
   onToggleRedList,
   isSpecial = false,
+  isReviewFlagged = false,
+  reviewFlagPending = false,
+  onToggleReviewFlag,
   onToggleSpecial,
   isDifficult = false,
   onToggleDifficulty,
@@ -209,6 +217,14 @@ export function PronunciationStudyView({
             onToggleDifficulty={onToggleDifficulty}
             difficultyPending={difficultyPending}
           />
+            {onToggleReviewFlag && (
+              <StudyReviewFlagButton
+                isFlagged={isReviewFlagged}
+                isPending={reviewFlagPending}
+                onToggle={onToggleReviewFlag}
+                className="right-3 top-3"
+              />
+            )}
         </div>
 
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground sm:mb-4 sm:text-xs">

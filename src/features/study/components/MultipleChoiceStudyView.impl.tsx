@@ -16,6 +16,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pickSmartDistractors } from "@/features/study/lib/smartDistractors";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -42,6 +43,10 @@ interface MultipleChoiceStudyViewProps {
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
   isSpecial?: boolean;
+  /** Revisar cards (QA de conteúdo) — separado do Ponto de atenção. */
+  isReviewFlagged?: boolean;
+  reviewFlagPending?: boolean;
+  onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
@@ -72,6 +77,9 @@ export const MultipleChoiceStudyView = ({
   onToggleFavorite,
   onToggleRedList,
   isSpecial = false,
+  isReviewFlagged = false,
+  reviewFlagPending = false,
+  onToggleReviewFlag,
   onToggleSpecial,
   isDifficult = false,
   onToggleDifficulty,
@@ -204,6 +212,14 @@ export const MultipleChoiceStudyView = ({
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />
+            {onToggleReviewFlag && (
+              <StudyReviewFlagButton
+                isFlagged={isReviewFlagged}
+                isPending={reviewFlagPending}
+                onToggle={onToggleReviewFlag}
+                className="right-3 top-3"
+              />
+            )}
         </div>
 
         <div className="text-center">
