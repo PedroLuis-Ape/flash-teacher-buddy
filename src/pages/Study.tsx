@@ -706,6 +706,9 @@ const Study = () => {
   
   const effectiveMode = normalizedMode === "mixed" ? mixedModeFor(currentIndex) : normalizedMode;
   const isPronunciationMode = effectiveMode === "pronunciation";
+  // Flip extenso: navegação livre (botão, teclado e swipe), sem avaliação.
+  const flipFreeNavigation = effectiveMode === "flip" && !masteryProgressActive;
+
 
   // Reload flashcards ONLY when the underlying list/collection changes.
   // Order/direction/favorites are applied locally (in effectiveFlashcards or by
