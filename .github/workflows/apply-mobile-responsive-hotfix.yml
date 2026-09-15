@@ -1,0 +1,245 @@
+name: Apply audited mobile responsive hotfix
+
+on:
+  push:
+    branches:
+      - fix/mobile-responsive-layout-20260915
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mobile-responsive-layout-20260915
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply audited responsive fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"Expected block not found in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          # 1) Biblioteca: ações mobile não podem disputar uma única linha.
+          path = "src/features/library/FoldersOptimized.tsx"
+          replace_once(
+              path,
+              '      <div className="flex items-center justify-between gap-2 py-1">\n        <div className="ape-action-cluster">',
+              '      <div className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">\n        <div className="ape-action-cluster !grid w-full grid-cols-2 gap-2 sm:!flex sm:w-auto sm:flex-wrap">',
+          )
+          replace_once(
+              path,
+              '<Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-[40px]" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>',
+              '<Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>',
+          )
+          replace_once(
+              path,
+              '<LibraryExportDialog userId={userId} />',
+              '<LibraryExportDialog userId={userId} label="Exportar" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" />',
+          )
+          replace_once(
+              path,
+              '<DialogTrigger asChild><Button size="sm" className="min-h-[40px]"><FolderPlus className="mr-2 h-4 w-4" />Nova pasta</Button></DialogTrigger>',
+              '<DialogTrigger asChild><Button size="sm" className="col-span-2 min-h-11 w-full min-w-0 justify-center sm:col-auto sm:w-auto"><FolderPlus className="mr-2 h-4 w-4" />Nova pasta</Button></DialogTrigger>',
+          )
+          replace_once(
+              path,
+              '        <div className="flex flex-wrap items-center gap-2">\n          <div className="inline-flex min-h-11 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das pastas">',
+              '        <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-end">\n          <div className="inline-flex min-h-11 shrink-0 rounded-lg border bg-muted/30 p-1" aria-label="Modo de visualização das pastas">',
+          )
+          replace_once(
+              path,
+              '          <Button type="button" variant={localOrdering ? "secondary" : "outline"} size="sm" className="min-h-11 gap-1.5" aria-pressed={localOrdering} aria-label="Ordenar pastas neste dispositivo" onClick={() => setLocalOrdering((value) => !value)}>',
+              '          <Button type="button" variant={localOrdering ? "secondary" : "outline"} size="sm" className="min-h-11 min-w-0 flex-1 gap-1.5 sm:flex-none" aria-pressed={localOrdering} aria-label="Ordenar pastas neste dispositivo" onClick={() => setLocalOrdering((value) => !value)}>',
+          )
+
+          # 2) Pasta: toolbar em grid mobile; controles de view/ordem numa linha segura.
+          path = "src/pages/Folder.tsx"
+          replace_once(
+              path,
+              '<div className="flex items-center gap-3">\n            {isEditingTitle ? (',
+              '<div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">\n            {isEditingTitle ? (',
+          )
+          replace_once(
+              path,
+              '<h1 className="text-3xl font-bold">{folder.title}</h1>',
+              '<h1 className="min-w-0 break-words text-2xl font-bold sm:text-3xl">{folder.title}</h1>',
+          )
+          replace_once(
+              path,
+              '<div className="ape-action-cluster mb-4 flex-wrap">',
+              '<div className="ape-action-cluster mb-4 !grid w-full grid-cols-2 gap-2 sm:!flex sm:w-auto sm:flex-wrap">',
+          )
+          replace_once(
+              path,
+              '<Button variant="outline" size="sm" onClick={handleOpenFolderSettings}>',
+              '<Button variant="outline" size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={handleOpenFolderSettings}>',
+          )
+          replace_once(
+              path,
+              '                      variant="outline"\n                      size="sm"\n                      data-testid="embedded-list-create-trigger"',
+              '                      variant="outline"\n                      size="sm"\n                      className="min-h-11 w-full min-w-0 justify-center sm:w-auto"\n                      data-testid="embedded-list-create-trigger"',
+          )
+          replace_once(
+              path,
+              '<Button size="sm" onClick={handleOpenNewListDialog}>',
+              '<Button size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto" onClick={handleOpenNewListDialog}>',
+          )
+          replace_once(
+              path,
+              '<Button variant="secondary" size="sm">\n                      <Share2 className="mr-1.5 h-4 w-4" />',
+              '<Button variant="secondary" size="sm" className="min-h-11 w-full min-w-0 justify-center sm:w-auto">\n                      <Share2 className="mr-1.5 h-4 w-4" />',
+          )
+          replace_once(
+              path,
+              '                    variant={selectionMode ? "default" : "outline"} \n                    size="sm"\n                    onClick={() => {',
+              '                    variant={selectionMode ? "default" : "outline"} \n                    size="sm"\n                    className="min-h-11 w-full min-w-0 justify-center sm:w-auto"\n                    onClick={() => {',
+          )
+          replace_once(
+              path,
+              '<div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">',
+              '<div className="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-end">',
+          )
+          replace_once(
+              path,
+              '                  className="min-h-11 gap-1.5"\n                  aria-label="Ordenar listas nesta pasta"',
+              '                  className="min-h-11 min-w-0 flex-1 gap-1.5 sm:flex-none"\n                  aria-label="Ordenar listas nesta pasta"',
+          )
+          replace_once(
+              path,
+              '<CardContent className="p-3 flex flex-wrap items-center gap-3">',
+              '<CardContent className="flex min-w-0 items-start gap-3 p-3 sm:items-center">',
+          )
+          replace_once(
+              path,
+              '<div className="flex-1 min-w-[9rem]">',
+              '<div className="min-w-0 flex-1">',
+          )
+
+          mobile_menu = '''                          {!selectionMode && (\n                            <div className="shrink-0 sm:hidden" onClick={(e) => e.stopPropagation()}>\n                              <DropdownMenu>\n                                <DropdownMenuTrigger asChild>\n                                  <Button\n                                    type="button"\n                                    variant="ghost"\n                                    size="icon"\n                                    className="h-11 w-11 shrink-0 rounded-xl"\n                                    aria-label={`Ações da lista ${list.title}`}\n                                    onClick={(event) => event.stopPropagation()}\n                                  >\n                                    <MoreHorizontal className="h-5 w-5" />\n                                  </Button>\n                                </DropdownMenuTrigger>\n                                <DropdownMenuContent align="end" className="w-60" onClick={(event) => event.stopPropagation()}>\n                                  {userId && !isSystemFolder && (\n                                    <>\n                                      <DropdownMenuItem onSelect={() => toggleFavorite.mutate({ resourceId: list.id, resourceType: "list", isFavorite })}>\n                                        <Star className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current text-yellow-500" : ""}`} />\n                                        {isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}\n                                      </DropdownMenuItem>\n                                      <DropdownMenuItem onSelect={() => toggleListAttention.mutate({ listId: list.id, isAttention })}>\n                                        <AlertTriangle className={`mr-2 h-4 w-4 ${isAttention ? "text-red-500" : ""}`} />\n                                        {isAttention ? "Remover ponto de atenção" : "Adicionar ponto de atenção"}\n                                      </DropdownMenuItem>\n                                    </>\n                                  )}\n                                  {list.is_embedded && isOwner && (\n                                    <DropdownMenuItem onSelect={() => setManagingEmbeddedList(list)}>\n                                      <Layers className="mr-2 h-4 w-4" />\n                                      Gerenciar cards incorporados\n                                    </DropdownMenuItem>\n                                  )}\n                                  {canEdit && (\n                                    <>\n                                      <DropdownMenuSeparator />\n                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>\n                                        <Pencil className="mr-2 h-4 w-4" />\n                                        Editar lista\n                                      </DropdownMenuItem>\n                                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>\n                                        <Trash2 className="mr-2 h-4 w-4" />\n                                        Excluir lista\n                                      </DropdownMenuItem>\n                                    </>\n                                  )}\n                                </DropdownMenuContent>\n                              </DropdownMenu>\n                            </div>\n                          )}\n\n'''
+          marker = '                          {!selectionMode && (\n                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>'
+          replacement = mobile_menu + '                          {!selectionMode && (\n                            <div className="hidden shrink-0 gap-1 sm:flex" onClick={(e) => e.stopPropagation()}>'
+          replace_once(path, marker, replacement)
+
+          # 3) FolderWorkspace: nada floating por cima do conteúdo no mobile.
+          path = "src/pages/FolderWorkspace.tsx"
+          replace_once(
+              path,
+              'className="pointer-events-none fixed bottom-20 right-3 z-40 md:bottom-6 md:right-6"',
+              'className="pointer-events-none fixed bottom-20 right-3 z-40 hidden md:block md:bottom-6 md:right-6"',
+          )
+          replace_once(
+              path,
+              '              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">\n                <ListSequenceDialog',
+              '              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">\n                <div className="md:hidden">\n                  <FolderExportDialog\n                    sources={[{ id }]}\n                    label="Exportar flashcards"\n                    className="min-h-11 w-full justify-center rounded-xl shadow-none"\n                    variant="outline"\n                    size="default"\n                  />\n                </div>\n                <ListSequenceDialog',
+          )
+
+          # 4) Glossário da pasta: conteúdo pode quebrar sem expulsar o chevron.
+          path = "src/features/study/components/FolderGlossaryCard.tsx"
+          replace_once(
+              path,
+              '<CardContent className="flex items-center gap-3 p-3">',
+              '<CardContent className="flex min-w-0 items-start gap-3 p-3 sm:items-center">',
+          )
+          replace_once(
+              path,
+              '<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">',
+              '<div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:mt-0">',
+          )
+          replace_once(
+              path,
+              '<ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />',
+              '<ChevronRight className="mt-2 h-5 w-5 shrink-0 text-muted-foreground sm:mt-0" />',
+          )
+
+          # 5) Study toolbar: larguras explícitas; nenhum botão pode tomar a linha toda.
+          path = "src/features/study/components/StudyToolsMenu.tsx"
+          replace_once(
+              path,
+              '<div className="flex w-full min-w-0 items-center justify-center gap-1.5 md:hidden">',
+              '<div className="flex w-full min-w-0 items-center gap-1.5 overflow-hidden md:hidden">',
+          )
+          replace_once(
+              path,
+              'className="study-tools-inline-button h-9 min-w-[3.75rem] shrink-0 gap-1 px-2"',
+              'className="study-tools-inline-button study-tools-rate-button h-9 !w-[4.25rem] !min-w-[4.25rem] !flex-none gap-1 px-2"',
+          )
+          replace_once(
+              path,
+              'className="study-tools-inline-button study-tools-attention-button h-9 min-w-0 flex-1 gap-1 px-2"',
+              'className="study-tools-inline-button study-tools-attention-button h-9 min-w-0 flex-1 gap-1 overflow-hidden px-2"',
+          )
+          replace_once(
+              path,
+              '"study-tools-floating-trigger h-9 w-10 px-0 shrink-0",',
+              '"study-tools-floating-trigger h-9 !w-11 !min-w-11 shrink-0 px-0",',
+          )
+
+          path = "src/features/study/components/study-tools-menu.css"
+          p = Path(path)
+          css = p.read_text(encoding="utf-8")
+          addition = '''\n@media (max-width: 767px) {\n  .study-tools-portal-slot > div:first-child {\n    width: 100%;\n    min-width: 0;\n    max-width: 100%;\n    overflow: hidden;\n  }\n\n  .study-tools-rate-button {\n    flex: 0 0 4.25rem !important;\n    width: 4.25rem !important;\n    min-width: 4.25rem !important;\n  }\n\n  .study-tools-attention-button {\n    flex: 1 1 0 !important;\n    min-width: 0 !important;\n    max-width: 100%;\n  }\n\n  .study-tools-floating-trigger {\n    flex: 0 0 2.75rem !important;\n    width: 2.75rem !important;\n    min-width: 2.75rem !important;\n  }\n}\n\n@media (max-width: 359px) {\n  .study-tools-attention-button > span:last-child {\n    display: none;\n  }\n\n  .study-tools-attention-button {\n    flex: 0 0 2.75rem !important;\n    width: 2.75rem !important;\n  }\n}\n'''
+          if "study-tools-rate-button" not in css:
+              css += addition
+          p.write_text(css, encoding="utf-8")
+
+          # 6) Write/Rewrite: largura sempre limitada pelo viewport reduzido pelo teclado virtual.
+          path = "src/features/study/components/WriteStudyView.impl.tsx"
+          replace_once(
+              path,
+              '<div className="space-y-4" tabIndex={-1}>',
+              '<div className="min-w-0 space-y-4" tabIndex={-1}>',
+          )
+          replace_once(
+              path,
+              '"min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",',
+              '"w-full min-w-0 min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",',
+          )
+
+          # 7) Shared primitive: não force clusters a serem shrink-0 globalmente.
+          path = "src/index.css"
+          replace_once(
+              path,
+              '@apply flex min-w-0 shrink-0 items-center gap-1 sm:gap-2;',
+              '@apply flex min-w-0 max-w-full items-center gap-1 sm:gap-2;',
+          )
+
+          # 8) Contrato para impedir regressão do hotfix mobile.
+          test = Path("src/pages/__tests__/mobileResponsiveLayout.contract.test.ts")
+          test.write_text(r'''import { readFileSync } from "node:fs";\nimport { describe, expect, it } from "vitest";\n\nconst librarySource = readFileSync(new URL("../../features/library/FoldersOptimized.tsx", import.meta.url), "utf8");\nconst folderSource = readFileSync(new URL("../Folder.tsx", import.meta.url), "utf8");\nconst workspaceSource = readFileSync(new URL("../FolderWorkspace.tsx", import.meta.url), "utf8");\nconst toolsSource = readFileSync(new URL("../../features/study/components/StudyToolsMenu.tsx", import.meta.url), "utf8");\nconst toolsCss = readFileSync(new URL("../../features/study/components/study-tools-menu.css", import.meta.url), "utf8");\nconst writeSource = readFileSync(new URL("../../features/study/components/WriteStudyView.impl.tsx", import.meta.url), "utf8");\nconst indexCss = readFileSync(new URL("../../index.css", import.meta.url), "utf8");\n\ndescribe("mobile responsive layout hotfix", () => {\n  it("keeps library actions inside the narrow viewport", () => {\n    expect(librarySource).toContain("!grid w-full grid-cols-2");\n    expect(librarySource).toContain('label="Exportar"');\n    expect(librarySource).toContain("sm:flex-row sm:items-center sm:justify-between");\n  });\n\n  it("uses a compact folder action grid and mobile list menu", () => {\n    expect(folderSource).toContain("!grid w-full grid-cols-2");\n    expect(folderSource).toContain('className="shrink-0 sm:hidden"');\n    expect(folderSource).toContain('className="hidden shrink-0 gap-1 sm:flex"');\n    expect(folderSource).toContain("setListToDelete(list)");\n  });\n\n  it("keeps folder export static on mobile and floating only on desktop", () => {\n    expect(workspaceSource).toContain("hidden md:block");\n    expect(workspaceSource).toContain('label="Exportar flashcards"');\n    expect(workspaceSource).toContain('className="md:hidden"');\n  });\n\n  it("pins the study tools to compact mobile widths", () => {\n    expect(toolsSource).toContain("study-tools-rate-button");\n    expect(toolsSource).toContain("!w-[4.25rem]");\n    expect(toolsSource).toContain("!w-11 !min-w-11");\n    expect(toolsCss).toContain("@media (max-width: 359px)");\n    expect(toolsCss).toContain("flex: 0 0 4.25rem !important");\n  });\n\n  it("keeps write input shrink-safe when the virtual keyboard is open", () => {\n    expect(writeSource).toContain("w-full min-w-0 min-h-[80px]");\n    expect(writeSource).toContain('className="min-w-0 space-y-4"');\n  });\n\n  it("does not globally force action clusters to shrink-0", () => {\n    expect(indexCss).toContain("@apply flex min-w-0 max-w-full items-center gap-1 sm:gap-2;");\n  });\n});\n''', encoding="utf-8")
+          PY
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Focused responsive contracts
+        run: npx vitest run src/pages/__tests__/mobileResponsiveLayout.contract.test.ts src/pages/__tests__/visualNavigation.contract.test.ts src/features/export/folderExport.contract.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint touched files
+        run: npx eslint src/features/library/FoldersOptimized.tsx src/pages/Folder.tsx src/pages/FolderWorkspace.tsx src/features/study/components/FolderGlossaryCard.tsx src/features/study/components/StudyToolsMenu.tsx src/features/study/components/WriteStudyView.impl.tsx src/pages/__tests__/mobileResponsiveLayout.contract.test.ts
+      - name: Production build
+        run: npm run build
+      - name: Commit validated hotfix
+        shell: bash
+        run: |
+          rm .github/workflows/apply-mobile-responsive-hotfix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(mobile): repair responsive library folder and study layouts"
+          git push origin HEAD:fix/mobile-responsive-layout-20260915
