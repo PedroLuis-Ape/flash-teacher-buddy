@@ -1074,7 +1074,7 @@ const Folder = () => {
                 </CardHeader>
               </Card>
             ) : listViewMode === "grid" ? (
-              <div className={`grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
+              <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
                 {sortedLists.map((list) => {
                   const isSelected = selectedLists.has(list.id);
                   const isFavorite = listFavorites.includes(list.id);

@@ -504,7 +504,7 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : myFolders.length > 0 ? (
-            <div className="grid grid-cols-1 items-start gap-2.5 min-[480px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {myFolders.map((folder) => (
                 <ApeCardFolder
                   key={folder.id}
@@ -543,7 +543,7 @@ const Index = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            <div className="grid grid-cols-1 items-start gap-2.5 min-[480px]:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (

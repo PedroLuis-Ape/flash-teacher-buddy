@@ -63,6 +63,7 @@ import { PronunciationStudyView } from "@/features/study/components/Pronunciatio
 import { DetailedExplanationPanel } from "@/features/study/components/DetailedExplanationPanel";
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
 import { awaitSaveProgress, describeSaveProgressResult } from "@/features/study/lib/saveProgressResult";
 import {
@@ -122,7 +123,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
-import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2, Menu as MenuIcon } from "lucide-react";
+
+/** Rótulos curtos do modo atual, usados no topo mobile. */
+const STUDY_MODE_LABELS: Record<string, string> = {
+  flip: "Flip",
+  write: "Escrever",
+  "multiple-choice": "Múltipla",
+  unscramble: "Embaralhar",
+  pronunciation: "Pronúncia",
+  mixed: "Misto",
+};
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateStudyResumeCaches } from "@/features/study/lib/studyResumeCache";
@@ -314,6 +325,8 @@ const Study = () => {
   // Keeping the same local name minimizes diff to call sites below.
   const userId = authUserId;
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
+  /** Mobile: caixa de ferramentas do topo in-game (bottom sheet). */
+  const [sessionToolsOpen, setSessionToolsOpen] = useState(false);
   const [listSystemKind, setListSystemKind] = useState<"user" | "attention_points" | "reinforcement">("user");
   // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
@@ -2415,7 +2428,79 @@ const Study = () => {
             </div>
           </div>
         )}
-        <div className="mb-3 space-y-2">
+        {/* MOBILE: topo curto — Sair · modo atual · Ferramentas (bottom sheet).
+            Os controles secundários saem da superfície fixa e vão para a caixa. */}
+        <div className="mb-3 flex items-center justify-between gap-2 sm:hidden">
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setShowExitDialog(true)}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Sair
+          </Button>
+
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              {STUDY_MODE_LABELS[normalizedMode] ?? normalizedMode}
+            </span>
+
+            <Sheet open={sessionToolsOpen} onOpenChange={setSessionToolsOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  aria-label="Ferramentas da sessão"
+                  title="Ferramentas da sessão"
+                >
+                  <MenuIcon className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="ape-overlay-scroll max-h-[80dvh] overflow-y-auto">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Ferramentas da sessão</SheetTitle>
+                </SheetHeader>
+
+                <div className="mt-4 grid gap-2">
+                  {userId && displayedCard && canToggleReinforcement && (
+                    <Button
+                      type="button"
+                      variant={isDisplayedReinforcement ? "secondary" : "outline"}
+                      className="min-h-11 justify-start gap-2"
+                      disabled={reinforcementMutation.isPending}
+                      aria-pressed={isDisplayedReinforcement}
+                      onClick={handleToggleReinforcement}
+                    >
+                      {reinforcementMutation.isPending
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <RefreshCcw className="h-4 w-4" />}
+                      {isDisplayedReinforcement ? "No Reforço ✓" : "Adicionar ao Reforço"}
+                    </Button>
+                  )}
+
+                  <GameSettingsModal
+                    settings={studySettings}
+                    onSettingsChange={applyStudySettingsChange}
+                    onFlowModeChange={handleFlowModeChange}
+                    gameMode={normalizedMode}
+                    showDirection={isListRoute}
+                    onRestart={handleRestartWithSettings}
+                    showFastMode={effectiveMode === "flip"}
+                    onEditCurrentCard={
+                      displayedCard && !isSystemCollection
+                        ? () => setEditingFlashcard(displayedCard as Flashcard)
+                        : undefined
+                    }
+                    canEditCurrentCard={!!displayedCard && !isSystemCollection}
+                  />
+
+                  <StudyCommandsPanel context={studyCommandContext} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+
+        {/* DESKTOP/TABLET: linha única como sempre foi. */}
+        <div className="mb-3 hidden space-y-2 sm:block">
           {/* Mobile: duas faixas (Sair em cima; ações abaixo, com quebra controlada).
               Desktop: volta a ser uma linha única. Nenhum handler foi alterado. */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

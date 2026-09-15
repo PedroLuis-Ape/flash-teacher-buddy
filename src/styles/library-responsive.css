@@ -10,7 +10,7 @@
 }
 
 .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15.5rem), 1fr)) !important;
+  /* Quantidade de colunas é decisão do React/Tailwind — o CSS cuida só de spacing. */
   align-items: start;
   gap: .625rem;
 }
@@ -99,46 +99,27 @@
   max-width: 100%;
 }
 
-@media (min-width: 1536px) {
-  .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)) !important;
-  }
-}
-
 @media (max-width: 640px) {
   .ape-tabs-shell:has(.space-ui-folder-card) [role="tabpanel"] > div {
     padding-inline: .75rem;
   }
 
   .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: .5rem;
   }
 
-  /* Duas colunas só cabem com o ícone menor em telas estreitas. */
-  .ape-tabs-shell .space-ui-folder-card .space-ui-card-icon {
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: .625rem;
-  }
-
   .ape-tabs-shell .space-ui-folder-card {
-    padding-inline: .625rem 3.25rem;
+    /* Menos reserva artificial: uma coluna já dá largura confortável ao título. */
+    padding-inline: .75rem 3rem;
     padding-block: .5rem;
   }
 
   .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card) > button[title="Ações da pasta"],
   .ape-tabs-shell .grid:has(.space-ui-folder-card) > div:has(.space-ui-folder-card):not(:has(> button[title="Ações da pasta"])) > button {
-    right: .375rem;
-    width: 2.25rem;
-    min-width: 2.25rem;
-    height: 2.25rem;
-    min-height: 2.25rem;
-  }
-}
-
-@media (max-width: 359px) {
-  .ape-tabs-shell .grid:has(.space-ui-folder-card) {
-    grid-template-columns: minmax(0, 1fr) !important;
+    right: .5rem;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
   }
 }

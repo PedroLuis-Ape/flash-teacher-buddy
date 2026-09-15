@@ -24,7 +24,7 @@
   
   /* Card title - single line with ellipsis */
   .ape-card-title {
-    @apply font-semibold text-base truncate leading-tight;
+    @apply font-semibold text-base leading-tight;
   }
   
   /* Consistent card layout */
