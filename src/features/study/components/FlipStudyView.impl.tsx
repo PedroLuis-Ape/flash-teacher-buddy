@@ -414,16 +414,18 @@ export const FlipStudyView = ({
     speakSide(isAFirst ? "a" : "b");
   }, [autoSpeakOnCardChange, back, flashcardId, front, isAFirst, isAutoPlaying, speakSide, ttsEnabled]);
 
+  // Passo do autoplay: fala -> onend REAL -> pausa curta de UI -> próximo passo.
+  // Uma geração por passo garante que uma fala antiga não avance nem cancele
+  // um passo iniciado depois.
+  const autoPlayGenerationRef = useRef(0);
   useEffect(() => {
-    if (!isAutoPlaying) {
-      clearAutoPlayTimeout();
-      return;
-    }
-
+    autoPlayGenerationRef.current += 1;
+    const generation = autoPlayGenerationRef.current;
     clearAutoPlayTimeout();
-    speakSide(autoPlayCurrentSide);
+    if (!isAutoPlaying) return;
 
-    autoPlayTimeoutRef.current = setTimeout(() => {
+    const advance = () => {
+      if (autoPlayGenerationRef.current !== generation) return;
       const step = getNextFlipAutoPlayStep({
         mode: playModeEffective,
         configuredSide: playFixedSide,
@@ -443,10 +445,32 @@ export const FlipStudyView = ({
       setIsAutoPlaying(false);
       writeFlipAutoPlayState(false, playFixedSide);
       stop();
-    }, AUTO_PLAY_DELAY_MS);
+    };
 
-    return clearAutoPlayTimeout;
+    const scheduleAdvance = (delay: number) => {
+      if (autoPlayGenerationRef.current !== generation) return;
+      clearAutoPlayTimeout();
+      autoPlayTimeoutRef.current = setTimeout(advance, delay);
+    };
+
+    // Failsafe: nunca é o relógio da fala, só protege contra promessa pendente.
+    autoPlayTimeoutRef.current = setTimeout(advance, AUTO_PLAY_FAILSAFE_MS);
+
+    void Promise.resolve(speakSide(autoPlayCurrentSide)).then((result) => {
+      if (autoPlayGenerationRef.current !== generation) return;
+      // Fala cancelada por troca de card/pausa: quem cancelou decide o próximo
+      // passo, este passo apenas encerra.
+      if (result && result.reason === "cancelled") return;
+      const spoke = Boolean(result && result.reason === "completed" && result.startedAt !== null);
+      scheduleAdvance(spoke ? AUTO_PLAY_UI_GAP_MS : AUTO_PLAY_SILENT_READ_MS);
+    });
+
+    return () => {
+      autoPlayGenerationRef.current += 1;
+      clearAutoPlayTimeout();
+    };
   }, [autoPlayCurrentSide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, playModeEffective, playFixedSide, speakSide, stop]);
+
 
   useEffect(() => () => clearAutoPlayTimeout(), [clearAutoPlayTimeout]);
 
