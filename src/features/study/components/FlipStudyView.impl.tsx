@@ -252,9 +252,13 @@ export const FlipStudyView = ({
     if (!fastMode || (isAutoPlaying && playModeEffective === "single")) {
       setIsFlipped(fixedSideToRenderedSide(side) === "second");
     }
-    if (ttsEnabled) speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
-    else stop();
+    if (!ttsEnabled) {
+      stop();
+      return Promise.resolve(null);
+    }
+    return speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
   }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playModeEffective, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
+
 
   const handlePlayTop = () => {
     pauseAutoPlay();
