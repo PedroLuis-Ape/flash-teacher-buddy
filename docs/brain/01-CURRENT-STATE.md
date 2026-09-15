@@ -65,9 +65,16 @@ related:
   `src/hooks/useFlashcardReviewFlags.ts`, `StudyReviewFlagButton.tsx`,
   `src/App.tsx` (`/review-cards`). Plano original em
   [[sessions/2026-09-15-plano-revisar-cards]].
-- [PENDENTE] A migration `20260915120000_user_flashcard_review_flags.sql` **ainda
-  não foi aplicada** em produção (`ymahldldyxvwjeruaxpr`). Sem ela a marcação
-  falha com aviso honesto; aplicação é decisão do Pedro.
+- [FATO CONFIRMADO 2026-09-15] A migration **está aplicada em produção**
+  (`ymahldldyxvwjeruaxpr`), junto com
+  `20260915133000_finalize_user_flashcard_review_flags.sql`. Conferido no banco:
+  tabela com 12 colunas e 3 policies, constraint de motivo
+  (`user_flashcard_review_flags_reason_check`), índice único parcial
+  `(user_id, flashcard_id) WHERE is_active`, 2 RPCs
+  (`set_user_flashcard_review_flag`, `update_user_flashcard_review_flag_metadata`),
+  `anon` sem EXECUTE e `authenticated` com **SELECT apenas** (0 grants de
+  INSERT/UPDATE/DELETE na tabela). Havia **1 marcação real** na fila — o fluxo
+  funciona ponta a ponta. (Corrige a anotação anterior, que dizia pendente.)
 - **Rodada 2 de responsividade mobile — CONCLUÍDA** (PRs #426, #427, #428):
   `ScrollingTitle` parado e legível no mobile (fim do marquee automático, com
   semântica pura testada), recentes da Home em 1 coluna abaixo de 480px, métrica
