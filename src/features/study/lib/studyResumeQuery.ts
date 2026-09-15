@@ -8,9 +8,12 @@
  * card permanecia preso na lista antiga, mesmo com a sessão nova aberta em
  * `study_sessions`.
  *
- * Agora: o ponteiro continua sendo a identidade exata da sessão do aparelho,
- * mas a decisão é por ÚLTIMA ATIVIDADE REAL (`updated_at` das sessões abertas
- * do usuário) e o ponteiro é realinhado para a sessão vencedora.
+ * Agora (P0 2026-09-15): o ponteiro continua sendo a identidade exata da sessão
+ * do aparelho, mas a decisão é por ÚLTIMA INTERAÇÃO REAL DO USUÁRIO
+ * (`study_sessions.last_activity_at`, escrito só pelo RPC de atividade). O
+ * `updated_at` só participa como fallback legado, para usuários que ainda não
+ * têm nenhuma atividade rastreada. Sessão concluída pode ser a última atividade
+ * — nesse caso o card fica vazio e nenhuma sessão antiga ressuscita.
  */
 import {
   clearStudyResumePointer,
