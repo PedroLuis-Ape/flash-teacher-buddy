@@ -970,10 +970,14 @@ export function useStudyEngine(
       const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
         resultCardIds,
-      }) ?? readStudySnapshot(legacyStudySnapshotKey, snapshotCardIds, {
-        enforceUniqueOrder: !!gameSettings.redFocus,
-        resultCardIds,
-      });
+      }) ?? legacyStudySnapshotKeys.reduce<ReturnType<typeof readStudySnapshot>>(
+        (found, key) => found ?? readStudySnapshot(key, snapshotCardIds, {
+          enforceUniqueOrder: !!gameSettings.redFocus,
+          resultCardIds,
+        }),
+        null,
+      );
+
       sessionLayerRef.current = localSnapshot?.layer;
       setRestoredSessionLayer(localSnapshot?.layer ?? null);
       fallbackLocalSnapshot = localSnapshot;
