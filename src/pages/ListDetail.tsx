@@ -445,7 +445,7 @@ const ListDetail = () => {
   const { data: firstFlashcardPage } = useQuery({
     queryKey: ["flashcards", id, "first-page"],
     queryFn: async () => {
-      const page = await fetchFlashcardPage(0, FIRST_PAGE_SIZE - 1);
+      const page = await fetchFlashcardPage(0, PAGE_SIZE - 1);
       if (page.error) throw page.error;
       return (page.data ?? []) as Flashcard[];
     },
@@ -467,7 +467,7 @@ const ListDetail = () => {
   const flashcards: Flashcard[] = allFlashcards ?? firstFlashcardPage ?? [];
   const flashcardsLoading = allFlashcardsLoading && !firstFlashcardPage;
   const isFullListLoading = allFlashcardsLoading && !!firstFlashcardPage
-    && (firstFlashcardPage?.length ?? 0) >= FIRST_PAGE_SIZE;
+    && (firstFlashcardPage?.length ?? 0) >= PAGE_SIZE;
 
 
   const viewingLayers = useMemo(() => {
