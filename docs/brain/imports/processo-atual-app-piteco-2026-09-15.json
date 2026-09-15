@@ -1,0 +1,229 @@
+{
+  "schema": "app-piteco.current-process",
+  "version": "1.0",
+  "generated_at": "2026-09-15",
+  "project": {
+    "name": "App Piteco / ApeEducation",
+    "repository": "https://github.com/PedroLuis-Ape/flash-teacher-buddy.git",
+    "supabase_project_ref": "xrnfhhoxmmstagmelvyi",
+    "lovable_project_id": "b6f1ba83-b44c-4a41-8589-b1e5380cf1ea",
+    "production_url": "https://ape-flashcards.lovable.app"
+  },
+  "purpose": "Registrar o estado atual do processo de desenvolvimento, auditoria, correção, documentação e publicação do runtime de estudo do App Piteco.",
+  "current_workflow": {
+    "step_1_audit": {
+      "description": "O fluxo começa com uma auditoria técnica do runtime de estudo antes de qualquer correção.",
+      "areas_checked": [
+        "configurações e presets",
+        "direção dos cards",
+        "playTarget / reprodução",
+        "TTS e autoplay",
+        "atalhos de teclado",
+        "gestos e swipe",
+        "Study vs MixedStudy",
+        "persistência e retomada de sessão",
+        "responsividade in-game",
+        "ListDetail e listas grandes",
+        "compatibilidade com sessões antigas"
+      ]
+    },
+    "step_2_root_cause_mapping": {
+      "description": "Antes de corrigir, cada bug é classificado pela causa raiz e pelo tipo de estado envolvido.",
+      "state_classes": {
+        "base_preference": "Preferência persistida do usuário. Ex.: direction, order, scope, fastMode, studyFlowMode, playTarget.",
+        "temporary_constraint": "Regra temporária que altera o comportamento efetivo sem destruir a preferência base. Ex.: Red Focus e mastery_rounds.",
+        "derived_state": "Estado calculado a partir das preferências. Ex.: effectiveDirection, promptSide, answerSide.",
+        "ephemeral_state": "Estado temporário do card atual. Ex.: flip atual, feedback, passo do autoplay.",
+        "legacy_wire": "Campos antigos mantidos apenas para leitura/migração. Ex.: playMode e playSide."
+      }
+    },
+    "step_3_implementation": {
+      "description": "As correções são aplicadas preservando um único dono por decisão e evitando estados paralelos.",
+      "principles": [
+        "uma configuração deve ter uma única autoridade",
+        "direction define o lado da pergunta/resposta",
+        "playTarget define o que reproduzir: pergunta, resposta ou ambos",
+        "gamificado usa direção efetiva aleatória sem apagar a preferência do usuário",
+        "Red Focus e restrições temporárias não devem sobrescrever o preset base",
+        "localStorage não deve ser a fonte principal de verdade",
+        "Supabase permanece como autoridade para dados importantes e retomada cross-device"
+      ]
+    },
+    "step_4_validation": {
+      "description": "Após cada rodada estrutural, o projeto passa por gates técnicos antes de publicação.",
+      "gates": [
+        "testes focados",
+        "suíte completa",
+        "typecheck",
+        "lint dos arquivos tocados",
+        "build de produção",
+        "revisão do diff real"
+      ]
+    },
+    "step_5_documentation": {
+      "description": "O resultado final é documentado no repositório.",
+      "second_brain_location": "docs/brain",
+      "current_note": "docs/brain/areas/study-runtime.md",
+      "audit_report": "reports/study-runtime/2026-09-14-study-runtime-audit.json",
+      "important_note": "Este Segundo Cérebro é o vault versionado no GitHub. Não significa que o Obsidian local do computador tenha sido alterado diretamente."
+    },
+    "step_6_publish": {
+      "description": "Depois dos gates verdes, a versão é publicada no Lovable.",
+      "status": "published",
+      "production_url": "https://ape-flashcards.lovable.app"
+    }
+  },
+  "study_runtime_architecture": {
+    "settings": {
+      "direction": {
+        "role": "Autoridade principal para determinar qual lado é prompt e qual lado é answer.",
+        "values": [
+          "a-b",
+          "b-a",
+          "any"
+        ]
+      },
+      "playTarget": {
+        "role": "Controla o alvo de reprodução/exibição sem escolher idioma diretamente.",
+        "values": [
+          "both",
+          "prompt",
+          "answer"
+        ]
+      },
+      "studyFlowMode": {
+        "role": "Controla o formato/fluxo da sessão.",
+        "important_behavior": "mastery_rounds pode impor effectiveDirection=any temporariamente sem destruir direction base."
+      },
+      "order": {
+        "role": "Controla ordem sequencial ou aleatória."
+      },
+      "scope": {
+        "role": "Controla conjunto de estudo, como todos ou favoritos."
+      },
+      "redFocus": {
+        "role": "Restrição temporária de fila.",
+        "important_behavior": "não deve destruir as preferências base ao ser ativado/desativado."
+      },
+      "fastMode": {
+        "role": "Controla comportamento de exibição rápida, não idioma."
+      },
+      "writeActivityMode": {
+        "role": "Configuração específica de modos de escrita."
+      },
+      "writeRewriteSide": {
+        "role": "Configuração específica de Rewrite; não deve virar autoridade global de direction."
+      },
+      "writeCorrectionMode": {
+        "role": "Controla correção da escrita."
+      }
+    },
+    "legacy_compatibility": {
+      "playMode": "Mantido apenas como legacy wire/migração.",
+      "playSide": "Mantido apenas como legacy wire/migração.",
+      "session_v1_strategy": "Na leitura de sessões antigas, o sistema testa múltiplas chaves candidatas para cobrir combinações históricas de playMode/playSide sem reintroduzir esses campos no runtime moderno."
+    }
+  },
+  "tts_current_process": {
+    "owner": "useTTS / owner central da fala no runtime de estudo",
+    "behavior": [
+      "fala usa Promise e eventos onstart/onend/onerror",
+      "cada request possui geração/token para impedir que fala antiga controle a nova",
+      "autoplay do Flip não usa mais 7 segundos fixos como relógio da fala",
+      "o próximo passo ocorre após o término real da fala",
+      "há pequena pausa de UI depois do onend",
+      "há failsafe apenas para promessas que não resolvem",
+      "não deve haver clique artificial em botão DOM para iniciar áudio"
+    ],
+    "remaining_risk": "Ainda deve ser validado visualmente e com uso real em diferentes navegadores/dispositivos."
+  },
+  "keyboard_and_input": {
+    "goal": "Campos de escrita têm prioridade sobre atalhos globais.",
+    "expected_behavior": [
+      "Q, A, W, D, R e outras teclas digitáveis devem escrever no campo quando o usuário está digitando",
+      "atalhos globais não podem navegar enquanto o input/textarea estiver ativo",
+      "Enter pode ser reservado para submissão quando definido pelo modo",
+      "atalhos voltam a funcionar quando o modo sai do contexto de digitação"
+    ],
+    "architecture_goal": "Um único roteador de comandos de teclado por sessão."
+  },
+  "gestures": {
+    "goal": "Um único dono para swipe e navegação por gesto.",
+    "reason": "Evitar avanço duplo causado por listeners simultâneos no deck e no modo Flip."
+  },
+  "large_lists_current_process": {
+    "current_strategy": "Progressive loading.",
+    "first_paint": "Primeira página real com aproximadamente 200 cards.",
+    "background_load": "O conjunto completo continua sendo carregado em segundo plano para preservar busca, camadas, seleção, bulk actions e exportação.",
+    "selection_behavior": "Selecionar todos é bloqueado enquanto a lista completa ainda está carregando.",
+    "search_behavior": "A busca ainda é client-side e pode estar parcial enquanto o carregamento completo não terminou.",
+    "remaining_debt": [
+      "paginação server-side real",
+      "busca server-side",
+      "seleção baseada em consulta/IDs sem depender de carregar tudo no cliente",
+      "payload inicial menor em vez de select('*') quando possível"
+    ]
+  },
+  "responsiveness_current_process": {
+    "status": "partially audited",
+    "known_problem": "Há CSS in-game acoplado a classes utilitárias Tailwind e uso de !important.",
+    "remaining_debt": [
+      "StudyViewportShell ou shell compartilhado",
+      "remoção de seletores frágeis como .max-w-* e [class*=...]",
+      "smoke visual autenticado em mobile estreito e desktop",
+      "validação com teclado virtual aberto nos modos de escrita"
+    ],
+    "target_viewports": [
+      "320x568",
+      "360x640",
+      "390x844",
+      "412x915",
+      "768x1024",
+      "1366x768"
+    ]
+  },
+  "persistence": {
+    "authority": "Supabase",
+    "goals": [
+      "retomar progresso em outro dispositivo",
+      "separar progresso por recurso/lista e modo de jogo",
+      "preservar progresso ao trocar de lista ou modo",
+      "evitar que dispositivo antigo sobrescreva sessão mais nova"
+    ],
+    "important_rule": "Dados importantes não devem depender apenas de localStorage."
+  },
+  "current_status": {
+    "main_runtime_reform": "completed",
+    "legacy_session_compatibility": "completed",
+    "direction_play_conflict": "completed",
+    "tts_fixed_delay_removal": "completed",
+    "event_driven_flip_autoplay": "completed",
+    "keyboard_priority": "completed at architecture/router level",
+    "single_swipe_owner": "completed",
+    "list_progressive_loading": "completed",
+    "true_server_side_pagination": "pending",
+    "in_game_responsive_shell": "pending",
+    "authenticated_visual_smoke": "pending",
+    "published": true
+  },
+  "important_commits": {
+    "first_structural_round": "b593d73df86d3bc8eb4573fca026c961b1e33a0e",
+    "second_structural_round": "248c411ab80652f03efad18757f55532809a3158",
+    "report_metadata_fix": "f40050def274046ee3536718a45596fb3cc9de66",
+    "second_brain_note_update": "b69eb8b6af3724617f2cf3363d14de8336f17063",
+    "final_report_publish_record": "bf1a96381333ce3f7c040a7fd1a2051296f951e2"
+  },
+  "lovable_cost": {
+    "first_round_credits": 13.5,
+    "second_round_credits": 9.2,
+    "total_credits": 22.7
+  },
+  "next_recommended_steps": [
+    "migrar ListDetail para paginação e busca server-side reais",
+    "criar um shell responsivo único para os modos de estudo",
+    "eliminar CSS frágil baseado em classes do pai",
+    "executar smoke visual autenticado em mobile e desktop",
+    "instrumentar métricas de TTS: requestedAt, startedAt, endedAt, cancelReason, mode e cardId",
+    "revisar todos os modos para garantir paridade entre Study e MixedStudy"
+  ]
+}
