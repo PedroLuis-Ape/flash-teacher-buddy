@@ -56,7 +56,9 @@ Primeira página real (200 cards) em query própria para paint rápido; o conjun
 completo continua sendo carregado porque busca, camadas, seleção, bulk actions e
 exportação prometem a lista inteira. Enquanto o conjunto completo carrega,
 "selecionar todos" é bloqueado com aviso honesto em vez de operar em conjunto
-parcial.
+parcial. A busca ainda é client-side e a interface informa que a lista completa
+está carregando; busca/paginação server-side continuam pendentes para eliminar
+qualquer falso negativo transitório em listas muito grandes.
 
 ## Dívidas que permanecem
 
