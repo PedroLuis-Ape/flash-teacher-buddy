@@ -542,6 +542,20 @@ export function useStudyEngine(
     sessionScopeKey: legacySessionScopeKey,
     cardsSignature,
   }), [userScope, localResourceId, mode, legacySessionScopeKey, cardsSignature]);
+  // LEGACY WIRE (somente leitura): o envelope v1 embutia o par físico do Play,
+  // que podia variar por usuário. Lemos todas as chaves candidatas.
+  const legacyStudySnapshotKeys = useMemo(
+    () => buildLegacyStudySessionScopeKeyCandidates(sessionContext).map((candidate) =>
+      buildLegacyStudySnapshotKey({
+        userScope: userScope || 'anon',
+        listId: localResourceId,
+        mode,
+        sessionScopeKey: candidate,
+        cardsSignature,
+      })),
+    [userScope, localResourceId, mode, sessionContext, cardsSignature],
+  );
+
 
   const masterySnapshotKey = useMemo(
     () => buildMasterySnapshotKey(studySnapshotKey),
