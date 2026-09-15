@@ -82,6 +82,11 @@ import { legacyPlayToTarget } from "@/features/study/preferences/studyPreset";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
+import { StudyCommandsPanel } from "@/features/study/components/StudyCommandsPanel";
+import {
+  isStudyCommandAvailable,
+  type StudyCommandContext,
+} from "@/features/study/lib/studyCommandRegistry";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
 import { StudyScopeEmptyState } from "@/features/study/components/StudyScopeEmptyState";
@@ -1900,7 +1905,7 @@ const Study = () => {
 
   // FONTE ÚNICA de comandos: a UI ("Comandos") e o teclado usam este contexto.
   const studyCommandContext = useMemo<StudyCommandContext>(() => ({
-    mode: (effectiveMode === "mixed" ? "flip" : effectiveMode) as StudyCommandContext["mode"],
+    mode: effectiveMode as StudyCommandContext["mode"],
     flowMode: masteryProgressActive ? "mastery_rounds" : "continuous",
     canGoNext,
     canGoPrevious: currentIndex > 0,
