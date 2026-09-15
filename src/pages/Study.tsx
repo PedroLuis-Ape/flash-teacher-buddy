@@ -2428,6 +2428,11 @@ const Study = () => {
                 }
                 canEditCurrentCard={!!displayedCard && !isSystemCollection}
               />
+
+              {/* Comandos: mesma registry consultada pelo teclado. */}
+              <StudyCommandsPanel context={studyCommandContext} />
+
+
               
               {/* Direction selector for flip mode — uses dynamic labels */}
               {effectiveMode === "flip" && (
