@@ -132,6 +132,31 @@ describe("publicação do ponteiro de retomada (camada comum de todas as superf�
     expect(storage.map.size).toBe(0);
   });
 
+  it("não republica atividade por rerender técnico/mudança de settings, só por identidade de atividade", async () => {
+    const touches: number[] = [];
+    const input = { ...baseInput, touchActivity: ({ revision }: { revision: number }) => { touches.push(revision); } };
+    await mount(input);
+    expect(touches.length).toBe(1);
+
+    // rerender técnico: mesma identidade de atividade
+    await act(async () => { renderer?.update(<Harness {...input} />); });
+    expect(touches.length).toBe(1);
+
+    // settings mudaram, atividade não
+    await act(async () => {
+      renderer?.update(<Harness {...input} settingsSummary={{ ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, translate: true }} />);
+    });
+    expect(touches.length).toBe(1);
+
+    // card avançou: é atividade real, com revisão monotônica
+    await act(async () => {
+      renderer?.update(<Harness {...input} currentIndex={5} currentCardId="card-5" />);
+    });
+    expect(touches.length).toBe(2);
+    expect(touches[1]).toBeGreaterThan(touches[0]);
+    expect(readStudyResumePointer("u1", storage)?.activityRevision).toBe(touches[1]);
+  });
+
   it("publish() manual republica a posição atual (contrato de 'Salvar e sair')", async () => {
     await mount(baseInput);
     await act(async () => {
