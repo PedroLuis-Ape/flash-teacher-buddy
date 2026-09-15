@@ -92,6 +92,7 @@ const STATIC_ROUTES = new Set([
   "/settings/shortcuts",
   "/audit",
   "/special-cards",
+  "/review-cards",
   "/system-status",
   "/reportar-problema",
 ]);

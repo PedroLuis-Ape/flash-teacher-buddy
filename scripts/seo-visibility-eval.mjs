@@ -140,7 +140,7 @@ addCheck({
   passed: ["/pt-br/fonte-oficial", "/pt-br/metodologia", "/pt-br/evidencias", "/portal"].every((path) => llms.includes(`${canonicalHost}${path}`)),
   detail: "llms.txt deve apontar para as fontes públicas prioritárias.",
 });
-const privatePatterns = ["/auth", "/dashboard", "/profile", "/settings/", "/special-cards", "/system-status"];
+const privatePatterns = ["/auth", "/dashboard", "/profile", "/settings/", "/special-cards", "/review-cards", "/system-status"];
 addCheck({
   id: "discovery-no-private-urls",
   area: "discovery",

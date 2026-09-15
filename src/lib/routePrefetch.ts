@@ -29,6 +29,7 @@ const routeImportMap: Record<string, () => Promise<unknown>> = {
   '/profile': () => import('@/pages/Profile'),
   '/notes': () => import('@/pages/Notes'),
   '/search': () => import('@/pages/Search'),
+  '/review-cards': () => import('@/pages/ReviewCards'),
   '/turmas': () => import('@/pages/Turmas'),
   '/trash': () => import('@/pages/Trash'),
 };

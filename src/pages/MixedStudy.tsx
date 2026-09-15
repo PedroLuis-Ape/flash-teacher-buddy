@@ -46,6 +46,7 @@ import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useSpecialFlashcards } from "@/hooks/useSpecialFlashcards";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
+import { useFlashcardReviewFlags, useFlashcardReviewFlagMutation } from "@/hooks/useFlashcardReviewFlags";
 import { assertStudySessionWrite } from "@/features/study/lib/restoreStudySession";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
 import {
@@ -996,6 +997,27 @@ export default function MixedStudy() {
       sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
     });
   }, [currentCard, institutionId, isCurrentCardSpecial, listId, setSpecialLayer, statusIdentity.canonicalGroupId, statusIdentity.stableGroupId, statusIdentity.visibleLayerId, userId]);
+  const { flaggedIds: reviewFlaggedIds } = useFlashcardReviewFlags(userId);
+  const reviewFlagMutation = useFlashcardReviewFlagMutation(userId);
+  const currentReviewCardId = statusIdentity.visibleLayerId ?? currentCard?.id ?? null;
+  const isCurrentReviewFlagged = Boolean(
+    currentReviewCardId && reviewFlaggedIds.has(currentReviewCardId),
+  );
+  const handleToggleReviewFlag = useCallback(() => {
+    if (!userId || !currentReviewCardId || reviewFlagMutation.isPending) return;
+    reviewFlagMutation.mutate({
+      flashcardId: currentReviewCardId,
+      enabled: !isCurrentReviewFlagged,
+      institutionId,
+    });
+  }, [
+    currentReviewCardId,
+    institutionId,
+    isCurrentReviewFlagged,
+    reviewFlagMutation,
+    userId,
+  ]);
+
   const resolvedDirection: Direction = baseDirection === "any"
     ? (mixed.currentCardId && hashToBool(mixed.currentCardId) ? "a-b" : "b-a")
     : baseDirection;
@@ -1320,6 +1342,9 @@ export default function MixedStudy() {
     onRestartJourney: restartJourneyManually,
     isSpecial: isCurrentCardSpecial,
     onToggleSpecial: handleToggleSpecial,
+    isReviewFlagged: isCurrentReviewFlagged,
+    reviewFlagPending: reviewFlagMutation.isPending,
+    onToggleReviewFlag: handleToggleReviewFlag,
     rewriteSnapshotScope: mixedSnapshotKey,
   };
 
@@ -1394,6 +1419,9 @@ export default function MixedStudy() {
               onRestartJourney={restartJourneyManually}
               isSpecial={isCurrentCardSpecial}
               onToggleSpecial={handleToggleSpecial}
+              isReviewFlagged={isCurrentReviewFlagged}
+              reviewFlagPending={reviewFlagMutation.isPending}
+              onToggleReviewFlag={handleToggleReviewFlag}
             />
           )}
           {mixed.activityMode === "unscramble" && <UnscrambleStudyView {...sharedProps} />}

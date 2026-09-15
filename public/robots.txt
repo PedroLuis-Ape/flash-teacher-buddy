@@ -43,6 +43,7 @@ Disallow: /my-teachers
 Disallow: /professores/
 Disallow: /glossary
 Disallow: /special-cards
+Disallow: /review-cards
 Disallow: /system-status
 Disallow: /reportar-problema
 
@@ -74,6 +75,7 @@ Disallow: /my-teachers
 Disallow: /professores/
 Disallow: /glossary
 Disallow: /special-cards
+Disallow: /review-cards
 Disallow: /system-status
 Disallow: /reportar-problema
 
