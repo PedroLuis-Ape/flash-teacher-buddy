@@ -1346,7 +1346,7 @@ export function useStudyEngine(
     isMasteryMode,
     listId,
     localResourceId,
-    legacyStudySnapshotKey,
+    legacyStudySnapshotKeys,
     loadFlipProgress,
     masterySnapshotKey,
     mode,
