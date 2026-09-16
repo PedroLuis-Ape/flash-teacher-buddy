@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { writeStudyResumePointer } from "@/features/study/lib/studyResumePointer";
 import { touchStudySessionActivity } from "@/features/study/lib/studySessionActivity";
+import { setCurrentStudyCardIdentity } from "@/features/study/lib/currentStudyCardIdentity";
 import type { StudySettingsSnapshotV3 } from "@/features/study/lib/studySettingsSnapshotV3";
 
 export type StudyResumePublisherStorage = Pick<Storage, "setItem" | "removeItem">;
@@ -91,6 +92,11 @@ export function useStudyResumePublisher(
   const lastRevisionRef = useRef(0);
 
   const publish = useCallback(() => {
+    // UI-local identity is intentionally independent from persistence. It lets
+    // subscribers reset transient per-card state as soon as the playable card
+    // or visible layer changes, even when the persisted note fields are equal.
+    setCurrentStudyCardIdentity(currentCardId, layerIndex);
+
     if (!target || !userId || !sessionId || !resourceId || !gameMode || !path) return;
     if (!deckReady) return;
 
