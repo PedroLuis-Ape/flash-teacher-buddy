@@ -36,6 +36,13 @@ describe("in-game card notes", () => {
     expect(editor).toContain('.select("id")');
   });
 
+  it("never overwrites rich notes that a legacy/basic caller did not load", () => {
+    expect(editor).toContain("Object.prototype.hasOwnProperty.call(flashcard, key)");
+    expect(editor).toContain("const showRichNotes = notesOnly || hasLoadedRichNotes");
+    expect(editor).toContain("const shouldPersistRichNotes = showRichNotes && richNotesDirty");
+    expect(editor).toContain("if (shouldPersistRichNotes)");
+  });
+
   it("refreshes the visible detailed explanation without rebuilding the deck", () => {
     expect(editor).toContain("setCurrentDetailedExplanation");
     expect(explanationPanel).toContain("useSyncExternalStore");
