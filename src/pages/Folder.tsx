@@ -1682,10 +1682,11 @@ const Folder = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
             <DialogHeader>
-              <DialogTitle>{t("library.folder.editList")}</DialogTitle>
+              <DialogTitle>{t("library.folder.renameList")}</DialogTitle>
               <DialogDescription>
-                Altere o título e descrição da lista
+                {t("library.folder.renameListDescription")}
               </DialogDescription>
+
             </DialogHeader>
             {editingList && (
               <form onSubmit={handleUpdateList} className="flex min-h-0 flex-1 flex-col">
