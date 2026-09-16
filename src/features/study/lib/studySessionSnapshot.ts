@@ -1,3 +1,5 @@
+import { repairStraightThroughOrder } from "./straightThroughQueue";
+
 export interface PersistedStudyResult {
   flashcardId: string;
   correct: boolean;
@@ -130,7 +132,8 @@ export function sanitizeStudyLayerSnapshot(value: unknown): StudySessionLayerSna
  * source of truth and every playable card appears exactly once. Old sessions
  * may still contain injected copies (or a randomized order), so those queues
  * are repaired and restarted at index zero. Clean red-focus sessions keep
- * their current index. Other scopes preserve legitimate repetitions.
+ * their current index. Other scopes preserve legitimate repetitions here; the
+ * Extenso-specific ordinary-repeat repair is applied by readStudySnapshot.
  */
 export function sanitizePersistedStudyOrder({
   sessionOrder,
@@ -290,7 +293,24 @@ export function readStudySnapshot(
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? sanitizeStudySnapshot(JSON.parse(raw), availableCardIds, options) : null;
+    const snapshot = raw ? sanitizeStudySnapshot(JSON.parse(raw), availableCardIds, options) : null;
+    if (!snapshot || options.enforceUniqueOrder) return snapshot;
+
+    const repaired = repairStraightThroughOrder({
+      sessionOrder: snapshot.cardsOrder,
+      currentIndex: snapshot.currentIndex,
+      availableCardIds,
+      context: {
+        sessionScopeKey: key,
+        settingsSnapshot: snapshot.settingsSnapshot,
+      },
+    });
+    if (!repaired || !repaired.repaired) return snapshot;
+    return {
+      ...snapshot,
+      cardsOrder: repaired.cardsOrder,
+      currentIndex: repaired.currentIndex,
+    };
   } catch {
     return null;
   }
