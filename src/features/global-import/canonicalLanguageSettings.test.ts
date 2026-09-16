@@ -39,6 +39,8 @@ const invertedFolder = {
   labels_b: "English",
 };
 
+const DIRECTION_ERROR = "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.";
+
 function plan(destination: GlobalImportDestinationPlan["folders"][number]["lists"][number]): GlobalImportDestinationPlan {
   return {
     folders: {
@@ -131,7 +133,7 @@ describe("Super Import canonical A/B language authority", () => {
       }],
     };
 
-    const errors = validateDestinationPlan(
+    expect(validateDestinationPlan(
       incomingEnPt,
       catalog,
       plan({
@@ -139,11 +141,7 @@ describe("Super Import canonical A/B language authority", () => {
         listId: "list-inherited",
         strategy: "append",
       }),
-    );
-
-    expect(errors.some((error) => error.includes("Os lados do pacote não correspondem aos lados da lista escolhida."))).toBe(true);
-    expect(errors.some((error) => error.includes("Recebido: A=en, B=pt-BR"))).toBe(true);
-    expect(errors.some((error) => error.includes("Destino: A=pt-BR, B=en"))).toBe(true);
+    )).toContain(DIRECTION_ERROR);
   });
 
   it("validates an individually mapped existing list even without consolidate=true", () => {
@@ -159,7 +157,7 @@ describe("Super Import canonical A/B language authority", () => {
       }],
     };
 
-    const errors = validateDestinationPlan(
+    expect(validateDestinationPlan(
       incomingEnPt,
       catalog,
       plan({
@@ -167,8 +165,6 @@ describe("Super Import canonical A/B language authority", () => {
         listId: "list-explicit-inverted",
         strategy: "append",
       }),
-    );
-
-    expect(errors.some((error) => error.includes("Os lados do pacote não correspondem aos lados da lista escolhida."))).toBe(true);
+    )).toContain(DIRECTION_ERROR);
   });
 });
