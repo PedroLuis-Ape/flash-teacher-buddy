@@ -6,12 +6,17 @@ import {
   type SmartImportList,
   type SmartImportPackage,
 } from "@/features/smart-import/schema";
-import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import {
+  getLangLabel,
+  resolveEffectiveListSettings,
+  type LanguageSettingsMode,
+} from "@/features/study/lib/resolveStudySides";
 import type {
   ExistingImportList,
   GlobalImportDestinationPlan,
   ImportDestinationCatalog,
 } from "./destination";
+import { importDirectionsMatch, type ImportLanguageDirection } from "./languageCompatibility";
 import type { GlobalImportPackage } from "./schema";
 
 export type ExistingListImportStrategy = "append" | "replace";
@@ -30,6 +35,11 @@ export interface ExistingListImportTarget {
   primarySide: "a" | "b";
   studyType: SmartImportList["study_type"];
   ttsEnabled: boolean;
+  languageSettingsMode: LanguageSettingsMode;
+  rawFrontLanguage: string | null;
+  rawBackLanguage: string | null;
+  rawLabelA: string | null;
+  rawLabelB: string | null;
 }
 
 export interface ExistingListSourceGroup {
@@ -72,30 +82,6 @@ export interface ExistingListImportPreparation {
 
 const DIRECTION_ERROR = "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.";
 
-function normalizeLanguage(value: string): string {
-  const normalized = value
-    .trim()
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/_/g, "-");
-  const aliases: Record<string, string> = {
-    english: "en",
-    ingles: "en",
-    portugues: "pt",
-    portuguese: "pt",
-    espanhol: "es",
-    spanish: "es",
-    frances: "fr",
-    french: "fr",
-    alemao: "de",
-    german: "de",
-    italiano: "it",
-    italian: "it",
-  };
-  return aliases[normalized] ?? normalized.split("-")[0];
-}
-
 function countPlayableCards(list: SmartImportList): number {
   return list.cards.reduce(
     (total, card) => total + (card.type === "normal" ? 1 : card.layers.length),
@@ -123,9 +109,54 @@ function normalizeStudyType(value: string): SmartImportList["study_type"] {
   return value === "general" || value === "math" || value === "visual" ? value : "language";
 }
 
+function smartListDirection(list: SmartImportList): ImportLanguageDirection {
+  return { front: list.front_language, back: list.back_language };
+}
+
+function effectiveTargetDirection(target: ExistingListImportTarget): ImportLanguageDirection {
+  return { front: target.frontLanguage, back: target.backLanguage };
+}
+
+function rawTargetDirection(target: ExistingListImportTarget): ImportLanguageDirection | null {
+  return target.rawFrontLanguage && target.rawBackLanguage
+    ? { front: target.rawFrontLanguage, back: target.rawBackLanguage }
+    : null;
+}
+
+function sourceLists(source: SmartImportPackage): SmartImportList[] {
+  return source.package.folders.flatMap((folder) => folder.lists);
+}
+
+function resolveSourceAwareTarget(
+  source: SmartImportPackage,
+  target: ExistingListImportTarget,
+): ExistingListImportTarget {
+  const lists = sourceLists(source);
+  const effective = effectiveTargetDirection(target);
+  if (lists.every((list) => importDirectionsMatch(smartListDirection(list), effective))) {
+    return target;
+  }
+
+  const raw = rawTargetDirection(target);
+  if (
+    target.languageSettingsMode === "legacy"
+    && raw
+    && lists.every((list) => importDirectionsMatch(smartListDirection(list), raw))
+  ) {
+    return {
+      ...target,
+      frontLanguage: raw.front,
+      backLanguage: raw.back,
+      labelA: target.rawLabelA || getLangLabel(raw.front),
+      labelB: target.rawLabelB || getLangLabel(raw.back),
+    };
+  }
+
+  return target;
+}
+
 function directionMatches(list: SmartImportList, target: ExistingListImportTarget): boolean {
-  return normalizeLanguage(list.front_language) === normalizeLanguage(target.frontLanguage)
-    && normalizeLanguage(list.back_language) === normalizeLanguage(target.backLanguage);
+  return importDirectionsMatch(smartListDirection(list), effectiveTargetDirection(target));
 }
 
 export function existingListTargetFromCatalog(
@@ -152,6 +183,11 @@ export function existingListTargetFromCatalog(
     primarySide: "a",
     studyType: normalizeStudyType(effective.studyType),
     ttsEnabled: effective.ttsEnabled,
+    languageSettingsMode: effective.languageSettingsMode,
+    rawFrontLanguage: list.lang_a ?? null,
+    rawBackLanguage: list.lang_b ?? null,
+    rawLabelA: list.labels_a ?? null,
+    rawLabelB: list.labels_b ?? null,
   };
 }
 
@@ -160,6 +196,7 @@ export function reconcileExistingListCards(
   target: ExistingListImportTarget,
   existingCards: Array<{ term: string; translation: string }>,
 ): ExistingListCardReconciliation {
+  const resolvedTarget = resolveSourceAwareTarget(source, target);
   const seen = new Set(existingCards.map((card) => cardIdentity(card.term, card.translation)));
   let cardsReceived = 0;
   let cardsValid = 0;
@@ -170,7 +207,7 @@ export function reconcileExistingListCards(
     for (const list of folder.lists) {
       const cards = playableCards(list);
       cardsReceived += cards.length;
-      if (!directionMatches(list, target)) {
+      if (!directionMatches(list, resolvedTarget)) {
         cardsBlocked += cards.length;
         continue;
       }
@@ -199,6 +236,7 @@ export function buildExistingListImportPlan(
   target: ExistingListImportTarget,
   strategy: ExistingListImportStrategy = "append",
 ): ExistingListImportPreparation {
+  const resolvedTarget = resolveSourceAwareTarget(source, target);
   const cards: SmartImportList["cards"] = [];
   const glossary = new Map<string, SmartGlossaryEntry>();
   const sourceGroups: ExistingListSourceGroup[] = [];
@@ -211,7 +249,7 @@ export function buildExistingListImportPlan(
   for (const folder of source.package.folders) {
     for (const list of folder.lists) {
       const listCards = countPlayableCards(list);
-      const blocked = !directionMatches(list, target);
+      const blocked = !directionMatches(list, resolvedTarget);
       cardsReceived += listCards;
       if (blocked) cardsBlocked += listCards;
       glossaryReceived += list.glossary.length;
@@ -240,23 +278,23 @@ export function buildExistingListImportPlan(
     package: {
       name: source.package.name,
       description: source.package.description,
-      source_language: target.frontLanguage,
-      target_language: target.backLanguage,
+      source_language: resolvedTarget.frontLanguage,
+      target_language: resolvedTarget.backLanguage,
       level: source.package.level,
       theme: source.package.theme,
       folders: [{
-        name: target.folderName,
+        name: resolvedTarget.folderName,
         description: null,
         lists: [{
-          name: target.listName,
+          name: resolvedTarget.listName,
           description: null,
-          front_language: target.frontLanguage,
-          back_language: target.backLanguage,
-          primary_side: target.primarySide,
-          study_type: target.studyType,
-          label_a: target.labelA,
-          label_b: target.labelB,
-          tts_enabled: target.ttsEnabled,
+          front_language: resolvedTarget.frontLanguage,
+          back_language: resolvedTarget.backLanguage,
+          primary_side: resolvedTarget.primarySide,
+          study_type: resolvedTarget.studyType,
+          label_a: resolvedTarget.labelA,
+          label_b: resolvedTarget.labelB,
+          tts_enabled: resolvedTarget.ttsEnabled,
           glossary: Array.from(glossary.values()),
           cards,
         }],
@@ -268,19 +306,22 @@ export function buildExistingListImportPlan(
   const plan: GlobalImportDestinationPlan = {
     folders: {
       0: {
-        folder: { mode: "existing", folderId: target.folderId },
+        folder: { mode: "existing", folderId: resolvedTarget.folderId },
         lists: {
-          0: { mode: "existing", listId: target.listId, strategy },
+          0: { mode: "existing", listId: resolvedTarget.listId, strategy },
         },
       },
     },
   };
 
+  const usedLegacyRawDirection = resolvedTarget.frontLanguage !== target.frontLanguage
+    || resolvedTarget.backLanguage !== target.backLanguage;
+
   return {
     smartPackage,
     packageValue,
     plan,
-    target,
+    target: resolvedTarget,
     sourceGroups,
     summary: {
       sourceFolders: source.package.folders.length,
@@ -293,9 +334,14 @@ export function buildExistingListImportPlan(
       glossaryToImport: glossary.size,
     },
     errors: Array.from(new Set(errors)),
-    warnings: glossaryDuplicates > 0
-      ? [`${glossaryDuplicates} entrada(s) repetida(s) de glossário foram consolidadas.`]
-      : [],
+    warnings: [
+      ...(usedLegacyRawDirection
+        ? ["A lista de destino ainda usa compatibilidade antiga. A importação respeitará os idiomas A/B armazenados diretamente na lista; abra Configurações A/B e salve uma autoridade explícita para eliminar a ambiguidade."]
+        : []),
+      ...(glossaryDuplicates > 0
+        ? [`${glossaryDuplicates} entrada(s) repetida(s) de glossário foram consolidadas.`]
+        : []),
+    ],
   };
 }
 
