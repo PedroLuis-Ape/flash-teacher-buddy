@@ -35,7 +35,6 @@ describe("folder UI contract — listas combinadas", () => {
     expect(FOLDER).toContain('.in("id", normalListIds)');
   });
 
-
   it("marks embedded lists and keeps reference ids and normal counts", () => {
     expect(FOLDER).toContain("🔗 Combinada");
     expect(FOLDER).toContain("list.reference_id");
@@ -44,7 +43,7 @@ describe("folder UI contract — listas combinadas", () => {
 
   it("never labels unembed as card deletion", () => {
     expect(DIALOGS).toContain("da lista combinada");
-    expect(DIALOGS).toContain("Remover todos desta fonte");
+    expect(DIALOGS).toContain("Remover esta fonte");
     expect(DIALOGS).toContain("Esvaziar lista combinada");
     expect(DIALOGS).not.toContain("Excluir card");
     expect(DIALOGS).not.toContain('from("flashcards")');
