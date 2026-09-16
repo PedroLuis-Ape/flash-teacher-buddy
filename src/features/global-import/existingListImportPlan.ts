@@ -35,11 +35,12 @@ export interface ExistingListImportTarget {
   primarySide: "a" | "b";
   studyType: SmartImportList["study_type"];
   ttsEnabled: boolean;
-  languageSettingsMode: LanguageSettingsMode;
-  rawFrontLanguage: string | null;
-  rawBackLanguage: string | null;
-  rawLabelA: string | null;
-  rawLabelB: string | null;
+  /** Optional for older callers/tests; catalog-derived targets always provide it. */
+  languageSettingsMode?: LanguageSettingsMode;
+  rawFrontLanguage?: string | null;
+  rawBackLanguage?: string | null;
+  rawLabelA?: string | null;
+  rawLabelB?: string | null;
 }
 
 export interface ExistingListSourceGroup {
