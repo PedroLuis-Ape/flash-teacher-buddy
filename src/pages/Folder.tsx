@@ -494,6 +494,10 @@ const Folder = () => {
     setEditDialogOpen(true);
   };
 
+  const handleOpenListEditor = (list: ListType) => {
+    navigate(`/list/${list.id}`);
+  };
+
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -1212,9 +1216,13 @@ const Folder = () => {
                                         Gerenciar cards incorporados
                                       </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                    <DropdownMenuItem data-testid="list-open-editor-action" onSelect={() => handleOpenListEditor(list)}>
                                       <Pencil className="mr-2 h-4 w-4" />
-                                      Editar lista
+                                      Editar cards e conteúdo
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                      <Settings className="mr-2 h-4 w-4" />
+                                      Editar nome e descrição
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
                                       <Trash2 className="mr-2 h-4 w-4" />
@@ -1381,9 +1389,13 @@ const Folder = () => {
                                   {canEdit && (
                                     <>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                      <DropdownMenuItem data-testid="list-open-editor-action-mobile" onSelect={() => handleOpenListEditor(list)}>
                                         <Pencil className="mr-2 h-4 w-4" />
-                                        Editar lista
+                                        Editar cards e conteúdo
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Editar nome e descrição
                                       </DropdownMenuItem>
                                       <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -1446,15 +1458,37 @@ const Folder = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                          aria-label={`Editar cards e conteúdo de ${list.title}`}
+                                          title="Editar cards e conteúdo"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            navigate(`/list/${list.id}`);
+                                            handleOpenListEditor(list);
                                           }}
                                         >
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>{t("library.folder.editContent")}</TooltipContent>
+                                      <TooltipContent>Editar cards e conteúdo</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                          aria-label={`Editar nome e descrição de ${list.title}`}
+                                          title="Editar nome e descrição"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditList(list);
+                                          }}
+                                        >
+                                          <Settings className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Editar nome e descrição</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <AlertDialog>
@@ -1472,7 +1506,7 @@ const Folder = () => {
                                         <AlertDialogTitle>{t("library.folder.deleteList")}</AlertDialogTitle>
                                         <AlertDialogDescription>
                                           Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
@@ -1652,9 +1686,9 @@ const Folder = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
             <DialogHeader>
-              <DialogTitle>{t("library.folder.editList")}</DialogTitle>
+              <DialogTitle>Editar nome e descrição</DialogTitle>
               <DialogDescription>
-                Altere o título e descrição da lista
+                Altere apenas o título e a descrição. Para editar ou apagar cards, use “Editar cards e conteúdo”.
               </DialogDescription>
             </DialogHeader>
             {editingList && (
