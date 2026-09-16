@@ -507,7 +507,7 @@ export const WriteStudyView = ({
     && normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)
       ? rewriteOppositeText
       : "";
-  const showRewriteTranslation = isListeningRewrite && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0;
+  const showRewriteTranslation = isRewriteActivity && rewriteTranslationText.length > 0;
   const rewriteHint = isRewriteActivity ? buildRewriteHint(correctAnswer, rewriteState.hintLevel) : "";
 
   const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
