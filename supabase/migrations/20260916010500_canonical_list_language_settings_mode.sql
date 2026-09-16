@@ -6,36 +6,34 @@
 --
 -- `language_settings_mode` removes the historical ambiguity between an
 -- intentional en/pt list configuration and the database's old en/pt defaults.
--- Existing rows are deliberately kept as `legacy`: no flashcard content or
--- existing list semantics are rewritten by this migration.
+-- Existing rows are deliberately NOT rewritten: NULL means legacy to the app,
+-- so no flashcard content or existing list semantics change on migration.
 BEGIN;
 
 ALTER TABLE public.lists
   ADD COLUMN IF NOT EXISTS language_settings_mode text;
 
--- Backwards compatibility is the first invariant: every pre-contract list
--- continues through the exact legacy resolution heuristic until a user or a
--- modern importer explicitly establishes a new authority.
-UPDATE public.lists
-SET language_settings_mode = 'legacy'
-WHERE language_settings_mode IS NULL;
-
+-- New rows that do not state an authority explicitly start in compatibility
+-- mode. Pre-existing rows remain NULL and are interpreted as legacy by the
+-- canonical resolver, avoiding a mass UPDATE on production data.
 ALTER TABLE public.lists
-  ALTER COLUMN language_settings_mode SET DEFAULT 'legacy',
-  ALTER COLUMN language_settings_mode SET NOT NULL;
+  ALTER COLUMN language_settings_mode SET DEFAULT 'legacy';
 
 ALTER TABLE public.lists
   DROP CONSTRAINT IF EXISTS lists_language_settings_mode_check;
 
 ALTER TABLE public.lists
   ADD CONSTRAINT lists_language_settings_mode_check
-  CHECK (language_settings_mode IN ('legacy', 'explicit', 'inherited')) NOT VALID;
+  CHECK (
+    language_settings_mode IS NULL
+    OR language_settings_mode IN ('legacy', 'explicit', 'inherited')
+  ) NOT VALID;
 
 ALTER TABLE public.lists
   VALIDATE CONSTRAINT lists_language_settings_mode_check;
 
 COMMENT ON COLUMN public.lists.language_settings_mode IS
-  'Authority for study/language settings: explicit=list owns A/B metadata; inherited=folder owns it; legacy=pre-contract compatibility heuristic.';
+  'Authority for study/language settings: explicit=list owns A/B metadata; inherited=folder owns it; legacy or NULL=pre-contract compatibility heuristic.';
 
 -- New manual/editor writes that actually define study settings become explicit.
 -- Rows inserted without any study metadata (for example old clone paths) stay
@@ -48,6 +46,7 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    NEW.language_settings_mode := COALESCE(NEW.language_settings_mode, 'legacy');
     IF NEW.language_settings_mode = 'legacy'
        AND (
          NEW.labels_a IS NOT NULL
@@ -64,7 +63,8 @@ BEGIN
 
   -- Respect an explicitly supplied mode change (including switching to
   -- inherited). Only infer `explicit` when the caller changes study metadata
-  -- without changing the authority field itself.
+  -- without changing the authority field itself. This also upgrades an old
+  -- NULL/legacy row the first time its study settings are deliberately edited.
   IF NEW.language_settings_mode IS NOT DISTINCT FROM OLD.language_settings_mode
      AND (
        NEW.study_type IS DISTINCT FROM OLD.study_type
@@ -112,7 +112,7 @@ BEGIN
     UPDATE public.lists
     SET language_settings_mode = 'explicit'
     WHERE id = NEW.entity_id
-      AND language_settings_mode = 'legacy';
+      AND COALESCE(language_settings_mode, 'legacy') = 'legacy';
   END IF;
 
   RETURN NEW;
