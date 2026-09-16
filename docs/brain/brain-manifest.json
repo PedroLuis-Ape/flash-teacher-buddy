@@ -3,10 +3,10 @@
   "brain_root": "docs/brain",
   "generated_by": "scripts/brain-index.mjs",
   "byte_basis": "utf8-bytes-lf-normalized",
-  "note_count": 113,
+  "note_count": 114,
   "historical_note_count": 38,
-  "total_bytes": 480196,
-  "brain_version": "8e5370a7ed060ed7c587ded9e0313ee550d63044e93c99482a0903c4f2541e51",
+  "total_bytes": 484586,
+  "brain_version": "67f06160a6ae23b2d00e571d2b3af584e53fe42ff5cf9c8d8920921e73c2c20d",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -267,8 +267,8 @@
       "canonical_confidence": "inferred"
     },
     "session-log": {
-      "notes": 2,
-      "bytes": 32970,
+      "notes": 3,
+      "bytes": 37360,
       "historical_notes": 0,
       "canonical_document": null,
       "canonical_confidence": null
@@ -1856,6 +1856,20 @@
       "historical": false,
       "bytes": 3130,
       "sha256": "4301cd0b87132e0ba56a4bf8bcb4c029c85dbf8102fbb7f15e76aa19a8258a98"
+    },
+    {
+      "path": "sessions/2026-09-15-canonical-list-language-settings.md",
+      "domain": "session-log",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "Sessão — autoridade canônica de idioma A/B",
+      "description": "Data: 2026-09-15",
+      "type": "session-log",
+      "status": null,
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 4390,
+      "sha256": "3cda1a0e7a2005b97d4731407180b5554bc5887770df00b8f89c396a0a12a77a"
     },
     {
       "path": "sessions/2026-09-15-finalizacao-revisar-cards.md",
