@@ -1,5 +1,9 @@
-import { resolveEffectiveListSettings } from "../study/lib/resolveStudySides";
-import type { GlobalImportList, GlobalImportPackage } from "./schema";
+import type { GlobalImportPackage } from "./schema";
+import {
+  formatImportLanguageMismatch,
+  resolveImportLanguageCompatibility,
+  resolveIncomingListDirection,
+} from "./languageCompatibility";
 
 export interface ExistingImportFolder {
   id: string;
@@ -60,39 +64,6 @@ export type ImportDestinationContext =
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function normalizeLanguage(value: string): string {
-  const normalized = value
-    .trim()
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/_/g, "-");
-  const aliases: Record<string, string> = {
-    english: "en", ingles: "en",
-    portuguese: "pt", portugues: "pt",
-    spanish: "es", espanhol: "es",
-    french: "fr", frances: "fr",
-    german: "de", alemao: "de",
-    italian: "it", italiano: "it",
-  };
-  return aliases[normalized] ?? normalized.split("-")[0];
-}
-
-function listDirection(
-  list: GlobalImportList,
-  packageValue: GlobalImportPackage,
-): { front: string; back: string } | null {
-  const metadata = list.cards[0]?.metadata;
-  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-    const front = metadata.front_language;
-    const back = metadata.back_language;
-    if (typeof front === "string" && typeof back === "string") return { front, back };
-  }
-  const front = packageValue.package.source_language;
-  const back = packageValue.package.target_language;
-  return front && back ? { front, back } : null;
 }
 
 export async function loadImportDestinationCatalog(
@@ -197,15 +168,20 @@ export function validateDestinationPlan(
         }
         targetedExistingLists.set(listPlan.listId, Boolean(listPlan.consolidate));
 
-        if (list && listPlan.consolidate) {
-          const direction = listDirection(incomingList, packageValue);
+        // Every path that targets an existing list must obey the same A/B
+        // contract. `consolidate` only controls many-lists-to-one semantics; it
+        // must never decide whether language compatibility is validated.
+        if (list) {
+          const direction = resolveIncomingListDirection(incomingList, packageValue);
           if (direction) {
             const targetFolder = folderById.get(list.folder_id);
-            const effective = resolveEffectiveListSettings(list, targetFolder);
-            const incompatible = normalizeLanguage(direction.front) !== normalizeLanguage(effective.langA)
-              || normalizeLanguage(direction.back) !== normalizeLanguage(effective.langB);
-            if (incompatible) {
-              errors.push("Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+            const compatibility = resolveImportLanguageCompatibility(
+              direction,
+              list,
+              targetFolder,
+            );
+            if (!compatibility.compatible) {
+              errors.push(formatImportLanguageMismatch(compatibility));
             }
           }
         }
