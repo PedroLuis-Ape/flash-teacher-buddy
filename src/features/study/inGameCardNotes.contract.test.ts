@@ -7,6 +7,7 @@ const study = read("src/pages/Study.tsx");
 const mixed = read("src/pages/MixedStudy.tsx");
 const settings = read("src/features/study/components/GameSettingsModal.impl.tsx");
 const editor = read("src/components/EditFlashcardDialog.tsx");
+const explanationPanel = read("src/features/study/components/DetailedExplanationPanel.impl.tsx");
 
 describe("in-game card notes", () => {
   it("keeps the exact visible card editor wired through the regular Study runtime", () => {
@@ -33,6 +34,14 @@ describe("in-game card notes", () => {
     expect(editor).toContain('.from("flashcards")');
     expect(editor).toContain(".update(extendedPayload)");
     expect(editor).toContain('.select("id")');
+  });
+
+  it("refreshes the visible detailed explanation without rebuilding the deck", () => {
+    expect(editor).toContain("setCurrentDetailedExplanation");
+    expect(explanationPanel).toContain("useSyncExternalStore");
+    expect(explanationPanel).toContain("liveValue.explanation");
+    expect(explanationPanel).toContain("liveValue.usageNotes");
+    expect(explanationPanel).toContain("liveValue.commonMistakes");
   });
 
   it("does not restart or rebuild the study session just to save notes", () => {
