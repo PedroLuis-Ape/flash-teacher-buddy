@@ -1487,7 +1487,7 @@ const Folder = () => {
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>{t("library.folder.editContent")}</TooltipContent>
+                                      <TooltipContent>{t("library.folder.editList")}</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <AlertDialog>
