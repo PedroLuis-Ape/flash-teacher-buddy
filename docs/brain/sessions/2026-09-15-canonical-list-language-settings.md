@@ -32,7 +32,7 @@ A migration é deliberadamente aditiva:
 - nenhum `flashcards.term` é alterado;
 - nenhum `flashcards.translation` é alterado;
 - nenhuma layer é reordenada ou reescrita;
-- listas existentes recebem `language_settings_mode='legacy'`;
+- nenhuma lista existente é atualizada em massa: `language_settings_mode=NULL` é interpretado como `legacy`;
 - portanto, listas antigas continuam usando a mesma resolução anterior;
 - inserts antigos que não declaram estudo/idioma permanecem `legacy`.
 
