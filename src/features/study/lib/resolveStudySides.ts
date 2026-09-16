@@ -84,6 +84,16 @@ export function resolveStudySides(
 import { toBCP47, getLangLabel } from "./languages";
 export { toBCP47, getLangLabel };
 
+/**
+ * Canonical source-of-truth contract for list study/language metadata.
+ *
+ * explicit  → the list owns its A/B language settings.
+ * inherited → the parent folder owns the settings.
+ * legacy    → preserve the historical heuristic so old decks do not change
+ *             behavior merely because this contract was introduced.
+ */
+export type LanguageSettingsMode = "explicit" | "inherited" | "legacy";
+
 export interface EffectiveListSettings {
   studyType: string;
   langA: string;
@@ -91,7 +101,8 @@ export interface EffectiveListSettings {
   labelsA: string;
   labelsB: string;
   ttsEnabled: boolean;
-  /** True when the list has its own explicit settings (not just defaults) */
+  languageSettingsMode: LanguageSettingsMode;
+  /** True when the list itself is the authority for the effective settings. */
   isListOverride: boolean;
 }
 
@@ -103,6 +114,7 @@ interface ListSettingsRow {
   labels_b?: string | null;
   tts_enabled?: boolean | null;
   system_kind?: string | null;
+  language_settings_mode?: string | null;
 }
 
 interface FolderSettingsRow {
@@ -114,14 +126,26 @@ interface FolderSettingsRow {
   tts_enabled?: boolean | null;
 }
 
+function canonicalLanguageSettingsMode(
+  value: unknown,
+  isSystemCollection: boolean,
+): LanguageSettingsMode {
+  // Materialized system collections own their metadata by definition; letting
+  // them inherit from a user folder can invert labels/TTS for the visible text.
+  if (isSystemCollection) return "explicit";
+  if (value === "explicit" || value === "inherited" || value === "legacy") return value;
+  return "legacy";
+}
+
 /**
- * Resolves the effective language settings for a list, falling back to the
- * parent folder when the list has no explicit override.
+ * Resolves the effective language settings for a list.
  *
- * System collections (notably Reforço) are materialized lists whose language
- * metadata belongs to the materialized list itself. They must never inherit a
- * different folder language configuration, otherwise the visible card text can
- * be correct while the ENGLISH/PORTUGUÊS headers are inverted.
+ * New rows can explicitly declare whether list or folder metadata is the
+ * authority. Rows created before that contract stay in `legacy`, which keeps
+ * the previous en/pt-default heuristic unchanged for backwards compatibility.
+ *
+ * System collections (notably Reforço/Pontos de atenção) always use their own
+ * materialized metadata and never inherit a contradictory folder setup.
  */
 export function resolveEffectiveListSettings(
   list: ListSettingsRow | null | undefined,
@@ -134,31 +158,62 @@ export function resolveEffectiveListSettings(
   const folderLangA = folder?.lang_a || null;
   const folderLangB = folder?.lang_b || null;
   const isSystemCollection = list?.system_kind === "reinforcement" || list?.system_kind === "attention_points";
-
-  const listHasExplicitOverride = isSystemCollection || (
-    listLangA !== null &&
-    listLangB !== null &&
-    !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB)
+  const languageSettingsMode = canonicalLanguageSettingsMode(
+    list?.language_settings_mode,
+    isSystemCollection,
   );
 
-  const folderHasConfig = !!(folderLangA && folderLangB);
-  const listMatchesBareDefaults =
-    (listLangA === BARE_DEFAULTS.lang_a || !listLangA) &&
-    (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
+  let src: ListSettingsRow;
+  let isListOverride: boolean;
 
-  const useFolderFallback = !isSystemCollection
-    && (!listHasExplicitOverride || (listMatchesBareDefaults && folderHasConfig));
+  if (languageSettingsMode === "explicit") {
+    // Explicit means explicit even for the historical bare-default pair en/pt.
+    // This is the key distinction the legacy schema could not represent.
+    src = list || {};
+    isListOverride = true;
+  } else if (languageSettingsMode === "inherited") {
+    // Inherited is deliberate, not inferred. Prefer every configured folder
+    // value and only fall back to the list when a legacy/partial folder row is
+    // missing that individual field.
+    src = {
+      study_type: folder?.study_type ?? list?.study_type,
+      lang_a: folderLangA ?? listLangA,
+      lang_b: folderLangB ?? listLangB,
+      labels_a: folder?.labels_a ?? list?.labels_a,
+      labels_b: folder?.labels_b ?? list?.labels_b,
+      tts_enabled: folder?.tts_enabled ?? list?.tts_enabled,
+    };
+    isListOverride = false;
+  } else {
+    // Legacy mode preserves the exact pre-contract behavior. Old flashcards and
+    // old lists therefore do not change semantics merely because the new column
+    // exists in the database.
+    const listHasExplicitOverride = isSystemCollection || (
+      listLangA !== null &&
+      listLangB !== null &&
+      !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB)
+    );
 
-  const src: ListSettingsRow = useFolderFallback && folder
-    ? {
-        study_type: list?.study_type || folder.study_type,
-        lang_a: folderLangA,
-        lang_b: folderLangB,
-        labels_a: folder.labels_a,
-        labels_b: folder.labels_b,
-        tts_enabled: list?.tts_enabled ?? folder.tts_enabled,
-      }
-    : (list || {});
+    const folderHasConfig = !!(folderLangA && folderLangB);
+    const listMatchesBareDefaults =
+      (listLangA === BARE_DEFAULTS.lang_a || !listLangA) &&
+      (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
+
+    const useFolderFallback = !isSystemCollection
+      && (!listHasExplicitOverride || (listMatchesBareDefaults && folderHasConfig));
+
+    src = useFolderFallback && folder
+      ? {
+          study_type: list?.study_type || folder.study_type,
+          lang_a: folderLangA,
+          lang_b: folderLangB,
+          labels_a: folder.labels_a,
+          labels_b: folder.labels_b,
+          tts_enabled: list?.tts_enabled ?? folder.tts_enabled,
+        }
+      : (list || {});
+    isListOverride = isSystemCollection || (listHasExplicitOverride && !useFolderFallback);
+  }
 
   const studyType = src.study_type || "language";
   const langA = src.lang_a || "en";
@@ -173,6 +228,7 @@ export function resolveEffectiveListSettings(
     labelsA: src.labels_a || defaultLabelA,
     labelsB: src.labels_b || defaultLabelB,
     ttsEnabled: src.tts_enabled ?? (studyType === "language"),
-    isListOverride: isSystemCollection || (listHasExplicitOverride && !useFolderFallback),
+    languageSettingsMode,
+    isListOverride,
   };
 }
