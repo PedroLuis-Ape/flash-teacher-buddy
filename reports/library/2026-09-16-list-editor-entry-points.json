@@ -1,0 +1,100 @@
+{
+  "schema": "app-piteco/audit-report",
+  "version": 1,
+  "generated_at": "2026-09-16T03:10:58+00:00",
+  "project": {
+    "name": "App Piteco / ApeEducation",
+    "repo": "PedroLuis-Ape/flash-teacher-buddy",
+    "production_data_project_ref": "xrnfhhoxmmstagmelvyi"
+  },
+  "commits": {
+    "base": "843a1616027c072059dfb0e9e1cfe6dc9670d845",
+    "note": "O commit desta correção é gerado após a escrita deste relatório; o SHA final é informado na resposta do agente."
+  },
+  "executive_summary": "A ação rotulada 'Editar lista' na tela de pasta abria apenas um diálogo de título/descrição, dando a impressão de que a edição real da lista (cards, edição e exclusão individual) havia desaparecido. Agora todos os pontos de entrada com esse rótulo abrem o editor completo em /list/:id, e o diálogo de metadados foi renomeado para 'Renomear / propriedades'.",
+  "problems_found": [
+    {
+      "id": "P0-editar-lista-metadados",
+      "severity": "high",
+      "root_cause": "Em src/pages/Folder.tsx, os itens de menu 'Editar lista' (visão em grade e em lista) chamavam handleEditList(list), que apenas abria o Dialog de título/descrição. O editor completo existente em src/pages/ListDetail.tsx (handleUpdateFlashcard / handleDeleteFlashcard / EditFlashcardDialog) ficava acessível somente pelo botão de lápis da linha em telas >= sm, invisível no mobile.",
+      "impact": "Usuário não encontrava mais como visualizar/editar/apagar cards individualmente a partir da pasta."
+    },
+    {
+      "id": "P1-rotulo-ambiguo",
+      "severity": "medium",
+      "root_cause": "O mesmo rótulo semântico ('Editar lista' / library.folder.editList) era usado para duas ações distintas: metadados e editor de conteúdo.",
+      "impact": "Ambiguidade de UX e risco de reintrodução da regressão."
+    }
+  ],
+  "changes_implemented": {
+    "navigation_entry_points": [
+      "Novo helper handleOpenListEditor(list) que navega para /list/:id (fonte única de verdade para 'Editar lista').",
+      "Menu contextual da visão em grade: item 'Editar lista' agora abre o editor completo (data-testid=list-open-editor-action).",
+      "Menu contextual da visão em lista: idem (data-testid=list-open-editor-action-row).",
+      "Botão de lápis da linha: passou a usar o mesmo helper, ganhou aria-label 'Editar lista <título>' e tooltip library.folder.editList (data-testid=list-open-editor-icon)."
+    ],
+    "metadata_action_rename": [
+      "handleEditList renomeado para handleRenameList; nenhum caminho morto restou (handleEditList não existe mais no arquivo).",
+      "Novos itens de menu 'Renomear / propriedades' (data-testid=list-rename-action e list-rename-action-row) com ícone Type.",
+      "Diálogo passou a usar library.folder.renameList e library.folder.renameListDescription; a gravação continua limitada a title/description."
+    ],
+    "i18n": [
+      "Chaves library.folder.renameList e library.folder.renameListDescription adicionadas em pt-BR, en, es, fr, it (paridade de catálogo verificada por teste)."
+    ],
+    "preserved": [
+      "Editor completo de /list/:id inalterado: handleUpdateFlashcard e handleDeleteFlashcard seguem sendo o fluxo de edição/exclusão individual, com persistência já existente.",
+      "Listas incorporadas/combinadas: 'Gerenciar cards incorporados' preservado nos dois menus e no botão de linha.",
+      "Coleções de sistema (attention_points, reinforcement) e listas antigas: nenhuma regra de dados, idioma A/B ou importação alterada.",
+      "Nenhuma alteração de Supabase, schema, RLS, RPC, auth ou project ref."
+    ]
+  },
+  "files_changed": [
+    "src/pages/Folder.tsx",
+    "src/features/library/listEditorEntryPoints.contract.test.ts",
+    "src/i18n/resources/pt-BR/library.json",
+    "src/i18n/resources/en/library.json",
+    "src/i18n/resources/es/library.json",
+    "src/i18n/resources/fr/library.json",
+    "src/i18n/resources/it/library.json",
+    "docs/brain/areas/library-list-editing.md",
+    "reports/library/2026-09-16-list-editor-entry-points.json"
+  ],
+  "tests_and_gates": {
+    "new_tests": {
+      "file": "src/features/library/listEditorEntryPoints.contract.test.ts",
+      "cases": 5,
+      "covers": [
+        "helper único navegando para /list/:id",
+        "todo rótulo 'Editar lista' vinculado ao editor completo (>= 3 pontos de entrada)",
+        "handleEditList não existe mais",
+        "diálogo de metadados apresentado como renomear/propriedades e limitado a title/description",
+        "listas combinadas e editor completo intactos"
+      ]
+    },
+    "gates": [
+      { "name": "vitest (library + pages)", "result": "17 arquivos / 98 testes passaram" },
+      { "name": "vitest (i18n + scripts)", "result": "7 arquivos / 50 testes passaram" },
+      { "name": "vitest (suíte completa)", "result": "341 arquivos / 2208 testes passaram" },
+      { "name": "tsgo --noEmit -p tsconfig.app.json", "result": "sem erros" },
+      { "name": "eslint (arquivos tocados)", "result": "0 erros, 1 aviso preexistente (react-hooks/exhaustive-deps em Folder.tsx:146)" },
+      { "name": "build", "result": "build OK" }
+    ]
+  },
+  "compatibility": {
+    "old_lists": "compatível — apenas navegação e rótulos mudaram",
+    "embedded_lists": "compatível — gerenciamento de cards incorporados preservado",
+    "system_collections": "compatível — ações continuam condicionadas a canEdit/isOwner/!isSystemFolder",
+    "database": "nenhuma migration nesta rodada"
+  },
+  "remaining_risks": [
+    "Validação visual autenticada (mobile ~390px e desktop ~1366px) do menu com dois itens não foi executada: o ambiente do agente não tem sessão de usuário real na pasta.",
+    "A exclusão individual de card foi verificada por leitura de código e testes de contrato (fluxo handleDeleteFlashcard inalterado); a confirmação de que o card some da UI e permanece removido após recarregar depende de teste manual autenticado.",
+    "O aviso preexistente de dependências do useEffect em Folder.tsx continua, fora do escopo desta correção."
+  ],
+  "deployment": {
+    "requested": false,
+    "performed_by_agent": false,
+    "status": "pending_external_publish"
+  },
+  "cost_credits": null
+}
