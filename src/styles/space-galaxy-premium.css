@@ -1,0 +1,274 @@
+/*
+ * Premium Galaxy refinement.
+ * Keeps the existing SVG/CSS scene and performance tiers, then adds a crisp
+ * procedural star plane plus landing-specific composition/readability control.
+ */
+
+.space-galaxy-depth-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: .78;
+}
+
+.space-galaxy-effects--balanced .space-galaxy-depth-canvas {
+  opacity: .58;
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-depth-canvas {
+  opacity: .9;
+}
+
+.space-galaxy-depth-haze,
+.space-galaxy-readability-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.space-galaxy-depth-haze {
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 52% 42% at 76% 24%, hsl(222 92% 57% / .10), transparent 72%),
+    radial-gradient(ellipse 58% 48% at 68% 37%, hsl(282 90% 58% / .09), transparent 76%),
+    radial-gradient(ellipse 44% 30% at 18% 82%, hsl(244 90% 54% / .055), transparent 78%);
+  opacity: .92;
+  transform: translate3d(0, 0, 0);
+}
+
+.space-galaxy-effects--full.space-galaxy-effects--scene-motion .space-galaxy-depth-haze {
+  animation: ape-galaxy-depth-breathe 42s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.space-galaxy-readability-field {
+  z-index: 8;
+  background:
+    linear-gradient(90deg, hsl(249 58% 4% / .36) 0%, hsl(249 56% 5% / .18) 34%, transparent 61%),
+    radial-gradient(ellipse 46% 60% at 24% 30%, hsl(249 58% 4% / .22), transparent 82%),
+    linear-gradient(180deg, transparent 0%, transparent 62%, hsl(249 58% 4% / .08) 100%);
+}
+
+/* Landing composition: richer around the product demo, calmer behind the copy. */
+.space-galaxy-effects--landing {
+  background:
+    radial-gradient(ellipse 62% 52% at 77% 24%, hsl(221 90% 46% / .13), transparent 68%),
+    radial-gradient(ellipse 68% 58% at 70% 38%, hsl(280 86% 44% / .115), transparent 72%),
+    radial-gradient(ellipse 46% 42% at 14% 76%, hsl(255 76% 38% / .055), transparent 78%),
+    linear-gradient(180deg, hsl(248 58% 4% / .08), transparent 72%);
+}
+
+.space-galaxy-effects--landing .space-galaxy-depth-haze {
+  background:
+    radial-gradient(ellipse 44% 38% at 78% 24%, hsl(212 100% 72% / .11), transparent 68%),
+    radial-gradient(ellipse 57% 52% at 72% 35%, hsl(281 94% 66% / .11), transparent 74%),
+    radial-gradient(ellipse 30% 24% at 62% 56%, hsl(303 82% 62% / .055), transparent 78%);
+}
+
+.space-galaxy-effects--landing .space-galaxy-readability-field {
+  background:
+    linear-gradient(90deg, hsl(249 60% 3.5% / .58) 0%, hsl(249 58% 4% / .37) 27%, hsl(249 56% 5% / .12) 48%, transparent 68%),
+    radial-gradient(ellipse 50% 62% at 21% 29%, hsl(248 60% 3.5% / .38), transparent 78%),
+    linear-gradient(180deg, transparent 0%, transparent 58%, hsl(249 58% 4% / .13) 100%);
+}
+
+.space-galaxy-effects--landing .space-galaxy-spiral-main {
+  left: auto;
+  right: 3vw;
+  top: 7vh;
+  width: clamp(310px, 35vw, 590px);
+  opacity: .24;
+  filter: saturate(.94) brightness(.97) contrast(1.08);
+}
+
+.space-galaxy-effects--landing .space-galaxy-spiral-distant {
+  right: auto;
+  left: 4vw;
+  bottom: 3vh;
+  opacity: .075;
+  filter: saturate(.74) brightness(.76) contrast(1.06);
+}
+
+.space-galaxy-effects--landing .space-galaxy-planet-main {
+  right: -12vw;
+  top: -15vh;
+  width: clamp(300px, 31vw, 540px);
+  opacity: .2;
+  filter: saturate(.82) brightness(.76) contrast(1.06);
+}
+
+.space-galaxy-effects--landing .space-galaxy-nebula {
+  left: 5vw;
+  top: 3vh;
+  width: 112vw;
+  opacity: .39;
+  filter: saturate(.98) brightness(.93) contrast(1.06);
+  mask-image: radial-gradient(ellipse 74% 68% at 69% 38%, black 0%, black 46%, transparent 86%);
+  -webkit-mask-image: radial-gradient(ellipse 74% 68% at 69% 38%, black 0%, black 46%, transparent 86%);
+}
+
+.space-galaxy-effects--landing .space-galaxy-nebula-dust {
+  left: 12vw;
+  top: 8vh;
+  width: 102vw;
+  opacity: .24;
+  filter: saturate(.92) brightness(.88) contrast(1.04);
+  mask-image: radial-gradient(ellipse 70% 62% at 66% 42%, black 0%, black 44%, transparent 86%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 62% at 66% 42%, black 0%, black 44%, transparent 86%);
+}
+
+.space-galaxy-effects--landing.space-galaxy-effects--full .space-galaxy-arm {
+  left: -9%;
+  top: 17%;
+  width: 132%;
+  height: clamp(30rem, 44vw, 58rem);
+  opacity: .31;
+  filter: saturate(1.03) contrast(1.06);
+}
+
+.space-galaxy-effects--landing.space-galaxy-effects--balanced .space-galaxy-arm {
+  left: -17%;
+  top: 23%;
+  width: 143%;
+  height: clamp(23rem, 48vw, 40rem);
+  opacity: .23;
+}
+
+.space-galaxy-effects--landing.space-galaxy-effects--quality-high .space-galaxy-arm {
+  opacity: .37;
+  filter: saturate(1.08) brightness(1.02) contrast(1.08);
+}
+
+.space-galaxy-effects--landing.space-galaxy-effects--quality-high .space-galaxy-nebula {
+  opacity: .46;
+  filter: saturate(1.04) brightness(.97) contrast(1.08);
+}
+
+.space-galaxy-effects--landing.space-galaxy-effects--arm-motion .space-galaxy-arm {
+  animation: ape-galaxy-premium-drift 46s cubic-bezier(.45,.05,.55,.95) infinite alternate !important;
+}
+
+/* The CSS-only fallback still looks intentional on mobile/reduced-motion. */
+.space-galaxy-effects--static-fallback {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  pointer-events: none;
+  contain: paint;
+  background:
+    radial-gradient(circle at 14% 18%, hsl(0 0% 100% / .68) 0 .7px, transparent 1.25px),
+    radial-gradient(circle at 72% 28%, hsl(218 100% 91% / .54) 0 .75px, transparent 1.35px),
+    radial-gradient(circle at 37% 71%, hsl(288 100% 92% / .46) 0 .7px, transparent 1.3px),
+    radial-gradient(ellipse 86% 56% at 72% 18%, hsl(271 82% 44% / .16), transparent 67%),
+    radial-gradient(ellipse 62% 44% at 84% 43%, hsl(218 82% 42% / .105), transparent 72%),
+    linear-gradient(180deg, hsl(248 58% 4%), hsl(251 55% 6%) 55%, hsl(247 58% 4%));
+  background-size: 137px 137px, 199px 199px, 263px 263px, 100% 100%, 100% 100%, 100% 100%;
+  background-position: 17px 29px, 83px 117px, 149px 61px, 0 0, 0 0, 0 0;
+}
+
+.space-galaxy-effects--static-fallback .space-galaxy-arm {
+  left: -34%;
+  top: 31%;
+  width: 168%;
+  height: 13rem;
+  opacity: .2;
+  transform: rotate(-16deg) !important;
+  animation: none !important;
+  background:
+    radial-gradient(ellipse 28% 34% at 66% 45%, hsl(0 0% 100% / .16), transparent 70%),
+    radial-gradient(ellipse 52% 52% at 64% 48%, hsl(284 92% 70% / .16), transparent 73%),
+    linear-gradient(90deg, transparent 5%, hsl(224 88% 68% / .07) 28%, hsl(282 88% 72% / .13) 56%, hsl(218 88% 72% / .08) 76%, transparent 96%);
+}
+
+.space-galaxy-effects--static-fallback .space-galaxy-readability-field {
+  background: linear-gradient(90deg, hsl(249 60% 3.5% / .44), transparent 70%);
+}
+
+@keyframes ape-galaxy-depth-breathe {
+  from {
+    opacity: .82;
+    transform: translate3d(-.25%, .2%, 0) scale(1.002);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(.35%, -.3%, 0) scale(1.009);
+  }
+}
+
+@keyframes ape-galaxy-premium-drift {
+  0% {
+    transform: rotate(-17deg) translate3d(-.2%, .12%, 0) scale(1.002);
+  }
+  48% {
+    transform: rotate(-17deg) translate3d(.16%, -.12%, 0) scale(1.008);
+  }
+  100% {
+    transform: rotate(-17deg) translate3d(.34%, -.26%, 0) scale(1.004);
+  }
+}
+
+@media (max-width: 1199px) {
+  .space-galaxy-effects--landing .space-galaxy-spiral-main {
+    right: -3vw;
+    top: 10vh;
+    width: clamp(270px, 38vw, 430px);
+    opacity: .17;
+  }
+
+  .space-galaxy-effects--landing .space-galaxy-nebula {
+    left: 8vw;
+    top: 8vh;
+    width: 120vw;
+    opacity: .3;
+  }
+
+  .space-galaxy-effects--landing .space-galaxy-readability-field {
+    background:
+      linear-gradient(90deg, hsl(249 60% 3.5% / .58) 0%, hsl(249 58% 4% / .31) 36%, transparent 72%),
+      linear-gradient(180deg, transparent 0%, transparent 60%, hsl(249 58% 4% / .12) 100%);
+  }
+}
+
+@media (max-width: 767px), (update: slow) {
+  .space-galaxy-depth-canvas,
+  .space-galaxy-depth-haze {
+    display: none !important;
+  }
+
+  .space-galaxy-effects--static-fallback.space-galaxy-effects--landing {
+    background:
+      radial-gradient(circle at 15% 18%, hsl(0 0% 100% / .58) 0 .65px, transparent 1.2px),
+      radial-gradient(circle at 78% 27%, hsl(218 100% 91% / .48) 0 .7px, transparent 1.3px),
+      radial-gradient(ellipse 100% 54% at 76% 9%, hsl(274 84% 42% / .18), transparent 68%),
+      radial-gradient(ellipse 72% 42% at 92% 40%, hsl(219 82% 44% / .1), transparent 72%),
+      linear-gradient(180deg, hsl(248 58% 4%), hsl(251 55% 6%) 58%, hsl(247 58% 4%));
+    background-size: 151px 151px, 223px 223px, 100% 100%, 100% 100%, 100% 100%;
+  }
+
+  .space-galaxy-effects--static-fallback.space-galaxy-effects--landing .space-galaxy-arm {
+    top: 24%;
+    opacity: .17;
+  }
+
+  .space-galaxy-effects--static-fallback.space-galaxy-effects--landing .space-galaxy-readability-field {
+    background:
+      linear-gradient(180deg, hsl(249 60% 3.5% / .25), transparent 45%),
+      radial-gradient(ellipse 96% 54% at 50% 22%, hsl(249 58% 4% / .18), transparent 82%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-galaxy-depth-haze,
+  .space-galaxy-arm,
+  .space-galaxy-object,
+  .space-galaxy-moon-orbit {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
