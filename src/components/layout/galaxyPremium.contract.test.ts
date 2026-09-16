@@ -13,6 +13,7 @@ const premiumStyles = read("src/styles/space-galaxy-premium.css");
 const nebula = read("public/assets/galaxy/galaxy-nebula-arm.svg");
 const dust = read("public/assets/galaxy/galaxy-nebula-dust.svg");
 const spiral = read("public/assets/galaxy/galaxy-spiral-main.svg");
+const planet = read("public/assets/galaxy/galaxy-planet-main.svg");
 
 describe("premium galaxy visual contract", () => {
   it("preserves the existing Galaxy layer and adds a dedicated depth canvas", () => {
@@ -58,10 +59,12 @@ describe("premium galaxy visual contract", () => {
     expect(nebula).not.toContain('stdDeviation="34"');
     expect(dust).not.toContain('stdDeviation="42"');
     expect(spiral).not.toContain('stdDeviation="18"');
+    expect(planet).not.toContain('stdDeviation="18"');
     expect(nebula).toContain('stdDeviation="18"');
     expect(nebula).toContain('stdDeviation="7"');
     expect(dust).toContain('stdDeviation="24"');
     expect(spiral).toContain('stdDeviation="10"');
+    expect(planet).toContain('stdDeviation="10"');
   });
 
   it("keeps the landing copy side calmer than the product side", () => {
