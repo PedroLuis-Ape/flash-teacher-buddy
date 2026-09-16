@@ -104,6 +104,17 @@ function cardMatchesIds(card: StudyScopeCard, ids: ReadonlySet<string>): boolean
   });
 }
 
+function dedupePlayableCards<TCard extends StudyScopeCard>(cards: ReadonlyArray<TCard>): TCard[] {
+  const seen = new Set<string>();
+  const unique: TCard[] = [];
+  for (const card of cards) {
+    if (!card.id || seen.has(card.id)) continue;
+    seen.add(card.id);
+    unique.push(card);
+  }
+  return unique;
+}
+
 export function filterCardsForStudyScope<TCard extends StudyScopeCard>({
   cards,
   favoriteIds,
@@ -116,8 +127,16 @@ export function filterCardsForStudyScope<TCard extends StudyScopeCard>({
   settings: StudyScopeSettings;
 }): TCard[] {
   const scope = resolveStudyScope(settings);
-  if (scope === "all") return [...cards];
+  const scoped = scope === "all"
+    ? [...cards]
+    : cards.filter((card) => cardMatchesIds(
+      card,
+      new Set(scope === "red" ? redListIds : favoriteIds),
+    ));
 
-  const ids = new Set(scope === "red" ? redListIds : favoriteIds);
-  return cards.filter((card) => cardMatchesIds(card, ids));
+  // The raw deck can transiently contain the same playable row more than once
+  // (pagination/cache reconciliation or legacy imports). That must never create
+  // duplicate ordinary turns. Intentional red repetition happens later in the
+  // study engine and Mixed/mastery can still add their own repetitions.
+  return dedupePlayableCards(scoped);
 }
