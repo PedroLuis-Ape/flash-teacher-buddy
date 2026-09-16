@@ -23,16 +23,16 @@ related:
 
 ## FECHAMENTOS — leia este bloco primeiro
 
-> **Padrão obrigatório de fechamento de sessão.** Toda sessão relevante adiciona
-> uma entrada aqui, no topo, neste formato exato:
+> **Padrão de fechamento.** Tarefa que mudou o estado durável do projeto adiciona
+> uma entrada curta aqui, no topo, neste formato:
 >
 > `### FECHAMENTO <AAAA-MM-DD>` · **Finalizado** (o que ficou pronto) ·
 > **Pronto até** (o ponto exato: commit, gate, ambiente) · **Não entrou** (o que
 > ficou fora de propósito) · **Depende de** (o que trava e de quem).
 >
-> Regra de ouro: **agente novo lê este bloco antes de abrir qualquer outra nota.**
-> Ele existe para não reler o vault inteiro a cada tarefa. Histórico e detalhe
-> ficam nas notas de sessão linkadas; aqui fica só o estado datado.
+> Regra de ouro: este bloco é um **resumo datado de estado**, não um diário. Agente novo lê apenas a
+> entrada mais recente relevante — **nunca o arquivo inteiro** (ele cresce com o histórico). Tarefa sem
+> mudança de estado durável não gera entrada; histórico e detalhe ficam nas notas de sessão linkadas.
 
 ## Regra permanente — BANCO OFICIAL (não esquecer nunca)
 

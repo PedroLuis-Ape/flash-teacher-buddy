@@ -8,9 +8,10 @@ cssclasses:
 
 # App Piteco Brain
 
-> Regra ativa: alimentar este vault continuamente com contexto relevante; anotações do agente usam a cor vermelha.
+> Regra ativa: **memória seletiva** — registrar somente conhecimento durável; ausência de atualização é normal.
+> Política canônica: `C:\Users\pedro\.codex\policies\second-brain-policy.md`. Anotações do agente usam a cor vermelha.
 
-> **Entrada obrigatória para agentes:** [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]]
+> **Entrada para agentes quando a tarefa exigir memória:** [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]]
 
 Memória operacional do trabalho no App Piteco. Esta pasta é um índice de contexto, decisões, riscos e checkpoints; o código continua no repositório principal e no worktree isolado indicado em [[01-CURRENT-STATE]].
 
@@ -73,16 +74,16 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 
 ## Regra de retomada
 
-**Primeiro passo de qualquer agente:** ler o bloco **FECHAMENTOS** no topo de
-[[01-CURRENT-STATE]]. Ele tem, por data, o que ficou finalizado, até onde ficou
-pronto e o que está em espera — é o que evita reler o vault inteiro.
+Quando a tarefa exigir memória: comece por este índice e siga apenas o domínio afetado. Para retomar
+trabalho, leia o bloco **FECHAMENTOS** no topo de [[01-CURRENT-STATE]] — **apenas esse bloco**, nunca o
+arquivo inteiro (60+ KB). Ele tem, por data, o que ficou finalizado, até onde ficou pronto e o que está
+em espera.
 
 **Antes de tocar em banco:** o backend de produção é **`ymahldldyxvwjeruaxpr`**
 (`xrnf…` é só o projeto administrado, com 0 cards). Confirme com
 `node scripts/check-platform.mjs` e leia [[areas/supabase-runtime]].
 
-Ler primeiro [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]],
-depois [[01-CURRENT-STATE]] e o checkpoint da sessão.
+Se precisar do protocolo completo de contexto: [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]].
 
 O checkout principal é `C:\Users\pedro\Documents\APP PITECO`, na branch
 `main`. Worktrees de tarefa ficam em

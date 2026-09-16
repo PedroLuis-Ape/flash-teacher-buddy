@@ -30,9 +30,9 @@ related:
 
 # START HERE — Protocolo de contexto do App Piteco
 
-## Fechamento de sessão (formato obrigatório)
+## Fechamento de sessão (formato)
 
-Toda sessão relevante termina com uma entrada datada no bloco **FECHAMENTOS**,
+Toda tarefa que mudou o estado durável do projeto termina com uma entrada curta e datada em **FECHAMENTOS**,
 no topo de [[01-CURRENT-STATE]], neste formato:
 
 `### FECHAMENTO <AAAA-MM-DD>` · **Finalizado** · **Pronto até** · **Não entrou** ·
@@ -48,17 +48,23 @@ Piteco / APE Education. Ela é uma rota de entrada e uma regra de operação; n�
 é um substituto para as notas profundas de arquitetura, áreas, decisões,
 bugs, testes, riscos ou handoff.
 
-## Regra estrutural obrigatória
+## Regra estrutural — leitura condicional
 
-Antes de iniciar qualquer nova tarefa no App Piteco:
+Política canônica (fonte única, não duplicar): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
 
-1. consultar o Segundo Cérebro;
-2. buscar primeiro somente as informações relacionadas à tarefa atual;
-3. seguir os links/conexões encontrados para recuperar decisões, arquitetura,
-   bugs anteriores, migrations, contratos, testes e progresso relevante;
-4. conferir o conhecimento recuperado contra o código, Git e ambiente atual;
-5. evitar reler todo o repositório ou todo o Segundo Cérebro quando as
-   informações necessárias já estiverem documentadas e conectadas.
+Consultar a memória **não é o primeiro passo de toda tarefa**. Níveis:
+
+1. **0 — simples/local** (CSS, texto, tipagem, lint, teste, erro evidente): não consultar; não gravar.
+2. **1 — normal**: no máximo o índice [[00-HOME]]; não abrir automaticamente o que ele aponta.
+3. **2 — sistema conhecido** (persistência, flashcards, auth, importação, banco, arquitetura, progresso,
+   gamificação): índice → 1 ou poucas notas do domínio → parar quando houver contexto suficiente.
+4. **3 — exige histórico** (decisão arquitetural, bug dependente de histórico, contradição, retomada
+   antiga): busca direcionada com `rg`, somente o que responde à pergunta atual.
+
+Regras de custo sempre válidas: nunca ler o vault inteiro nem seguir referências recursivamente por
+reflexo; **busca antes de leitura** (localize o termo e abra só o arquivo/trecho útil); nota grande se
+lê por trecho — de [[01-CURRENT-STATE]] (60+ KB) use apenas o bloco **FECHAMENTOS** mais recente;
+`brain-manifest.json` (~70 KB) é artefato derivado e se consulta por filtro, nunca integralmente.
 
 O caminho operacional confirmado do vault externo é
 `C:\Users\pedro\Documents\App-Piteco-Brain`. O nome
@@ -71,10 +77,9 @@ Regra vigente para eliminar releitura redundante do Segundo Cérebro dentro da
 MESMA tarefa. Schema do packet, comandos e telemetria estão em
 [[27-CONTEXT-PACKET-E-TELEMETRIA]].
 
-1. **READ ONCE** - consultar o Segundo Cérebro uma única vez por tarefa, no
-   início, pelo caminho mais estreito: o manifesto
-   `docs/brain/brain-manifest.json` (metadados por nota) e as notas do domínio
-   afetado.
+1. **READ ONCE** - quando a tarefa exigir memória, consultar uma única vez, pelo caminho mais estreito:
+   o índice [[00-HOME]] e, no máximo, as notas do domínio afetado. O manifesto
+   `docs/brain/brain-manifest.json` é artefato derivado e grande: consulte por filtro, nunca integralmente.
 2. **COMPACT** - transformar a leitura em um CONTEXT PACKET compacto
    (`node scripts/context-packet.mjs new`): objetivo, regras relevantes,
    arquitetura, contratos, decisões, riscos, arquivos, invariantes e incertezas
@@ -132,7 +137,8 @@ sem reabrir o vault inteiro. O custo de contexto da tarefa fica no ledger
 
 ## Como recuperar contexto sem desperdiçar contexto
 
-Comece sempre por [[01-CURRENT-STATE]] e por esta nota. Depois use as
+Quando a memória for necessária, comece pelo índice [[00-HOME]]. Para estado/retomada, leia apenas o
+bloco **FECHAMENTOS** mais recente de [[01-CURRENT-STATE]] — não o arquivo inteiro. Depois use as
 palavras-chave da tarefa para seguir somente o subgrafo necessário:
 
 - comportamento/arquitetura → [[03-ARCHITECTURE]] → [[04-DECISIONS]];
@@ -183,7 +189,8 @@ conectá-lo à área, aos bugs, às decisões, aos testes e aos riscos relaciona
 
 ## Ao terminar uma etapa importante
 
-Antes de encerrar uma etapa significativa, revisar o Segundo Cérebro e:
+Não atualizar é o resultado normal. Se (e somente se) a etapa gerou conhecimento durável novo,
+revisar o Segundo Cérebro e:
 
 1. atualizar a nota de área ou a nota de arquitetura já existente, quando ela
    for a fonte correta;
@@ -229,16 +236,16 @@ As conexões principais deste protocolo são:
 
 ## Próximo passo padrão
 
-Antes de qualquer nova implementação, correção, investigação ou refatoração,
-o primeiro passo padrão é:
+O primeiro passo é resolver com o que já está no contexto e no código. A memória entra apenas nos
+níveis 1–3 definidos acima:
 
-> **Consultar o Segundo Cérebro e recuperar apenas o contexto conectado à
-> tarefa atual.**
+> **Se a tarefa exigir contexto histórico, consultar o índice e recuperar apenas o que está
+> conectado à tarefa atual.**
 
 Ao terminar:
 
-> **Revisar se o trabalho gerou conhecimento durável que precisa ser
-> conectado de volta ao Segundo Cérebro.**
+> **Se (e somente se) surgiu conhecimento durável novo, conectá-lo de volta ao Segundo Cérebro.**
+> Quando não surgiu, não existe atualização de memória — e esse é o resultado esperado.
 
 O objetivo é que um agente futuro recupere rapidamente o estado, as decisões,
 os riscos e o próximo movimento sem reconstruir todo o contexto do zero.
