@@ -1,0 +1,99 @@
+{
+  "date": "2026-09-16",
+  "scope": "Landing page Galaxy background refinement",
+  "status": "implemented_on_pr_439",
+  "architecture": {
+    "before": "SVG + CSS gradients/animations + Web Animations API; no Three.js/WebGL renderer in the active Galaxy background",
+    "after": "Existing SVG/CSS/Web Animations architecture preserved and augmented with a lightweight adaptive Canvas 2D depth-star layer",
+    "principle": "Evolve the existing visual concept instead of replacing it"
+  },
+  "before": {
+    "visual": [
+      "Broad nebula shapes relied on large Gaussian blur values and could read as soft haze instead of structured cosmic depth",
+      "Depth came mostly from separate SVG objects and a small set of DOM stars",
+      "Hero composition did not explicitly reserve a calm readability zone behind headline and CTAs",
+      "Mobile fallback was functional but visually simpler than the desktop identity"
+    ],
+    "technical": [
+      "galaxy-nebula-arm.svg used Gaussian blur stdDeviation 34",
+      "galaxy-nebula-dust.svg used Gaussian blur stdDeviation 42",
+      "galaxy-spiral-main.svg used Gaussian blur stdDeviation 18",
+      "galaxy-spiral-distant.svg used Gaussian blur stdDeviation 22",
+      "Existing full/balanced/static capability tiers already protected weak devices and reduced-motion users"
+    ]
+  },
+  "visual_improvements": [
+    "Added three independent star-depth planes with distinct scale, brightness, parallax and drift characteristics",
+    "Moved the landing's richest galactic composition toward the product demo/right side while reducing visual competition behind the hero copy",
+    "Added a dedicated readability field behind headline/CTA regions without placing overlays above interactive content",
+    "Rebuilt nebula SVG structure with broad atmospheric layers plus narrower luminous cores and sparse crisp dust points",
+    "Sharpened main and distant spiral galaxies with smaller blur kernels and secondary fine arm strokes",
+    "Reduced planet prominence so the scene reads more like deep space and less like a crowded solar-system illustration",
+    "Kept movement slow and atmospheric rather than screensaver-like"
+  ],
+  "technical_improvements": [
+    "Added GalaxyDepthCanvas.tsx using Canvas 2D rather than introducing a new 3D dependency",
+    "Capped devicePixelRatio per tier/quality to improve sharpness without unbounded GPU/memory cost",
+    "Added deterministic seeded star generation to avoid visual layout jitter between repaints",
+    "Used requestAnimationFrame with capped paint frequency instead of rendering at display refresh rate",
+    "Used window.scrollY inside the existing paint loop for depth response, avoiding a new scroll listener",
+    "Pointer parallax activates only on capable full-tier devices with a fine pointer",
+    "Canvas loop stops when the document is hidden or animation is disabled",
+    "Existing comet, scene-plan and tier systems remain intact"
+  ],
+  "desktop_vs_mobile": {
+    "full_desktop": "Rich three-plane canvas field, capped high-DPR rendering, subtle pointer/scroll parallax, full SVG scene and slow atmospheric drift",
+    "balanced": "Lower canvas opacity/density/DPR and 24fps paint budget; existing scene planner keeps fewer assets",
+    "mobile_static": "No canvas animation; premium CSS-only star/nebula fallback with the same Galaxy identity and a simplified composition",
+    "reduced_motion": "No animated galaxy drift; static fallback remains visually complete"
+  },
+  "performance_decisions": {
+    "dpr_caps": {
+      "static": 1.15,
+      "balanced_standard": 1.4,
+      "balanced_high": 1.55,
+      "full_standard": 1.75,
+      "full_high": 2.0
+    },
+    "canvas_target_fps": {
+      "balanced": 24,
+      "full_standard": 32,
+      "full_high": 40
+    },
+    "star_caps": {
+      "static": 54,
+      "balanced": 112,
+      "full_standard": 168,
+      "full_high": 210
+    },
+    "notes": [
+      "No new motion/3D package added",
+      "No wheel/touch scroll interception",
+      "No unbounded DPR",
+      "No extra scroll listener for the starfield",
+      "Existing hardware/save-data/reduced-motion tiers continue to decide scene complexity"
+    ]
+  },
+  "tunable_parameters": {
+    "star_density": "getStarCount tier caps in GalaxyDepthCanvas.tsx",
+    "render_sharpness": "getPixelRatio DPR caps",
+    "animation_budget": "frameInterval values",
+    "parallax_depth": "DEPTH_PARALLAX and DEPTH_SCROLL",
+    "ambient_drift": "DEPTH_DRIFT and premium CSS animation durations",
+    "nebula_intensity": "landing nebula opacity/filter declarations in space-galaxy-premium.css",
+    "readability": "space-galaxy-readability-field gradients",
+    "hero_composition": "landing-specific spiral/planet/nebula positions",
+    "quality_mode": "existing galaxyQuality standard/high setting"
+  },
+  "files": [
+    "src/components/layout/GalaxyDepthCanvas.tsx",
+    "src/components/layout/GalaxyVisualLayer.tsx",
+    "src/components/layout/PublicGalaxyGate.tsx",
+    "src/styles/space-galaxy-premium.css",
+    "src/components/layout/galaxyPremium.contract.test.ts",
+    "public/assets/galaxy/galaxy-nebula-arm.svg",
+    "public/assets/galaxy/galaxy-nebula-dust.svg",
+    "public/assets/galaxy/galaxy-spiral-main.svg",
+    "public/assets/galaxy/galaxy-spiral-distant.svg"
+  ]
+}
