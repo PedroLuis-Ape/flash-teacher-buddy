@@ -75,10 +75,11 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.langB).toBe("en");
     expect(result.labelsA).toBe("Français");
     expect(result.labelsB).toBe("English");
+    expect(result.languageSettingsMode).toBe("legacy");
     expect(result.isListOverride).toBe(true);
   });
 
-  it("falls back to folder when a normal list has bare defaults (en/pt)", () => {
+  it("keeps the legacy folder fallback for old bare-default en/pt rows", () => {
     const list = { lang_a: "en", lang_b: "pt" };
     const folder = { lang_a: "fr", lang_b: "en", labels_a: "Français", labels_b: "English" };
     const result = resolveEffectiveListSettings(list, folder);
@@ -87,12 +88,88 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.langB).toBe("en");
     expect(result.labelsA).toBe("Français");
     expect(result.labelsB).toBe("English");
+    expect(result.languageSettingsMode).toBe("legacy");
     expect(result.isListOverride).toBe(false);
+  });
+
+  it("treats explicit en/pt as authoritative even when the folder is inverted", () => {
+    const list = {
+      language_settings_mode: "explicit",
+      study_type: "language",
+      lang_a: "en",
+      lang_b: "pt-BR",
+      labels_a: "English",
+      labels_b: "Português",
+      tts_enabled: true,
+    };
+    const folder = {
+      study_type: "language",
+      lang_a: "pt-BR",
+      lang_b: "en",
+      labels_a: "Português",
+      labels_b: "English",
+      tts_enabled: false,
+    };
+    const result = resolveEffectiveListSettings(list, folder);
+
+    expect(result).toMatchObject({
+      langA: "en",
+      langB: "pt-BR",
+      labelsA: "English",
+      labelsB: "Português",
+      ttsEnabled: true,
+      languageSettingsMode: "explicit",
+      isListOverride: true,
+    });
+  });
+
+  it("uses the folder deliberately when mode is inherited", () => {
+    const list = {
+      language_settings_mode: "inherited",
+      study_type: "language",
+      lang_a: "en",
+      lang_b: "pt",
+      labels_a: "English",
+      labels_b: "Português",
+      tts_enabled: true,
+    };
+    const folder = {
+      study_type: "general",
+      lang_a: "fr",
+      lang_b: "de",
+      labels_a: "Pergunta",
+      labels_b: "Resposta",
+      tts_enabled: false,
+    };
+    const result = resolveEffectiveListSettings(list, folder);
+
+    expect(result).toMatchObject({
+      studyType: "general",
+      langA: "fr",
+      langB: "de",
+      labelsA: "Pergunta",
+      labelsB: "Resposta",
+      ttsEnabled: false,
+      languageSettingsMode: "inherited",
+      isListOverride: false,
+    });
+  });
+
+  it("unknown or missing mode is treated as legacy for backwards compatibility", () => {
+    const folder = { lang_a: "de", lang_b: "ja", labels_a: "Deutsch", labels_b: "日本語" };
+    const missing = resolveEffectiveListSettings({ lang_a: "en", lang_b: "pt" }, folder);
+    const unknown = resolveEffectiveListSettings({ language_settings_mode: "future", lang_a: "en", lang_b: "pt" }, folder);
+
+    expect(missing.languageSettingsMode).toBe("legacy");
+    expect(unknown.languageSettingsMode).toBe("legacy");
+    expect(missing.langA).toBe("de");
+    expect(unknown.langA).toBe("de");
   });
 
   it("never lets a reinforcement list inherit contradictory folder labels", () => {
     const list = {
       system_kind: "reinforcement",
+      language_settings_mode: "inherited",
       study_type: "language",
       lang_a: "en",
       lang_b: "pt",
@@ -112,16 +189,18 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.langB).toBe("pt");
     expect(result.labelsA).toBe("English");
     expect(result.labelsB).toBe("Português");
+    expect(result.languageSettingsMode).toBe("explicit");
     expect(result.isListOverride).toBe(true);
   });
 
-  it("falls back to folder when list has null langs", () => {
+  it("falls back to folder when legacy list has null langs", () => {
     const list = { lang_a: null, lang_b: null };
     const folder = { lang_a: "de", lang_b: "ja", labels_a: "Deutsch", labels_b: "日本語" };
     const result = resolveEffectiveListSettings(list, folder);
 
     expect(result.langA).toBe("de");
     expect(result.langB).toBe("ja");
+    expect(result.languageSettingsMode).toBe("legacy");
     expect(result.isListOverride).toBe(false);
   });
 
@@ -131,10 +210,11 @@ describe("resolveEffectiveListSettings", () => {
     expect(result.langB).toBe("pt");
     expect(result.labelsA).toBe("English");
     expect(result.labelsB).toBe("Português");
+    expect(result.languageSettingsMode).toBe("legacy");
   });
 
   it("derives labels from getLangLabel when labels are missing", () => {
-    const list = { lang_a: "ko", lang_b: "ru" };
+    const list = { language_settings_mode: "explicit", lang_a: "ko", lang_b: "ru" };
     const result = resolveEffectiveListSettings(list, null);
     expect(result.labelsA).toBe("한국어");
     expect(result.labelsB).toBe("Русский");
