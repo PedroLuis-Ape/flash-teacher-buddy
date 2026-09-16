@@ -2933,6 +2933,73 @@ export type Database = {
         }
         Relationships: []
       }
+      user_flashcard_review_flags: {
+        Row: {
+          created_at: string
+          flashcard_id: string
+          id: string
+          institution_id: string | null
+          is_active: boolean
+          note: string | null
+          reason: string | null
+          resolved_at: string | null
+          source_group_uid: string | null
+          source_list_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          note?: string | null
+          reason?: string | null
+          resolved_at?: string | null
+          source_group_uid?: string | null
+          source_list_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          note?: string | null
+          reason?: string | null
+          resolved_at?: string | null
+          source_group_uid?: string | null
+          source_list_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_flashcard_review_flags_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flashcard_review_flags_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flashcard_review_flags_source_list_id_fkey"
+            columns: ["source_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_goal_step_completions: {
         Row: {
           created_at: string
@@ -3128,6 +3195,7 @@ export type Database = {
           user_id: string
           write_activity_mode: string | null
           write_correction_mode: string | null
+          write_rewrite_prompt_mode: string | null
           write_rewrite_side: string | null
         }
         Insert: {
@@ -3146,6 +3214,7 @@ export type Database = {
           user_id: string
           write_activity_mode?: string | null
           write_correction_mode?: string | null
+          write_rewrite_prompt_mode?: string | null
           write_rewrite_side?: string | null
         }
         Update: {
@@ -3164,6 +3233,7 @@ export type Database = {
           user_id?: string
           write_activity_mode?: string | null
           write_correction_mode?: string | null
+          write_rewrite_prompt_mode?: string | null
           write_rewrite_side?: string | null
         }
         Relationships: [
@@ -3471,6 +3541,7 @@ export type Database = {
           user_id: string
           write_activity_mode: string
           write_correction_mode: string
+          write_rewrite_prompt_mode: string
           write_rewrite_side: string
         }
         Insert: {
@@ -3488,6 +3559,7 @@ export type Database = {
           user_id: string
           write_activity_mode?: string
           write_correction_mode?: string
+          write_rewrite_prompt_mode?: string
           write_rewrite_side?: string
         }
         Update: {
@@ -3505,6 +3577,7 @@ export type Database = {
           user_id?: string
           write_activity_mode?: string
           write_correction_mode?: string
+          write_rewrite_prompt_mode?: string
           write_rewrite_side?: string
         }
         Relationships: []
@@ -4673,6 +4746,16 @@ export type Database = {
         }
         Returns: Json
       }
+      set_user_flashcard_review_flag: {
+        Args: {
+          _enabled: boolean
+          _flashcard_id: string
+          _institution_id?: string
+          _note?: string
+          _reason?: string
+        }
+        Returns: Json
+      }
       set_user_reinforcement_point: {
         Args: {
           _enabled: boolean
@@ -4798,6 +4881,10 @@ export type Database = {
           _public_profile_searchable: boolean
           _public_specialties: string[]
         }
+        Returns: Json
+      }
+      update_user_flashcard_review_flag_metadata: {
+        Args: { _flag_id: string; _note?: string; _reason?: string }
         Returns: Json
       }
     }

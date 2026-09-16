@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search, List, LayoutGrid, MoreHorizontal, Star, Layers } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search, List, LayoutGrid, MoreHorizontal, Star, Layers, Type } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -489,10 +489,18 @@ const Folder = () => {
     }
   };
 
-  const handleEditList = (list: ListType) => {
+  // "Editar lista" SEMPRE abre o editor completo em /list/:id (cards, edição e
+  // exclusão individual). O diálogo de título/descrição é ação separada de
+  // renomear/propriedades e nunca deve ocupar o rótulo de edição da lista.
+  const handleOpenListEditor = (list: ListType) => {
+    navigate(`/list/${list.id}`);
+  };
+
+  const handleRenameList = (list: ListType) => {
     setEditingList(list);
     setEditDialogOpen(true);
   };
+
 
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1212,10 +1220,21 @@ const Folder = () => {
                                         Gerenciar cards incorporados
                                       </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                    <DropdownMenuItem
+                                      data-testid="list-open-editor-action"
+                                      onSelect={() => handleOpenListEditor(list)}
+                                    >
                                       <Pencil className="mr-2 h-4 w-4" />
                                       Editar lista
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      data-testid="list-rename-action"
+                                      onSelect={() => handleRenameList(list)}
+                                    >
+                                      <Type className="mr-2 h-4 w-4" />
+                                      Renomear / propriedades
+                                    </DropdownMenuItem>
+
                                     <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Excluir lista
@@ -1381,10 +1400,21 @@ const Folder = () => {
                                   {canEdit && (
                                     <>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                      <DropdownMenuItem
+                                        data-testid="list-open-editor-action-row"
+                                        onSelect={() => handleOpenListEditor(list)}
+                                      >
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar lista
                                       </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        data-testid="list-rename-action-row"
+                                        onSelect={() => handleRenameList(list)}
+                                      >
+                                        <Type className="mr-2 h-4 w-4" />
+                                        Renomear / propriedades
+                                      </DropdownMenuItem>
+
                                       <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Excluir lista
@@ -1446,15 +1476,18 @@ const Folder = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                          data-testid="list-open-editor-icon"
+                                          aria-label={`Editar lista ${list.title}`}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            navigate(`/list/${list.id}`);
+                                            handleOpenListEditor(list);
                                           }}
                                         >
+
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>{t("library.folder.editContent")}</TooltipContent>
+                                      <TooltipContent>{t("library.folder.editList")}</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <AlertDialog>
@@ -1652,10 +1685,11 @@ const Folder = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll">
             <DialogHeader>
-              <DialogTitle>{t("library.folder.editList")}</DialogTitle>
+              <DialogTitle>{t("library.folder.renameList")}</DialogTitle>
               <DialogDescription>
-                Altere o título e descrição da lista
+                {t("library.folder.renameListDescription")}
               </DialogDescription>
+
             </DialogHeader>
             {editingList && (
               <form onSubmit={handleUpdateList} className="flex min-h-0 flex-1 flex-col">
