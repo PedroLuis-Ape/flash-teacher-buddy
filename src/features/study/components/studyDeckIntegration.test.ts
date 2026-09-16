@@ -10,6 +10,7 @@ const unscramble = read("UnscrambleStudyView.tsx");
 const pronunciation = read("PronunciationStudyView.tsx");
 const deck = read("StudyCardDeck.tsx");
 const css = read("studyCardDeck.css");
+const flipCss = read("flipStudyMobileCompact.css");
 
 describe("study deck integration", () => {
   it("applies the visual deck to every study mode wrapper", () => {
@@ -18,14 +19,37 @@ describe("study deck integration", () => {
     }
   });
 
-  it("enables previous-card swipe in every mode while Flip Fast also supports next", () => {
-    expect(flip).toContain("props.fastMode");
-    expect(flip).toContain("swipeNavigation");
+  it("gives Flip its own vertical feed gesture while other modes keep the shared swipe contract", () => {
+    expect(flip).toContain("flip-vertical-feed-viewport");
+    expect(flip).toContain("handleFeedPointerMove");
+    expect(flip).toContain("handleFeedWheel");
+    expect(flip).toContain('commitFeedNavigation("next")');
+    expect(flip).toContain('commitFeedNavigation("previous")');
+    expect(flip).not.toContain("swipeNavigation={{");
+
+    // Do not pin this integration contract to each mode's exact callback
+    // spelling. The important invariant is that every non-Flip wrapper still
+    // delegates gesture handling to StudyCardDeck instead of inheriting the
+    // new Flip-only vertical feed.
     for (const source of [write, multiple, unscramble, pronunciation]) {
       expect(source).toContain("swipeNavigation");
-      expect(source).toContain("onPrevious: props.onPrevious");
-      expect(source).toContain("canGoNext: false");
+      expect(source).not.toContain("flip-vertical-feed-viewport");
     }
+  });
+
+  it("renders the next Flip surface during the drag instead of waiting for release", () => {
+    expect(flip).toContain("flip-vertical-feed-preview--next");
+    expect(flip).toContain("--flip-feed-offset");
+    expect(flipCss).toContain("calc(100% + 12px + var(--flip-feed-offset))");
+    expect(flipCss).toContain('[data-feed-dragging="true"] .flip-vertical-feed-preview');
+    expect(flipCss).toContain("touch-action: none");
+  });
+
+  it("keeps Flip navigation on the existing Study callbacks so game rules still gate next/previous", () => {
+    expect(flip).toContain("const canFeedNext = Boolean(props.onNext && props.canGoNext !== false)");
+    expect(flip).toContain("const canFeedPrevious = Boolean(props.onPrevious && props.canGoPrevious !== false)");
+    expect(flip).toContain("props.onNext?.()");
+    expect(flip).toContain("props.onPrevious?.()");
   });
 
   it("measures the real flashcard surface with one resize observer", () => {
@@ -58,7 +82,7 @@ describe("study deck integration", () => {
     expect(css).toContain("border-radius: var(--deck-surface-radius)");
   });
 
-  it("uses a stronger desktop flight and a lighter mobile flight", () => {
+  it("uses a stronger desktop flight and a lighter mobile flight for non-Flip deck navigation", () => {
     expect(css).toContain("deck-card-flight-next");
     expect(css).toContain("translate3d(-118px, -22px, 0)");
     expect(css).toContain("deck-card-flight-next-mobile");
@@ -70,5 +94,6 @@ describe("study deck integration", () => {
     expect(css).toContain("pointer-events: none");
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("max-width: 42rem");
+    expect(flipCss).toContain("prefers-reduced-motion");
   });
 });
