@@ -19,6 +19,7 @@
       "galaxy-nebula-dust.svg used Gaussian blur stdDeviation 42",
       "galaxy-spiral-main.svg used Gaussian blur stdDeviation 18",
       "galaxy-spiral-distant.svg used Gaussian blur stdDeviation 22",
+      "galaxy-planet-main.svg used Gaussian blur stdDeviation 18 for its broad halo",
       "Existing full/balanced/static capability tiers already protected weak devices and reduced-motion users"
     ]
   },
@@ -28,7 +29,7 @@
     "Added a dedicated readability field behind headline/CTA regions without placing overlays above interactive content",
     "Rebuilt nebula SVG structure with broad atmospheric layers plus narrower luminous cores and sparse crisp dust points",
     "Sharpened main and distant spiral galaxies with smaller blur kernels and secondary fine arm strokes",
-    "Reduced planet prominence so the scene reads more like deep space and less like a crowded solar-system illustration",
+    "Refined planet lighting, atmosphere and edge definition while reducing its visual dominance in the landing composition",
     "Kept movement slow and atmospheric rather than screensaver-like"
   ],
   "technical_improvements": [
@@ -94,6 +95,7 @@
     "public/assets/galaxy/galaxy-nebula-arm.svg",
     "public/assets/galaxy/galaxy-nebula-dust.svg",
     "public/assets/galaxy/galaxy-spiral-main.svg",
-    "public/assets/galaxy/galaxy-spiral-distant.svg"
+    "public/assets/galaxy/galaxy-spiral-distant.svg",
+    "public/assets/galaxy/galaxy-planet-main.svg"
   ]
 }
