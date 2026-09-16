@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLocation } from "react-router-dom";
+import { GalaxyDepthCanvas } from "@/components/layout/GalaxyDepthCanvas";
 import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
@@ -20,6 +22,7 @@ import "@/styles/space-ui-glitter.css";
 import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-galaxy-home-mobile-hotfix.css";
 import "@/styles/space-galaxy-navigation-performance.css";
+import "@/styles/space-galaxy-premium.css";
 
 type Star = {
   left: string;
@@ -68,6 +71,7 @@ function isRouteTransitioning(): boolean {
 }
 
 export function GalaxyVisualLayer() {
+  const location = useLocation();
   const { palette } = usePalette();
   const { settings } = usePerformance();
   const [tier, setTier] = useState<GalaxyMotionTier>(() => detectGalaxyMotionTier());
@@ -76,6 +80,7 @@ export function GalaxyVisualLayer() {
   const quality = settings.galaxyQuality;
   const high = quality === "high";
   const isGalaxy = palette === "galaxy";
+  const isLanding = location.pathname === "/";
   const cometPlan = useMemo(() => getGalaxyCometPlan(tier, quality), [quality, tier]);
   const scenePlan = useMemo(() => getGalaxyScenePlan(tier), [tier]);
   const motionAllowed = settings.animations && !settings.reduceMotion && tier !== "static";
@@ -210,6 +215,7 @@ export function GalaxyVisualLayer() {
     "space-galaxy-effects",
     `space-galaxy-effects--${tier}`,
     `space-galaxy-effects--quality-${quality}`,
+    isLanding ? "space-galaxy-effects--landing" : "",
     decorAllowed ? "space-galaxy-effects--stars-motion" : "",
     decorAllowed && (tier === "full" || high) ? "space-galaxy-effects--arm-motion" : "",
     decorAllowed && scenePlan.animated ? "space-galaxy-effects--scene-motion" : "",
@@ -219,6 +225,8 @@ export function GalaxyVisualLayer() {
   return <>
     <PitecoHeroAssetBridge />
     {isGalaxy && <div aria-hidden="true" className={classes}>
+      <GalaxyDepthCanvas tier={tier} quality={quality} animated={decorAllowed} visible={visible} landing={isLanding} />
+      <span className="space-galaxy-depth-haze" />
       <span className="space-galaxy-arm" />
       {scenePlan.spiralMain && <GalaxyAsset className="space-galaxy-spiral-main" src="/assets/galaxy/galaxy-spiral-main.svg" />}
       {scenePlan.spiralDistant && <GalaxyAsset className="space-galaxy-spiral-distant" src="/assets/galaxy/galaxy-spiral-distant.svg" />}
@@ -246,6 +254,7 @@ export function GalaxyVisualLayer() {
         return <span key={`${star.left}-${star.top}`} className={`space-twinkle-star${decorAllowed ? "" : " space-twinkle-star--static"}`} style={style} />;
       })}
       {decorAllowed && Array.from({ length: cometPlan.count }, (_, index) => <span key={index} ref={(node) => { cometRefs.current[index] = node; }} className={`space-shooting-star space-shooting-star--${index + 1}`} />)}
+      <span className="space-galaxy-readability-field" />
     </div>}
   </>;
 }

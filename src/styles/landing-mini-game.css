@@ -1,0 +1,390 @@
+.landing-home .landing-demo-playable {
+  padding: 26px 22px 22px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.landing-home .landing-mini-game {
+  position: relative;
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-home .landing-mini-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 750;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: .02em;
+}
+
+.landing-home .landing-mini-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: hsl(var(--primary));
+}
+
+.landing-home .landing-mini-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
+.landing-home .landing-mini-progress span {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(var(--border) / .7);
+}
+
+.landing-home .landing-mini-progress span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: hsl(var(--primary));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 420ms cubic-bezier(.16,1,.3,1), opacity 220ms ease;
+}
+
+.landing-home .landing-mini-progress span.is-current::after {
+  transform: scaleX(.5);
+  opacity: .55;
+  animation: landing-mini-progress-breathe 1.8s ease-in-out infinite;
+}
+
+.landing-home .landing-mini-progress span.is-done::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.landing-home .landing-mini-question {
+  text-align: center;
+  animation: landing-mini-question-in 460ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.landing-home .landing-mini-question .landing-demo-prompt {
+  margin: 16px 0 8px;
+  font-size: clamp(24px, 2.6vw, 32px);
+}
+
+.landing-home .landing-mini-instruction {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.landing-home .landing-mini-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.landing-home .landing-mini-option {
+  --mini-option-index: 0;
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid hsl(var(--border) / .82);
+  border-radius: 11px;
+  background: hsl(var(--background) / .78);
+  color: hsl(var(--foreground));
+  text-align: left;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  box-shadow: 0 1px 0 hsl(var(--foreground) / .025);
+  transition:
+    transform 180ms cubic-bezier(.22,.8,.24,1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+  animation: landing-mini-option-in 420ms cubic-bezier(.16,1,.3,1) both;
+  animation-delay: calc(var(--mini-option-index) * 55ms);
+}
+
+.landing-home .landing-mini-option:not(:disabled):hover {
+  transform: translate3d(4px, -1px, 0);
+  border-color: hsl(var(--primary) / .44);
+  background: hsl(var(--primary) / .045);
+  box-shadow: 0 10px 28px -22px hsl(var(--primary) / .65);
+}
+
+.landing-home .landing-mini-option:not(:disabled):active {
+  transform: translate3d(2px, 0, 0) scale(.992);
+}
+
+.landing-home .landing-mini-option:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.landing-home .landing-mini-option:disabled {
+  cursor: default;
+}
+
+.landing-home .landing-mini-option.is-correct {
+  border-color: hsl(145 64% 42% / .62);
+  background: hsl(145 64% 42% / .09);
+  animation: landing-mini-correct 560ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.landing-home .landing-mini-option.is-wrong {
+  border-color: hsl(0 72% 55% / .62);
+  background: hsl(0 72% 55% / .08);
+  animation: landing-mini-wrong 430ms cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.landing-home .landing-mini-option-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.landing-home .landing-mini-option.is-correct .landing-mini-option-icon {
+  color: hsl(145 64% 38%);
+  background: hsl(145 64% 42% / .12);
+}
+
+.landing-home .landing-mini-option.is-wrong .landing-mini-option-icon {
+  color: hsl(0 72% 52%);
+  background: hsl(0 72% 55% / .11);
+}
+
+.landing-home .landing-mini-options.is-mixing {
+  animation: landing-mini-deck-mix 560ms cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.landing-home .landing-mini-feedback {
+  min-height: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 14px;
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.landing-home .landing-mini-feedback span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.landing-home .landing-mini-feedback .is-correct {
+  color: hsl(145 64% 38%);
+  animation: landing-mini-feedback-in 240ms ease-out both;
+}
+
+.landing-home .landing-mini-feedback .is-wrong {
+  color: hsl(0 64% 52%);
+  animation: landing-mini-feedback-in 240ms ease-out both;
+}
+
+.landing-home .landing-mini-game-complete {
+  min-height: 390px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px 10px;
+  animation: landing-mini-complete-in 560ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.landing-home .landing-mini-game-complete::before,
+.landing-home .landing-mini-game-complete::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(12px);
+  opacity: .5;
+}
+
+.landing-home .landing-mini-game-complete::before {
+  left: -80px;
+  top: -100px;
+  background: radial-gradient(circle, hsl(var(--primary) / .16), transparent 68%);
+  animation: landing-mini-celebration-drift 5s ease-in-out infinite alternate;
+}
+
+.landing-home .landing-mini-game-complete::after {
+  right: -80px;
+  bottom: -110px;
+  background: radial-gradient(circle, hsl(145 64% 42% / .12), transparent 68%);
+  animation: landing-mini-celebration-drift 5.8s ease-in-out -1.4s infinite alternate-reverse;
+}
+
+.landing-home .landing-mini-celebration {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / .08);
+  border: 1px solid hsl(var(--primary) / .18);
+  box-shadow: 0 18px 55px -32px hsl(var(--primary) / .7);
+  animation: landing-mini-celebration-pop 760ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.landing-home .landing-mini-game-complete h3 {
+  max-width: 330px;
+  margin-top: 10px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.landing-home .landing-mini-summary {
+  max-width: 350px;
+  margin-top: 12px;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.landing-home .landing-mini-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.landing-home .landing-mini-continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.landing-home .landing-mini-reset {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-weight: 700;
+  transition: color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.landing-home .landing-mini-reset:hover {
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--primary) / .36);
+  transform: translateY(-1px);
+}
+
+@keyframes landing-mini-question-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.988); filter: blur(3px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+@keyframes landing-mini-option-in {
+  from { opacity: 0; transform: translate3d(12px, 7px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes landing-mini-correct {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.018); box-shadow: 0 0 0 5px hsl(145 64% 42% / .06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes landing-mini-wrong {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-5px) rotate(-.3deg); }
+  45% { transform: translateX(4px) rotate(.25deg); }
+  68% { transform: translateX(-2px); }
+}
+
+@keyframes landing-mini-deck-mix {
+  0% { transform: translateX(0); }
+  26% { transform: translateX(6px) skewX(-1deg); }
+  52% { transform: translateX(-5px) skewX(1deg); }
+  76% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes landing-mini-feedback-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes landing-mini-progress-breathe {
+  0%, 100% { opacity: .42; }
+  50% { opacity: .8; }
+}
+
+@keyframes landing-mini-complete-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes landing-mini-celebration-pop {
+  0% { opacity: 0; transform: scale(.55) rotate(-12deg); }
+  70% { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes landing-mini-celebration-drift {
+  from { transform: translate3d(-4px, -4px, 0) scale(.92); }
+  to { transform: translate3d(10px, 8px, 0) scale(1.08); }
+}
+
+@media (max-width: 760px) {
+  .landing-home .landing-demo-playable { padding: 22px 16px 18px; }
+  .landing-home .landing-mini-game,
+  .landing-home .landing-mini-game-complete { min-height: 370px; }
+  .landing-home .landing-mini-question .landing-demo-prompt { font-size: 25px; }
+  .landing-home .landing-mini-option { min-height: 48px; font-size: 12.5px; }
+  .landing-home .landing-mini-complete-actions { flex-direction: column; width: 100%; }
+  .landing-home .landing-mini-complete-actions > * { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-home .landing-mini-question,
+  .landing-home .landing-mini-option,
+  .landing-home .landing-mini-options.is-mixing,
+  .landing-home .landing-mini-option.is-correct,
+  .landing-home .landing-mini-option.is-wrong,
+  .landing-home .landing-mini-feedback span,
+  .landing-home .landing-mini-game-complete,
+  .landing-home .landing-mini-celebration,
+  .landing-home .landing-mini-game-complete::before,
+  .landing-home .landing-mini-game-complete::after,
+  .landing-home .landing-mini-progress span::after {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "app-piteco/landing-motion-report",
+  "version": 1,
+  "date": "2026-09-16",
+  "status": "implemented-awaiting-ci",
+  "scope": "public landing only",
+  "implementation": {
+    "engine": "existing CSS/rAF/IntersectionObserver motion system",
+    "external_animation_dependency_added": false,
+    "features": [
+      "hero stagger choreography",
+      "scroll-linked hero exit",
+      "pointer-reactive ambient light on fine-pointer desktop",
+      "magnetic primary CTA",
+      "3D demo flashcard tilt with max 4deg",
+      "native details answer reveal",
+      "desktop sticky three-step storytelling",
+      "mobile vertical fallback",
+      "progressive in-view section reveals",
+      "audience card hover lift",
+      "FAQ indicator motion",
+      "reduced-motion fallbacks"
+    ]
+  },
+  "guardrails": {
+    "seo_copy_source_preserved": true,
+    "native_details_semantics_preserved": true,
+    "scroll_hijacking": false,
+    "wheel_handlers": false,
+    "touchmove_handlers": false,
+    "supabase_changed": false,
+    "auth_changed": false,
+    "study_runtime_changed": false,
+    "importers_changed": false
+  },
+  "files": [
+    "src/components/landing/LandingHome.tsx",
+    "src/features/public-home/LandingMotion.tsx",
+    "src/styles/landing-home.css",
+    "src/features/public-home/landingProfessionalMotion.contract.test.ts",
+    "docs/brain/sessions/2026-09-16-landing-professional-motion.md"
+  ],
+  "validation": {
+    "focused_contract_added": true,
+    "local_full_suite": "not available in this session because container has no external network and Lovable workspace is out of credits",
+    "next_gate": "GitHub CI + deploy preview"
+  }
+}
