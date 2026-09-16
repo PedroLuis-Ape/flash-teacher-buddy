@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { editorialMeta, getEditorialRouteLabel, type EditorialPageDefinition } from "@/content/public/editorialMaster";
 import { FeaturedPublicResource } from "@/features/public-home/FeaturedPublicResource";
+import { LandingMiniGame } from "@/features/public-home/LandingMiniGame";
 import {
   MotionReveal,
   useHeroScrollMotion,
@@ -17,6 +18,7 @@ import { MarketingCarousel } from "@/features/public-home/MarketingCarousel";
 import { useFeaturedPublicResource } from "@/features/public-home/useFeaturedPublicResource";
 import { usePointerTilt } from "@/hooks/usePointerTilt";
 import "@/styles/landing-home.css";
+import "@/styles/landing-mini-game.css";
 import "@/styles/landing-featured.css";
 
 export function LandingHome({ page }: { page: EditorialPageDefinition }) {
@@ -77,14 +79,8 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
               <span>{demo.label}</span>
               <Layers3 aria-hidden="true" className="ml-auto h-4 w-4" />
             </div>
-            <div className="landing-demo">
-              <p className="landing-eyebrow">{demo.context}</p>
-              <p className="landing-demo-prompt">{demo.prompt}</p>
-              <p className="landing-note">{demo.instruction}</p>
-              <details className="landing-demo-answer">
-                <summary>{demo.answerLabel}</summary>
-                <p>{demo.answer}</p>
-              </details>
+            <div className="landing-demo landing-demo-playable">
+              <LandingMiniGame demo={demo} continueHref={primaryHref} locale={page.locale} />
             </div>
             <p className="landing-demo-caption">{demo.caption}</p>
           </div>
