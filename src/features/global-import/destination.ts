@@ -27,6 +27,8 @@ export interface ExistingImportList {
   labels_b?: string | null;
   study_type?: string | null;
   tts_enabled?: boolean | null;
+  system_kind?: string | null;
+  language_settings_mode?: "explicit" | "inherited" | "legacy" | null;
 }
 
 export type FolderDestination =
