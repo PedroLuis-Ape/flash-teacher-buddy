@@ -475,7 +475,7 @@ export function ContentIngestDialog({
             <DialogTitle>Importar para esta lista</DialogTitle>
             <Badge variant="secondary">Seguro e reversível</Badge>
           </div>
-          <DialogDescription>Escolha texto rápido ou envie um pacote completo do Super Importador.</DialogDescription>
+          <DialogDescription>Cole flashcards ou importe um pacote JSON diretamente para a lista aberta.</DialogDescription>
         </DialogHeader>
 
         <div className="px-5 pt-4">
@@ -491,6 +491,38 @@ export function ContentIngestDialog({
           {loadingTarget && <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
 
           {!loadingTarget && step === 1 && target && <div className="space-y-5">
+            <Card
+              className="border-dashed p-4"
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (busy) return;
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (busy) return;
+                void handleCompleteFile(event.dataTransfer.files?.[0]);
+              }}
+            >
+              <input
+                ref={completeFileRef}
+                type="file"
+                accept={COMPLETE_IMPORT_FILE_ACCEPT}
+                className="hidden"
+                onChange={(event) => void handleCompleteFile(event.target.files?.[0])}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 font-semibold"><FileJson2 className="h-5 w-5 text-primary" />Importar arquivo JSON</div>
+                  <p className="mt-1 text-sm text-muted-foreground">Use o mesmo pacote JSON do Super Importador. Você também pode arrastar e soltar o arquivo aqui.</p>
+                </div>
+                <Button type="button" onClick={() => completeFileRef.current?.click()} disabled={busy}>
+                  <FileJson2 className="mr-2 h-4 w-4" />Selecionar arquivo JSON
+                </Button>
+              </div>
+              <p className="mt-3 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">Aceita arquivo <strong>.json</strong> de até 50 MB. O pacote é validado e o destino permanece travado nesta lista antes de qualquer gravação.</p>
+            </Card>
+
             <div className="grid gap-3 md:grid-cols-2">
               <button type="button" onClick={() => changeMode("simple")} className={`rounded-xl border p-4 text-left ${mode === "simple" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
                 <Zap className="h-5 w-5 text-primary" />
@@ -500,7 +532,7 @@ export function ContentIngestDialog({
               <button type="button" onClick={() => changeMode("complete")} className={`rounded-xl border p-4 text-left ${mode === "complete" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
                 <Brain className="h-5 w-5 text-primary" />
                 <div className="mt-2 font-semibold">🧠 Pacote completo</div>
-                <p className="mt-1 text-sm text-muted-foreground">Arquivo JSON 2.0, cards detalhados, várias listas consolidadas e glossário da pasta.</p>
+                <p className="mt-1 text-sm text-muted-foreground">JSON 2.0, cards detalhados, várias listas consolidadas e glossário da pasta.</p>
               </button>
             </div>
 
@@ -520,24 +552,11 @@ export function ContentIngestDialog({
             {mode === "complete" && <Card className="space-y-4 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold">Prompt e arquivo do Super Importador</h3>
-                  <p className="text-sm text-muted-foreground">Cole o JSON abaixo ou selecione diretamente o arquivo recebido da IA.</p>
+                  <h3 className="font-semibold">Prompt do Super Importador</h3>
+                  <p className="text-sm text-muted-foreground">Cole o JSON abaixo ou use a área de arquivo acima.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={() => setPromptOpen(true)}>Configurar prompt</Button>
-                  <input
-                    ref={completeFileRef}
-                    type="file"
-                    accept={COMPLETE_IMPORT_FILE_ACCEPT}
-                    className="hidden"
-                    onChange={(event) => void handleCompleteFile(event.target.files?.[0])}
-                  />
-                  <Button type="button" onClick={() => completeFileRef.current?.click()} disabled={busy}>
-                    <FileJson2 className="mr-2 h-4 w-4" />Selecionar arquivo JSON
-                  </Button>
-                </div>
+                <Button type="button" variant="outline" onClick={() => setPromptOpen(true)}>Configurar prompt</Button>
               </div>
-              <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">Aceita arquivo <strong>.json</strong> de até 50 MB. O arquivo é analisado antes de qualquer gravação.</p>
             </Card>}
 
             <div className="space-y-2">
@@ -548,7 +567,7 @@ export function ContentIngestDialog({
                 className="min-h-[320px] font-mono text-xs sm:text-sm"
                 placeholder={mode === "simple"
                   ? "Hello / Olá\nGood morning / Bom dia"
-                  : "Cole o JSON app-piteco-super-import 2.0 ou use o botão Selecionar arquivo JSON..."}
+                  : "Cole o JSON app-piteco-super-import 2.0 ou use Selecionar arquivo JSON acima..."}
               />
             </div>
           </div>}
