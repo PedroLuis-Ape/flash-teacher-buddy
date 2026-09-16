@@ -7,7 +7,8 @@ import type {
 
 const db = supabase as any;
 const FOLDER_FIELDS = "id, title, institution_id, class_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
-const LIST_FIELDS = "id, title, folder_id, class_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
+const LEGACY_LIST_FIELDS = "id, title, folder_id, class_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled, system_kind";
+const LIST_FIELDS = `${LEGACY_LIST_FIELDS}, language_settings_mode`;
 
 function uniqueById<T extends { id: string }>(rows: T[] | null | undefined): T[] {
   const unique = new Map<string, T>();
@@ -15,6 +16,16 @@ function uniqueById<T extends { id: string }>(rows: T[] | null | undefined): T[]
     if (row?.id && !unique.has(row.id)) unique.set(row.id, row);
   }
   return Array.from(unique.values());
+}
+
+function isMissingLanguageSettingsMode(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { message?: unknown; details?: unknown; hint?: unknown };
+  const text = [record.message, record.details, record.hint]
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  return text.includes("language_settings_mode");
 }
 
 export function normalizeImportDestinationCatalog(
@@ -68,17 +79,22 @@ export async function loadImportDestinationCatalog(
   // A pasta já foi validada por owner, instituição/turma e exclusão lógica.
   // Assim como a Biblioteca e a tela da pasta, ela é a autoridade do escopo:
   // listas legadas podem não repetir owner_id/class_id corretamente.
-  const listsQuery = db
+  const runListsQuery = (fields: string) => db
     .from("lists")
-    .select(LIST_FIELDS)
+    .select(fields)
     .is("deleted_at", null)
     .in("folder_id", folders.map((folder) => folder.id))
     .order("title", { ascending: true });
 
-  const { data: listRows, error: listsError } = await listsQuery;
-  if (listsError) throw listsError;
+  let listsResult = await runListsQuery(LIST_FIELDS);
+  // Deploy-safe rollout: the web app can ship before the additive migration.
+  // Until the column exists, the catalog simply treats every row as legacy.
+  if (listsResult.error && isMissingLanguageSettingsMode(listsResult.error)) {
+    listsResult = await runListsQuery(LEGACY_LIST_FIELDS);
+  }
+  if (listsResult.error) throw listsResult.error;
 
-  return normalizeImportDestinationCatalog({ folders, lists: listRows ?? [] });
+  return normalizeImportDestinationCatalog({ folders, lists: listsResult.data ?? [] });
 }
 
 export async function loadExistingListDestinationCatalog(
@@ -87,14 +103,20 @@ export async function loadExistingListDestinationCatalog(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Você precisa estar logado.");
 
-  const { data: list, error: listError } = await db
+  const runListQuery = (fields: string) => db
     .from("lists")
-    .select(LIST_FIELDS)
+    .select(fields)
     .eq("id", listId)
     .eq("owner_id", user.id)
     .is("deleted_at", null)
     .maybeSingle();
-  if (listError) throw listError;
+
+  let listResult = await runListQuery(LIST_FIELDS);
+  if (listResult.error && isMissingLanguageSettingsMode(listResult.error)) {
+    listResult = await runListQuery(LEGACY_LIST_FIELDS);
+  }
+  if (listResult.error) throw listResult.error;
+  const list = listResult.data;
   if (!list) throw new Error("Lista inválida ou sem permissão para importar.");
 
   const { data: folder, error: folderError } = await db
