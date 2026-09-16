@@ -1506,7 +1506,7 @@ const Folder = () => {
                                         <AlertDialogTitle>{t("library.folder.deleteList")}</AlertDialogTitle>
                                         <AlertDialogDescription>
                                           Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                        </AlertDialogHeader>
+                                        </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
