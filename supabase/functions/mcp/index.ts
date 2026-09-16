@@ -7343,6 +7343,11 @@ function getLangLabel(code) {
 }
 
 // src/features/study/lib/resolveStudySides.ts
+function canonicalLanguageSettingsMode(value, isSystemCollection) {
+  if (isSystemCollection) return "explicit";
+  if (value === "explicit" || value === "inherited" || value === "legacy") return value;
+  return "legacy";
+}
 function resolveEffectiveListSettings(list, folder) {
   const BARE_DEFAULTS = { lang_a: "en", lang_b: "pt" };
   const listLangA = list?.lang_a || null;
@@ -7350,18 +7355,40 @@ function resolveEffectiveListSettings(list, folder) {
   const folderLangA = folder?.lang_a || null;
   const folderLangB = folder?.lang_b || null;
   const isSystemCollection = list?.system_kind === "reinforcement" || list?.system_kind === "attention_points";
-  const listHasExplicitOverride = isSystemCollection || listLangA !== null && listLangB !== null && !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB);
-  const folderHasConfig = !!(folderLangA && folderLangB);
-  const listMatchesBareDefaults = (listLangA === BARE_DEFAULTS.lang_a || !listLangA) && (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
-  const useFolderFallback = !isSystemCollection && (!listHasExplicitOverride || listMatchesBareDefaults && folderHasConfig);
-  const src = useFolderFallback && folder ? {
-    study_type: list?.study_type || folder.study_type,
-    lang_a: folderLangA,
-    lang_b: folderLangB,
-    labels_a: folder.labels_a,
-    labels_b: folder.labels_b,
-    tts_enabled: list?.tts_enabled ?? folder.tts_enabled
-  } : list || {};
+  const languageSettingsMode = canonicalLanguageSettingsMode(
+    list?.language_settings_mode,
+    isSystemCollection
+  );
+  let src;
+  let isListOverride;
+  if (languageSettingsMode === "explicit") {
+    src = list || {};
+    isListOverride = true;
+  } else if (languageSettingsMode === "inherited") {
+    src = {
+      study_type: folder?.study_type ?? list?.study_type,
+      lang_a: folderLangA ?? listLangA,
+      lang_b: folderLangB ?? listLangB,
+      labels_a: folder?.labels_a ?? list?.labels_a,
+      labels_b: folder?.labels_b ?? list?.labels_b,
+      tts_enabled: folder?.tts_enabled ?? list?.tts_enabled
+    };
+    isListOverride = false;
+  } else {
+    const listHasExplicitOverride = isSystemCollection || listLangA !== null && listLangB !== null && !(listLangA === BARE_DEFAULTS.lang_a && listLangB === BARE_DEFAULTS.lang_b && folderLangA && folderLangB);
+    const folderHasConfig = !!(folderLangA && folderLangB);
+    const listMatchesBareDefaults = (listLangA === BARE_DEFAULTS.lang_a || !listLangA) && (listLangB === BARE_DEFAULTS.lang_b || !listLangB);
+    const useFolderFallback = !isSystemCollection && (!listHasExplicitOverride || listMatchesBareDefaults && folderHasConfig);
+    src = useFolderFallback && folder ? {
+      study_type: list?.study_type || folder.study_type,
+      lang_a: folderLangA,
+      lang_b: folderLangB,
+      labels_a: folder.labels_a,
+      labels_b: folder.labels_b,
+      tts_enabled: list?.tts_enabled ?? folder.tts_enabled
+    } : list || {};
+    isListOverride = isSystemCollection || listHasExplicitOverride && !useFolderFallback;
+  }
   const studyType = src.study_type || "language";
   const langA = src.lang_a || "en";
   const langB = src.lang_b || "pt";
@@ -7374,7 +7401,8 @@ function resolveEffectiveListSettings(list, folder) {
     labelsA: src.labels_a || defaultLabelA,
     labelsB: src.labels_b || defaultLabelB,
     ttsEnabled: src.tts_enabled ?? studyType === "language",
-    isListOverride: isSystemCollection || listHasExplicitOverride && !useFolderFallback
+    languageSettingsMode,
+    isListOverride
   };
 }
 
