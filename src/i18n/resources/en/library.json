@@ -49,7 +49,9 @@
         "termsCopied": "{{count}} terms copied!",
         "copyError": "Failed to copy: {{message}}",
         "promptCopied": "Prompt copied! Paste it into an AI such as ChatGPT or Gemini."
-      }
+      },
+      "renameList": "Rename / properties",
+      "renameListDescription": "Change the list title and description"
     },
     "list": {
       "notFound": "List not found",

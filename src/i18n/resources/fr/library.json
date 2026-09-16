@@ -49,7 +49,9 @@
         "termsCopied": "{{count}} termes copiés !",
         "copyError": "Échec de la copie : {{message}}",
         "promptCopied": "Consigne copiée ! Collez-la dans une IA comme ChatGPT ou Gemini."
-      }
+      },
+      "renameList": "Renommer / propriétés",
+      "renameListDescription": "Modifiez le titre et la description de la liste"
     },
     "list": {
       "notFound": "Liste introuvable",
