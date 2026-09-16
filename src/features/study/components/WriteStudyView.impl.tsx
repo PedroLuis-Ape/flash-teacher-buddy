@@ -219,9 +219,6 @@ export const WriteStudyView = ({
   const [shake, setShake] = useState(false);
   const correctionMode = writeCorrectionMode;
 
-  // Lock global "next / skip / next-layer" shortcuts while this Write view
-  // has no evaluation yet — the user must submit first. Once feedback is
-  // shown (right/wrong screen), shortcuts unlock automatically.
   useEffect(() => {
     setWriteAnswerLocked(!evaluation);
     return () => setWriteAnswerLocked(false);
@@ -252,18 +249,11 @@ export const WriteStudyView = ({
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
-  // Dono do teclado no modo escrever: enquanto o aluno está digitando, NENHUM
-  // atalho de sessão pode rodar (nem Q/A/W/D do preset gamer). Depois de enviar,
-  // o escopo vira "feedback" e os atalhos voltam a valer. O estado é explícito,
-  // então não depende de onde o foco está no momento do keydown.
   useEffect(() => {
     setShortcutScope("write-answer", evaluation ? "feedback" : "text-entry");
     return () => clearShortcutScope("write-answer");
   }, [evaluation]);
 
-  // Foco por digitação (não autofocus): a primeira tecla imprimível cai no
-  // campo de resposta, uma única vez, sem exigir clique e sem abrir o teclado
-  // virtual sozinho no celular.
   useTypeToAnswer({
     enabled: evaluation === null,
     inputRef,
@@ -276,11 +266,6 @@ export const WriteStudyView = ({
     },
   });
 
-
-
-  // Central advance gate — every "next"/"skip" path goes through this
-  // controller so we can (a) demand a finalized status before advancing and
-  // (b) prevent duplicate onAdvance calls for the same attempt.
   const advance = useAdvanceController({
     cardId: attemptCardId,
     mode: "write",
@@ -288,7 +273,7 @@ export const WriteStudyView = ({
     onAdvance: (final) => {
       if (final === "correct" || final === "accepted_with_corrections") onCorrect();
       else if (final === "incorrect") onIncorrect();
-      else onSkip(); // "skipped" and "revealed"
+      else onSkip();
     },
     onCancelSkip: () => window.setTimeout(() => inputRef.current?.focus(), 30),
   });
@@ -457,8 +442,6 @@ export const WriteStudyView = ({
 
   const handleRetry = () => {
     if (isRewriteActivity && rewriteState.phase === "REWRITE") {
-      // Reescrita visual: o rascunho é preservado, o aluno corrige o que já
-      // escreveu. Ditado: depois da revelação a tentativa recomeça limpa.
       const nextState = isVisibleRewrite
         ? { ...rewriteState, submittedAnswer: null }
         : retryRewriteAttempt(rewriteState);
@@ -507,7 +490,7 @@ export const WriteStudyView = ({
     && normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)
       ? rewriteOppositeText
       : "";
-  const showRewriteTranslation = isListeningRewrite && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0;
+  const showRewriteTranslation = isRewriteActivity && rewriteTranslationText.length > 0;
   const rewriteHint = isRewriteActivity ? buildRewriteHint(correctAnswer, rewriteState.hintLevel) : "";
 
   const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
