@@ -1476,11 +1476,14 @@ const Folder = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                          data-testid="list-open-editor-icon"
+                                          aria-label={`Editar lista ${list.title}`}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            navigate(`/list/${list.id}`);
+                                            handleOpenListEditor(list);
                                           }}
                                         >
+
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
