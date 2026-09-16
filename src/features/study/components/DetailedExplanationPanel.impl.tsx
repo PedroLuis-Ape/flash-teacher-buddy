@@ -1,10 +1,9 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
+import { setCurrentDetailedExplanation } from "@/features/study/lib/currentDetailedExplanation";
 import {
-  getCurrentDetailedExplanation,
-  setCurrentDetailedExplanation,
-  subscribeCurrentDetailedExplanation,
-} from "@/features/study/lib/currentDetailedExplanation";
-import { UnifiedDetailedExplanationPanel } from "./UnifiedDetailedExplanationPanel";
+  getCurrentStudyCardIdentity,
+  subscribeCurrentStudyCardIdentity,
+} from "@/features/study/lib/currentStudyCardIdentity";
 
 interface DetailedExplanationPanelProps {
   explanation?: string | null;
@@ -12,29 +11,37 @@ interface DetailedExplanationPanelProps {
   commonMistakes?: string | null;
 }
 
+/**
+ * Single-source bridge for the current card's rich explanation fields.
+ *
+ * Rendering is intentionally owned by StudyToolsMenu -> HintModal on every
+ * viewport. This component only publishes the current card's canonical rich
+ * fields into the shared snapshot so there is never a second explanation UI
+ * competing with the same data.
+ */
 export function DetailedExplanationPanel({
   explanation,
   usageNotes,
   commonMistakes,
 }: DetailedExplanationPanelProps) {
-  const liveValue = useSyncExternalStore(
-    subscribeCurrentDetailedExplanation,
-    getCurrentDetailedExplanation,
-    getCurrentDetailedExplanation,
+  const cardIdentity = useSyncExternalStore(
+    subscribeCurrentStudyCardIdentity,
+    getCurrentStudyCardIdentity,
+    getCurrentStudyCardIdentity,
   );
 
-  // Card navigation remains authoritative: when the visible card changes, its
-  // persisted fields refresh the shared snapshot. In-game editing can update
-  // the same snapshot immediately without rebuilding the study deck/session.
+  // Card/layer identity remains part of the synchronization boundary. Two
+  // consecutive cards may both have null note props, and the identity change
+  // must still clear any transient explanation edited on the previous card.
   useLayoutEffect(() => {
     setCurrentDetailedExplanation({ explanation, usageNotes, commonMistakes });
-  }, [explanation, usageNotes, commonMistakes]);
+  }, [
+    cardIdentity.cardId,
+    cardIdentity.layerIndex,
+    explanation,
+    usageNotes,
+    commonMistakes,
+  ]);
 
-  return (
-    <UnifiedDetailedExplanationPanel
-      explanation={liveValue.explanation}
-      usageNotes={liveValue.usageNotes}
-      commonMistakes={liveValue.commonMistakes}
-    />
-  );
+  return null;
 }

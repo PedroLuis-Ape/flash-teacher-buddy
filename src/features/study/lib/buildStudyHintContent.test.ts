@@ -23,6 +23,37 @@ describe("buildStudyHintContent", () => {
     })).toBe("**Explicação detalhada**\nExplicação disponível.");
   });
 
+  it("normalizes legacy rich sections embedded inside hint into one presentation", () => {
+    const result = buildStudyHintContent({
+      hint: [
+        "Dica curta.",
+        "",
+        "**Explicação detalhada**",
+        "Conteúdo legado.",
+        "",
+        "**Quando usar**",
+        "Uso legado.",
+      ].join("\n"),
+      detailed_explanation: "Conteúdo legado.",
+      usage_notes: "Uso legado.",
+    });
+
+    expect(result?.match(/\*\*Explicação detalhada\*\*/g)).toHaveLength(1);
+    expect(result?.match(/Conteúdo legado\./g)).toHaveLength(1);
+    expect(result?.match(/\*\*Quando usar\*\*/g)).toHaveLength(1);
+    expect(result).toContain("Dica curta.");
+  });
+
+  it("preserves distinct canonical and legacy text without creating a second explanation section", () => {
+    const result = buildStudyHintContent({
+      hint: "**Explicação detalhada**\nTexto antigo.",
+      detailed_explanation: "Texto atual.",
+    });
+
+    expect(result?.match(/\*\*Explicação detalhada\*\*/g)).toHaveLength(1);
+    expect(result).toContain("Texto atual.\n\nTexto antigo.");
+  });
+
   it("returns null when the card has no hint or enriched explanation", () => {
     expect(buildStudyHintContent({})).toBeNull();
   });

@@ -43,12 +43,14 @@ describe("in-game card notes", () => {
     expect(editor).toContain("if (shouldPersistRichNotes)");
   });
 
-  it("refreshes the visible detailed explanation without rebuilding the deck", () => {
+  it("refreshes the shared detailed explanation snapshot without rebuilding the deck", () => {
     expect(editor).toContain("setCurrentDetailedExplanation");
     expect(explanationPanel).toContain("useSyncExternalStore");
-    expect(explanationPanel).toContain("liveValue.explanation");
-    expect(explanationPanel).toContain("liveValue.usageNotes");
-    expect(explanationPanel).toContain("liveValue.commonMistakes");
+    expect(explanationPanel).toContain("subscribeCurrentStudyCardIdentity");
+    expect(explanationPanel).toContain("setCurrentDetailedExplanation({ explanation, usageNotes, commonMistakes })");
+    expect(explanationPanel).toContain("cardIdentity.cardId");
+    expect(explanationPanel).toContain("cardIdentity.layerIndex");
+    expect(explanationPanel).toContain("return null");
   });
 
   it("does not restart or rebuild the study session just to save notes", () => {
