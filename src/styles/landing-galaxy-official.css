@@ -1,0 +1,402 @@
+/* Official asset-driven Galaxy identity for the public landing page.
+ * The general app Galaxy remains untouched. On `/`, authored responsive art
+ * becomes the primary renderer so the landing does not stack two competing
+ * Galaxy scenes or spend GPU budget on effects hidden behind opaque artwork. */
+
+html[data-palette="galaxy"] .space-galaxy-effects--landing {
+  display: none !important;
+}
+
+.landing-home--galaxy {
+  --landing-galaxy-panel: hsl(246 44% 8% / .72);
+  --landing-galaxy-panel-strong: hsl(247 48% 7% / .86);
+  --landing-galaxy-border: hsl(268 96% 84% / .19);
+  --landing-galaxy-glow: hsl(282 100% 74% / .18);
+  color-scheme: dark;
+}
+
+.landing-galaxy-system {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  contain: paint;
+  background: hsl(246 58% 5%);
+}
+
+.landing-galaxy-base,
+.landing-galaxy-base > img,
+.landing-galaxy-contrast,
+.landing-galaxy-atmosphere {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-galaxy-base > img {
+  object-fit: cover;
+  object-position: center center;
+  transform: translateZ(0) scale(1.003);
+  filter: saturate(1.02) contrast(1.025) brightness(.92);
+}
+
+/* Dedicated readability zone: the source art intentionally keeps useful dark
+ * negative space on the left, and this mask reinforces it without flattening
+ * the richer visual side around the playable product demo. */
+.landing-galaxy-contrast {
+  z-index: 2;
+  background:
+    linear-gradient(90deg,
+      hsl(246 61% 4% / .88) 0%,
+      hsl(246 58% 5% / .77) 20%,
+      hsl(246 55% 6% / .50) 43%,
+      hsl(246 52% 7% / .20) 68%,
+      hsl(246 50% 7% / .08) 100%),
+    linear-gradient(180deg,
+      hsl(246 58% 4% / .14) 0%,
+      transparent 35%,
+      hsl(246 62% 4% / .38) 100%);
+}
+
+.landing-galaxy-atmosphere {
+  z-index: 3;
+  opacity: .68;
+  background:
+    radial-gradient(circle at 76% 27%, hsl(290 100% 74% / .11), transparent 24%),
+    radial-gradient(circle at 70% 54%, hsl(207 100% 72% / .08), transparent 27%),
+    radial-gradient(circle at 22% 45%, hsl(247 72% 5% / .36), transparent 30%);
+  mix-blend-mode: screen;
+}
+
+.landing-galaxy-breathing,
+.landing-galaxy-twinkle {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.landing-galaxy-breathing {
+  right: clamp(-120px, -5vw, -28px);
+  top: clamp(56px, 8vh, 112px);
+  width: min(46vw, 680px);
+  aspect-ratio: 1;
+  opacity: .70;
+  animation: landing-galaxy-breathe 28s ease-in-out infinite alternate;
+}
+
+.landing-galaxy-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transform: translateZ(0) scale(.988) rotate(-.35deg);
+  will-change: opacity, transform;
+  animation: landing-galaxy-frame-cycle 24s ease-in-out infinite;
+}
+
+.landing-galaxy-frame-2 { animation-delay: -8s; }
+.landing-galaxy-frame-3 { animation-delay: -16s; }
+
+.landing-galaxy-breathing .landing-galaxy-frame {
+  filter: saturate(.94) brightness(.92);
+  mix-blend-mode: screen;
+}
+
+.landing-galaxy-twinkles {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+.landing-galaxy-twinkle {
+  width: clamp(54px, 5vw, 86px);
+  aspect-ratio: 1;
+  opacity: .55;
+}
+
+.landing-galaxy-twinkle .landing-galaxy-frame {
+  animation-duration: 10.5s;
+  filter: saturate(.9) brightness(.9);
+}
+
+.landing-galaxy-twinkle-a { left: 56%; top: 13%; animation: landing-galaxy-drift-a 19s ease-in-out infinite alternate; }
+.landing-galaxy-twinkle-b { right: 8%; top: 58%; width: clamp(44px, 4vw, 68px); animation: landing-galaxy-drift-b 23s ease-in-out infinite alternate; }
+.landing-galaxy-twinkle-c { left: 68%; bottom: 8%; width: clamp(38px, 3.2vw, 58px); animation: landing-galaxy-drift-c 25s ease-in-out infinite alternate; }
+
+/* The original pointer grid/orbs remain useful in other palettes. In Galaxy,
+ * the official art already supplies depth, so their presence is restrained. */
+.landing-home--galaxy .landing-ambient {
+  opacity: .18;
+  mix-blend-mode: screen;
+}
+
+.landing-home--galaxy .landing-ambient-grid {
+  opacity: .06;
+}
+
+/* Calm reading bands: the Galaxy remains visible as identity, but content gets
+ * a stable dark surface instead of placing paragraphs directly over bright art. */
+.landing-home--galaxy .landing-steps-band {
+  border-color: var(--landing-galaxy-border);
+  background:
+    linear-gradient(180deg, hsl(247 52% 6% / .82), hsl(248 48% 7% / .69)),
+    radial-gradient(circle at 84% 25%, hsl(282 100% 67% / .08), transparent 34%);
+  box-shadow: 0 40px 110px hsl(248 80% 3% / .40);
+  backdrop-filter: blur(12px);
+}
+
+.landing-home--galaxy .landing-story-visual,
+.landing-home--galaxy .landing-audience,
+.landing-home--galaxy .landing-trust,
+.landing-home--galaxy .landing-faq details {
+  border-color: var(--landing-galaxy-border);
+  background: linear-gradient(145deg, hsl(247 48% 8% / .88), hsl(250 44% 8% / .70));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / .035),
+    0 28px 90px -62px hsl(280 100% 70% / .52);
+  backdrop-filter: blur(10px);
+}
+
+.landing-home--galaxy .landing-demo-wrap {
+  border-color: hsl(277 100% 84% / .24);
+  background: linear-gradient(145deg, hsl(247 55% 8% / .76), hsl(250 50% 7% / .48));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / .04),
+    0 34px 110px -56px hsl(287 100% 68% / .52);
+  backdrop-filter: blur(12px);
+}
+
+.landing-home--galaxy .landing-demo {
+  background: hsl(248 46% 8% / .88);
+  border-color: hsl(268 100% 89% / .14);
+}
+
+/* Narrative Piteco art: only the active storytelling image is visible. */
+.landing-galaxy-story-art {
+  position: absolute;
+  right: -2%;
+  bottom: -1%;
+  width: min(58%, 270px);
+  aspect-ratio: 4 / 3;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.landing-galaxy-story-art img {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+  transform: translate3d(18px, 12px, 0) scale(.96);
+  transition: opacity 480ms ease, transform 620ms cubic-bezier(.16, 1, .3, 1);
+  filter: drop-shadow(0 20px 34px hsl(249 80% 2% / .48));
+}
+
+.landing-galaxy-story-art img.is-active {
+  opacity: .94;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.landing-home--galaxy .landing-story-stack {
+  width: min(210px, 55%);
+  margin-right: auto;
+  margin-left: 9%;
+  z-index: 3;
+}
+
+.landing-home--galaxy .landing-story-orbit {
+  width: 72%;
+  opacity: .54;
+}
+
+.landing-galaxy-audience-art {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  width: 118px;
+  height: auto;
+  pointer-events: none;
+  opacity: .88;
+  filter: drop-shadow(0 14px 24px hsl(249 80% 2% / .38));
+}
+
+.landing-home--galaxy .landing-audience {
+  position: relative;
+  overflow: hidden;
+  padding-right: 148px;
+}
+
+.landing-galaxy-audience-art--teacher {
+  width: 148px;
+  right: 2px;
+  bottom: -2px;
+}
+
+.landing-galaxy-final-art {
+  position: absolute;
+  right: clamp(12px, 4vw, 52px);
+  top: 50%;
+  width: clamp(72px, 8vw, 108px);
+  height: auto;
+  transform: translateY(-50%) rotate(3deg);
+  opacity: .88;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 34px hsl(283 100% 66% / .25));
+  animation: landing-galaxy-final-float 8s ease-in-out infinite alternate;
+}
+
+.landing-home--galaxy .landing-final {
+  position: relative;
+  overflow: hidden;
+  padding-right: clamp(120px, 13vw, 180px);
+  border-color: hsl(281 100% 86% / .20);
+  background:
+    radial-gradient(circle at 88% 50%, hsl(286 100% 68% / .16), transparent 24%),
+    linear-gradient(135deg, hsl(248 55% 8% / .88), hsl(248 48% 7% / .68));
+  backdrop-filter: blur(12px);
+}
+
+@keyframes landing-galaxy-frame-cycle {
+  0%, 25% { opacity: .16; transform: translateZ(0) scale(.99) rotate(-.35deg); }
+  34%, 92% { opacity: 0; transform: translateZ(0) scale(1.018) rotate(.45deg); }
+  100% { opacity: .16; transform: translateZ(0) scale(.99) rotate(-.35deg); }
+}
+
+@keyframes landing-galaxy-breathe {
+  from { transform: translate3d(0, 0, 0) scale(.985) rotate(-.4deg); }
+  to { transform: translate3d(-8px, 7px, 0) scale(1.025) rotate(.65deg); }
+}
+
+@keyframes landing-galaxy-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(.96); }
+  to { transform: translate3d(8px, -5px, 0) scale(1.03); }
+}
+
+@keyframes landing-galaxy-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(.98); }
+  to { transform: translate3d(-7px, 6px, 0) scale(1.04); }
+}
+
+@keyframes landing-galaxy-drift-c {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(6px, -4px, 0); }
+}
+
+@keyframes landing-galaxy-final-float {
+  from { transform: translate3d(0, -50%, 0) rotate(2deg) scale(.98); }
+  to { transform: translate3d(0, calc(-50% - 5px), 0) rotate(4deg) scale(1.02); }
+}
+
+@media (max-width: 1099px) {
+  .landing-galaxy-breathing {
+    width: min(58vw, 590px);
+    right: -15vw;
+    top: 13vh;
+    opacity: .48;
+  }
+
+  .landing-home--galaxy .landing-story-stack {
+    margin-left: 5%;
+  }
+}
+
+@media (max-width: 767px) {
+  .landing-galaxy-base > img {
+    object-position: center top;
+    filter: saturate(.98) contrast(1.02) brightness(.78);
+  }
+
+  .landing-galaxy-contrast {
+    background:
+      linear-gradient(180deg,
+        hsl(247 60% 4% / .78) 0%,
+        hsl(247 56% 5% / .57) 34%,
+        hsl(247 58% 4% / .68) 100%),
+      linear-gradient(90deg, hsl(247 60% 4% / .22), transparent 80%);
+  }
+
+  .landing-galaxy-atmosphere { opacity: .36; }
+
+  /* Mobile keeps the official authored background, but drops the large
+   * animated galaxy sprite so the device only composites tiny twinkles. */
+  .landing-galaxy-breathing { display: none; }
+  .landing-galaxy-twinkle-b,
+  .landing-galaxy-twinkle-c { display: none; }
+  .landing-galaxy-twinkle-a { left: auto; right: 8%; top: 18%; width: 48px; opacity: .38; }
+
+  .landing-home--galaxy .landing-steps-band,
+  .landing-home--galaxy .landing-demo-wrap,
+  .landing-home--galaxy .landing-story-visual,
+  .landing-home--galaxy .landing-audience,
+  .landing-home--galaxy .landing-trust,
+  .landing-home--galaxy .landing-final,
+  .landing-home--galaxy .landing-faq details {
+    backdrop-filter: none;
+  }
+
+  .landing-galaxy-story-art {
+    position: relative;
+    width: min(78%, 310px);
+    height: 230px;
+    margin: 8px auto -18px;
+    right: auto;
+    bottom: auto;
+  }
+
+  .landing-home--galaxy .landing-story-stack {
+    width: min(270px, 78%);
+    margin-inline: auto;
+  }
+
+  .landing-home--galaxy .landing-audience {
+    padding-right: 24px;
+    padding-bottom: 118px;
+  }
+
+  .landing-galaxy-audience-art {
+    width: 96px;
+    right: 12px;
+    bottom: 4px;
+  }
+
+  .landing-galaxy-audience-art--teacher { width: 116px; }
+
+  .landing-home--galaxy .landing-final {
+    padding-right: 24px;
+    padding-bottom: 112px;
+  }
+
+  .landing-galaxy-final-art {
+    right: 14px;
+    top: auto;
+    bottom: 10px;
+    width: 82px;
+    transform: none;
+  }
+}
+
+.landing-galaxy-system[data-animated="false"] .landing-galaxy-frame,
+@media (prefers-reduced-motion: reduce) {
+  .landing-galaxy-system .landing-galaxy-frame,
+  .landing-galaxy-system .landing-galaxy-breathing,
+  .landing-galaxy-system .landing-galaxy-twinkle,
+  .landing-galaxy-final-art {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
+
+.landing-galaxy-system[data-animated="false"] .landing-galaxy-frame { opacity: 0; }
+.landing-galaxy-system[data-animated="false"] .landing-galaxy-frame-1 { opacity: .13; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-galaxy-system .landing-galaxy-frame { opacity: 0 !important; transform: none !important; }
+  .landing-galaxy-system .landing-galaxy-frame-1 { opacity: .12 !important; }
+}
