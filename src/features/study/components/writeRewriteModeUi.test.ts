@@ -75,9 +75,9 @@ describe("write rewrite activity UI", () => {
     expect(writeSource).toContain("Tradução do texto para reescrita");
   });
 
-  it("shows the translation only during listening and hides duplicates", () => {
+  it("shows the opposite-side translation in both rewrite modalities and hides duplicates", () => {
     expect(writeSource).toContain(
-      'isListeningRewrite && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0',
+      'isRewriteActivity && rewriteTranslationText.length > 0',
     );
     expect(writeSource).toContain(
       "normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)",
