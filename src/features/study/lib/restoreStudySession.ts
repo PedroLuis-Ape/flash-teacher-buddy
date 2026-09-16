@@ -1,9 +1,11 @@
 import { sanitizeStudyLayerSnapshot, type StudySessionSnapshot, type PersistedStudyResult } from "./studySessionSnapshot";
 import { sanitizeMasterySnapshot } from "./masterySessionSnapshot";
 import { createMasterySession } from "./studySessionFlow";
+import { repairStraightThroughOrder } from "./straightThroughQueue";
 
 export interface RestorableStudySession {
   id: string;
+  mode?: unknown;
   completed?: boolean;
   cards_order?: unknown;
   current_index?: unknown;
@@ -75,23 +77,50 @@ export function restoreStudySession(input: {
     : [];
   const raw = selected?.row.cardsOrder as unknown[] | undefined;
   const position = index(selected?.row.currentIndex ?? session.current_index);
-  const seen = new Set<string>();
+
+  let cardsOrder: string[] = [];
   let before = 0;
-  let cardsOrder = (raw ?? []).filter((id, offset): id is string => {
-    if (typeof id !== "string" || !eligible.has(id) || (input.unique && seen.has(id))) return false;
-    seen.add(id);
-    if (offset < position) before++;
-    return true;
-  });
-  // Preserve existing order and repetitions. Newly eligible cards belong at the end.
-  cardsOrder.push(...eligibleIds.filter(id => !seen.has(id)));
-  if (!selected) {
+  let queueWasRepaired = false;
+
+  if (raw) {
+    if (input.unique) {
+      const seen = new Set<string>();
+      cardsOrder = raw.filter((id, offset): id is string => {
+        if (typeof id !== "string" || !eligible.has(id) || seen.has(id)) return false;
+        seen.add(id);
+        if (offset < position) before += 1;
+        return true;
+      });
+      cardsOrder.push(...eligibleIds.filter(id => !seen.has(id)));
+      queueWasRepaired = JSON.stringify(raw) !== JSON.stringify(cardsOrder) || before !== position;
+    } else {
+      const repaired = repairStraightThroughOrder({
+        sessionOrder: raw,
+        currentIndex: position,
+        availableCardIds: eligible,
+        context: {
+          mode: session.mode,
+          sessionScopeKey: session.session_scope_key,
+          settingsSnapshot: session.settings_snapshot ?? resultSource.settingsSnapshot,
+        },
+      });
+      if (repaired) {
+        cardsOrder = repaired.cardsOrder;
+        before = repaired.currentIndex;
+        queueWasRepaired = repaired.repaired;
+      }
+    }
+  }
+
+  if (!selected || cardsOrder.length === 0) {
     // With no recoverable ordering, only explicit answer evidence can identify
     // completed cards. Never interpret an orphaned numeric index as card identity.
     const answered = new Set(results.map(result => result.flashcardId));
     cardsOrder = [...eligibleIds.filter(id => answered.has(id)), ...eligibleIds.filter(id => !answered.has(id))];
     before = results.length ? cardsOrder.filter(id => answered.has(id)).length : position;
+    queueWasRepaired = true;
   }
+
   const currentIndex = session.completed ? cardsOrder.length : Math.min(before, Math.max(0, cardsOrder.length - 1));
   const layer = sanitizeStudyLayerSnapshot(resultSource.layer);
   const snapshot: StudySessionSnapshot = {
@@ -107,7 +136,7 @@ export function restoreStudySession(input: {
   };
   return {
     snapshot, source: selected?.source ?? "repaired",
-    repaired: !selected || JSON.stringify(raw) !== JSON.stringify(cardsOrder) || position !== currentIndex
+    repaired: queueWasRepaired || !selected || JSON.stringify(raw) !== JSON.stringify(cardsOrder) || position !== currentIndex
       || JSON.stringify(session.cards_order) !== JSON.stringify(cardsOrder) || session.current_index !== currentIndex,
   };
 }
