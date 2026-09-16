@@ -290,6 +290,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   <WriteActivitySettings
                     activityMode={settings.writeActivityMode}
                     rewriteSide={settings.writeRewriteSide}
+                    rewritePromptMode={settings.writeRewritePromptMode}
                     onChange={onSettingsChange}
                   />
                   <CategoryRow

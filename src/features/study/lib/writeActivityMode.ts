@@ -2,7 +2,57 @@ import { hashToBool, normalizeDirection, type Direction } from "@/features/study
 
 export type WriteActivityMode = "translate" | "rewrite";
 export type WriteRewriteSide = "a" | "b" | "alternating";
+/**
+ * COMO o card é apresentado quando a atividade é "rewrite".
+ *
+ * - "visible": a frase-alvo fica visível desde o início (reescrita visual);
+ * - "listening": o aluno ouve e reconstrói sem ver a frase (ditado).
+ *
+ * São DUAS atividades irmãs: o ditado nunca é uma fase obrigatória da
+ * reescrita, e a reescrita visual nunca esconde a frase do aluno.
+ */
+export type WriteRewritePromptMode = "visible" | "listening";
 export type WriteActivityGameMode = "write" | "mixed";
+
+/**
+ * Dados antigos (preset sem o campo) são tratados como reescrita visual, que
+ * era a funcionalidade original substituída pelo ditado.
+ */
+export const DEFAULT_WRITE_REWRITE_PROMPT_MODE: WriteRewritePromptMode = "visible";
+
+export function isWriteRewritePromptMode(value: unknown): value is WriteRewritePromptMode {
+  return value === "visible" || value === "listening";
+}
+
+export function resolveWriteRewritePromptMode(value: unknown): WriteRewritePromptMode {
+  return isWriteRewritePromptMode(value) ? value : DEFAULT_WRITE_REWRITE_PROMPT_MODE;
+}
+
+/**
+ * Identidade do snapshot da tentativa de reescrita.
+ *
+ * Reescrita visual e ditado NÃO compartilham snapshot: cada modalidade tem a
+ * própria identidade de card, então um rascunho de ditado nunca reaparece na
+ * reescrita visual — nem o estado LISTENING vaza de uma para a outra.
+ */
+export function buildRewriteCardIdentity(
+  cardIdentity: string,
+  promptMode: WriteRewritePromptMode,
+  resolvedSide: "a" | "b",
+): string {
+  return `${cardIdentity}:rewrite-${promptMode}-${resolvedSide}`;
+}
+
+/**
+ * Identidade LEGADA (gravada antes da separação). Aquelas tentativas eram
+ * sempre de ditado, então só podem alimentar a modalidade "listening".
+ */
+export function buildLegacyRewriteCardIdentity(
+  cardIdentity: string,
+  resolvedSide: "a" | "b",
+): string {
+  return `${cardIdentity}:rewrite-${resolvedSide}`;
+}
 
 export interface WriteActivityPreference {
   mode: WriteActivityMode;
@@ -61,6 +111,8 @@ export function directionToRewriteSide(direction: unknown): WriteRewriteSide {
 export interface WriteSessionSettings {
   writeActivityMode: WriteActivityMode;
   writeRewriteSide: WriteRewriteSide;
+  /** Reescrita visual ("visible") x ditado ("listening"). */
+  writeRewritePromptMode: WriteRewritePromptMode;
   writeCorrectionMode: "flexible" | "hard";
   studyFlowMode: "mastery_rounds" | "continuous";
 }
@@ -68,6 +120,7 @@ export interface WriteSessionSettings {
 export const DEFAULT_WRITE_SESSION_SETTINGS: WriteSessionSettings = Object.freeze({
   writeActivityMode: "translate",
   writeRewriteSide: "alternating",
+  writeRewritePromptMode: DEFAULT_WRITE_REWRITE_PROMPT_MODE,
   writeCorrectionMode: "flexible",
   studyFlowMode: "mastery_rounds",
 });

@@ -53,6 +53,7 @@ describe("studyPreferenceCache", () => {
       studyFlowMode: "mastery_rounds" as const,
       writeActivityMode: "translate" as const,
       writeRewriteSide: "alternating" as const,
+      writeRewritePromptMode: "visible" as const,
       writeCorrectionMode: "flexible" as const,
     };
 

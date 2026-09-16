@@ -22,6 +22,8 @@ export const LEGACY_STUDY_PRESET_PLAY_SIDES = ["a", "b"] as const;
 export const STUDY_PRESET_FLOW_MODES = ["mastery_rounds", "continuous"] as const;
 export const STUDY_PRESET_WRITE_ACTIVITY_MODES = ["translate", "rewrite"] as const;
 export const STUDY_PRESET_WRITE_REWRITE_SIDES = ["a", "b", "alternating"] as const;
+/** Reescrita visual ("visible") x ditado ("listening"). */
+export const STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES = ["visible", "listening"] as const;
 export const STUDY_PRESET_WRITE_CORRECTION_MODES = ["flexible", "hard"] as const;
 
 export type StudyModePreset = (typeof STUDY_PRESET_MODES)[number];
@@ -52,6 +54,7 @@ export function legacyPlayToTarget(
 export type StudyFlowModePreset = (typeof STUDY_PRESET_FLOW_MODES)[number];
 export type StudyWriteActivityModePreset = (typeof STUDY_PRESET_WRITE_ACTIVITY_MODES)[number];
 export type StudyWriteRewriteSidePreset = (typeof STUDY_PRESET_WRITE_REWRITE_SIDES)[number];
+export type StudyWriteRewritePromptModePreset = (typeof STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES)[number];
 export type StudyWriteCorrectionModePreset = (typeof STUDY_PRESET_WRITE_CORRECTION_MODES)[number];
 
 export type StudyPreset = {
@@ -64,6 +67,8 @@ export type StudyPreset = {
   studyFlowMode: StudyFlowModePreset;
   writeActivityMode: StudyWriteActivityModePreset;
   writeRewriteSide: StudyWriteRewriteSidePreset;
+  /** Reescrever vendo o texto ("visible") x escrever o que ouviu ("listening"). */
+  writeRewritePromptMode: StudyWriteRewritePromptModePreset;
   writeCorrectionMode: StudyWriteCorrectionModePreset;
 };
 
@@ -80,6 +85,7 @@ export const DEFAULT_STUDY_PRESET: StudyPreset = Object.freeze({
   studyFlowMode: "mastery_rounds",
   writeActivityMode: "translate",
   writeRewriteSide: "alternating",
+  writeRewritePromptMode: "visible",
   writeCorrectionMode: "flexible",
 });
 
@@ -115,6 +121,9 @@ export function normalizeStudyPreset(value: unknown): StudyPreset {
     writeRewriteSide: isOneOf(input.writeRewriteSide, STUDY_PRESET_WRITE_REWRITE_SIDES)
       ? input.writeRewriteSide
       : DEFAULT_STUDY_PRESET.writeRewriteSide,
+    writeRewritePromptMode: isOneOf(input.writeRewritePromptMode, STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES)
+      ? input.writeRewritePromptMode
+      : DEFAULT_STUDY_PRESET.writeRewritePromptMode,
     writeCorrectionMode: isOneOf(input.writeCorrectionMode, STUDY_PRESET_WRITE_CORRECTION_MODES)
       ? input.writeCorrectionMode
       : DEFAULT_STUDY_PRESET.writeCorrectionMode,
@@ -138,6 +147,7 @@ export function normalizeStudyPresetOverride(value: unknown): StudyPresetOverrid
   if (isOneOf(value.studyFlowMode, STUDY_PRESET_FLOW_MODES)) result.studyFlowMode = value.studyFlowMode;
   if (isOneOf(value.writeActivityMode, STUDY_PRESET_WRITE_ACTIVITY_MODES)) result.writeActivityMode = value.writeActivityMode;
   if (isOneOf(value.writeRewriteSide, STUDY_PRESET_WRITE_REWRITE_SIDES)) result.writeRewriteSide = value.writeRewriteSide;
+  if (isOneOf(value.writeRewritePromptMode, STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES)) result.writeRewritePromptMode = value.writeRewritePromptMode;
   if (isOneOf(value.writeCorrectionMode, STUDY_PRESET_WRITE_CORRECTION_MODES)) result.writeCorrectionMode = value.writeCorrectionMode;
 
   return result;

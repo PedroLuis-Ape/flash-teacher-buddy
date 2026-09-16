@@ -27,8 +27,12 @@ import {
 } from "@/features/study/lib/writeAnswerEvaluation";
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import {
+  buildLegacyRewriteCardIdentity,
+  buildRewriteCardIdentity,
+  DEFAULT_WRITE_REWRITE_PROMPT_MODE,
   resolveRewriteSideForCard,
   type WriteActivityMode,
+  type WriteRewritePromptMode,
   type WriteRewriteSide,
 } from "@/features/study/lib/writeActivityMode";
 import { evaluateRewriteAnswer } from "@/features/study/lib/writeRewriteEvaluation";
@@ -53,6 +57,8 @@ import {
   readRewriteSnapshot,
   writeRewriteSnapshot,
 } from "@/features/study/lib/writeRewriteSnapshot";
+import type { SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
+import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
 
 /** Normaliza aspas/espaços/case apenas para comparação (nunca para exibição). */
 function normalizeRewriteComparison(value: string | null | undefined): string {
@@ -62,8 +68,32 @@ function normalizeRewriteComparison(value: string | null | undefined): string {
     .trim()
     .toLocaleLowerCase();
 }
-import type { SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
-import { StudyReviewFlagButton } from "./StudyReviewFlagButton";
+
+/**
+ * Restaura a tentativa de reescrita daquele card.
+ *
+ * Reescrita visual ("visible") e ditado ("listening") são atividades irmãs com
+ * snapshots PRÓPRIOS. Snapshots gravados antes da separação pertenciam ao
+ * ditado, então só podem alimentar "listening" — nunca a reescrita visual, que
+ * não tem (nem pode herdar) a fase LISTENING.
+ */
+function restoreRewriteFlowState(options: {
+  isRewriteActivity: boolean;
+  isListeningRewrite: boolean;
+  promptMode: WriteRewritePromptMode;
+  snapshotScope?: string;
+  cardIdentity: string;
+  legacyCardIdentity: string;
+}): RewriteFlowState {
+  if (!options.isRewriteActivity) return createRewriteFlowState(options.promptMode);
+  const stored = readRewriteSnapshot(options.snapshotScope, options.cardIdentity);
+  if (stored) return stored;
+  if (options.isListeningRewrite) {
+    const legacy = readRewriteSnapshot(options.snapshotScope, options.legacyCardIdentity);
+    if (legacy) return legacy;
+  }
+  return createRewriteFlowState(options.promptMode);
+}
 
 interface WriteStudyViewProps {
   front: string;
@@ -79,6 +109,8 @@ interface WriteStudyViewProps {
   /** Configurações controladas pelo dono da sessão (Study/MixedStudy). */
   writeActivityMode: WriteActivityMode;
   writeRewriteSide: WriteRewriteSide;
+  /** Reescrever vendo o texto ("visible") x escrever o que ouviu ("listening"). */
+  writeRewritePromptMode: WriteRewritePromptMode;
   writeCorrectionMode: WriteCorrectionMode;
   studyFlowMode: StudyFlowModePreset;
   langA?: string;
@@ -128,6 +160,7 @@ export const WriteStudyView = ({
   direction,
   writeActivityMode,
   writeRewriteSide,
+  writeRewritePromptMode = DEFAULT_WRITE_REWRITE_PROMPT_MODE,
   writeCorrectionMode,
   studyFlowMode,
   langA = "en",
@@ -161,12 +194,21 @@ export const WriteStudyView = ({
 }: WriteStudyViewProps) => {
   const cardIdentity = flashcardId ?? `${front}|${back}`;
   const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeRewriteSide);
-  const rewriteCardIdentity = `${cardIdentity}:rewrite-${resolvedRewriteSide}`;
-  const [rewriteState, setRewriteState] = useState<RewriteFlowState>(() =>
-    writeActivityMode === "rewrite"
-      ? readRewriteSnapshot(rewriteSnapshotScope, rewriteCardIdentity) ?? createRewriteFlowState()
-      : createRewriteFlowState(),
-  );
+  const isRewriteActivity = writeActivityMode === "rewrite";
+  const isListeningRewrite = isRewriteActivity && writeRewritePromptMode === "listening";
+  const isVisibleRewrite = isRewriteActivity && writeRewritePromptMode === "visible";
+  // Cada modalidade tem identidade própria: um rascunho de ditado nunca
+  // reaparece na reescrita visual, nem o estado LISTENING vaza entre elas.
+  const rewriteCardIdentity = buildRewriteCardIdentity(cardIdentity, writeRewritePromptMode, resolvedRewriteSide);
+  const legacyRewriteCardIdentity = buildLegacyRewriteCardIdentity(cardIdentity, resolvedRewriteSide);
+  const [rewriteState, setRewriteState] = useState<RewriteFlowState>(() => restoreRewriteFlowState({
+    isRewriteActivity,
+    isListeningRewrite,
+    promptMode: writeRewritePromptMode,
+    snapshotScope: rewriteSnapshotScope,
+    cardIdentity: rewriteCardIdentity,
+    legacyCardIdentity: legacyRewriteCardIdentity,
+  }));
   const [answer, setAnswer] = useState(() =>
     writeActivityMode === "rewrite" ? rewriteState.draft : "",
   );
@@ -189,7 +231,6 @@ export const WriteStudyView = ({
   const sideA = { text: front, lang: langA, label: labelA || getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: labelB || getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
   const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
-  const isRewriteActivity = writeActivityMode === "rewrite";
   const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
   const promptSide = isRewriteActivity ? rewriteTargetSide : translatedSides.promptSide;
   const answerSide = isRewriteActivity ? rewriteTargetSide : translatedSides.answerSide;
@@ -203,7 +244,7 @@ export const WriteStudyView = ({
   const answerLabel = answerSide.label;
   const promptLang = toBCP47(promptSide.lang);
   const effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard" : correctionMode;
-  const attemptCardId = `${cardIdentity}:${isRewriteActivity ? `rewrite-${resolvedRewriteSide}` : "translate"}`;
+  const attemptCardId = `${cardIdentity}:${isRewriteActivity ? `rewrite-${writeRewritePromptMode}-${resolvedRewriteSide}` : "translate"}`;
   const rewriteTargetRevealed = isRewriteActivity && rewriteState.phase !== "LISTENING";
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -264,9 +305,14 @@ export const WriteStudyView = ({
       : "text-[clamp(1.12rem,4.8vw,1.55rem)]";
 
   useEffect(() => {
-    const restoredRewriteState = isRewriteActivity
-      ? readRewriteSnapshot(rewriteSnapshotScope, rewriteCardIdentity) ?? createRewriteFlowState()
-      : createRewriteFlowState();
+    const restoredRewriteState = restoreRewriteFlowState({
+      isRewriteActivity,
+      isListeningRewrite,
+      promptMode: writeRewritePromptMode,
+      snapshotScope: rewriteSnapshotScope,
+      cardIdentity: rewriteCardIdentity,
+      legacyCardIdentity: legacyRewriteCardIdentity,
+    });
     setRewriteState(restoredRewriteState);
     setAnswer(isRewriteActivity ? restoredRewriteState.draft : "");
     setEvaluation(
@@ -283,7 +329,18 @@ export const WriteStudyView = ({
     setShake(false);
     setAttentionPointOpen(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
-  }, [correctAnswer, front, back, isRewriteActivity, resolvedRewriteSide, rewriteCardIdentity, rewriteSnapshotScope]);
+  }, [
+    correctAnswer,
+    front,
+    back,
+    isRewriteActivity,
+    isListeningRewrite,
+    legacyRewriteCardIdentity,
+    resolvedRewriteSide,
+    rewriteCardIdentity,
+    rewriteSnapshotScope,
+    writeRewritePromptMode,
+  ]);
 
   useEffect(() => {
     if (!isRewriteActivity) return;
@@ -400,7 +457,11 @@ export const WriteStudyView = ({
 
   const handleRetry = () => {
     if (isRewriteActivity && rewriteState.phase === "REWRITE") {
-      const nextState = retryRewriteAttempt(rewriteState);
+      // Reescrita visual: o rascunho é preservado, o aluno corrige o que já
+      // escreveu. Ditado: depois da revelação a tentativa recomeça limpa.
+      const nextState = isVisibleRewrite
+        ? { ...rewriteState, submittedAnswer: null }
+        : retryRewriteAttempt(rewriteState);
       setRewriteState(nextState);
       setAnswer(nextState.draft);
     }
@@ -446,7 +507,7 @@ export const WriteStudyView = ({
     && normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)
       ? rewriteOppositeText
       : "";
-  const showRewriteTranslation = isRewriteActivity && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0;
+  const showRewriteTranslation = isListeningRewrite && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0;
   const rewriteHint = isRewriteActivity ? buildRewriteHint(correctAnswer, rewriteState.hintLevel) : "";
 
   const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
@@ -490,7 +551,7 @@ export const WriteStudyView = ({
           hasFeedback ? "min-h-0 pt-0 gap-1" : "min-h-[128px] pt-2 sm:min-h-0 sm:pt-0",
         )}>
           <p className={cn("pr-20 text-xs text-muted-foreground sm:pr-0 sm:text-sm", hasFeedback ? "mb-1" : "mb-3 sm:mb-4")}>
-            {isRewriteActivity && rewriteState.phase === "LISTENING" ? `Ouça em ${promptLabel}` : promptLabel}
+            {isListeningRewrite && rewriteState.phase === "LISTENING" ? `Ouça em ${promptLabel}` : promptLabel}
           </p>
           <div className={cn(
             "flex w-full flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3",
@@ -540,9 +601,11 @@ export const WriteStudyView = ({
             )}
             <p className="text-sm text-muted-foreground sm:text-sm">
               {isRewriteActivity
-                ? rewriteState.phase === "LISTENING"
-                  ? "Ouça e reconstrua a frase sem vê-la:"
-                  : "Reescreva corretamente a frase revelada:"
+                ? isVisibleRewrite
+                  ? "Reescreva exatamente a frase acima:"
+                  : rewriteState.phase === "LISTENING"
+                    ? "Ouça e reconstrua a frase sem vê-la:"
+                    : "Reescreva corretamente a frase revelada:"
                 : `Traduza para ${answerLabel}:`}
             </p>
             </>
@@ -568,14 +631,26 @@ export const WriteStudyView = ({
             if (isRewriteActivity) setRewriteState((current) => updateRewriteDraft(current, event.target.value));
           }}
           onKeyDown={handleKeyPress}
-          placeholder={isRewriteActivity && rewriteState.phase === "LISTENING" ? "Digite o que você ouviu..." : isRewriteActivity ? "Reescreva a frase correta..." : "Digite sua resposta..."}
+          placeholder={isVisibleRewrite
+            ? "Reescreva a frase exatamente como está acima..."
+            : isRewriteActivity && rewriteState.phase === "LISTENING"
+              ? "Digite o que você ouviu..."
+              : isRewriteActivity
+                ? "Reescreva a frase correta..."
+                : "Digite sua resposta..."}
           disabled={evaluation !== null}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
           enterKeyHint="done"
-          aria-label={isRewriteActivity && rewriteState.phase === "LISTENING" ? "Digite a frase que você ouviu" : isRewriteActivity ? "Reescreva a frase correta" : "Digite sua resposta"}
+          aria-label={isVisibleRewrite
+            ? "Reescreva a frase que está visível"
+            : isRewriteActivity && rewriteState.phase === "LISTENING"
+              ? "Digite a frase que você ouviu"
+              : isRewriteActivity
+                ? "Reescreva a frase correta"
+                : "Digite sua resposta"}
           className={cn(
             "w-full min-w-0 min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
@@ -591,7 +666,13 @@ export const WriteStudyView = ({
           <StudyFeedbackPanel
             status="correct"
             title={isRewriteActivity ? "Reescrita correta!" : "Muito bem!"}
-            message={isRewriteActivity ? (rewriteState.hadInitialError ? "Você corrigiu e reescreveu a frase corretamente." : "Você reconstruiu a frase corretamente na primeira tentativa.") : "Sua resposta está correta."}
+            message={isRewriteActivity
+              ? isVisibleRewrite
+                ? "Você reescreveu a frase exatamente como ela aparece."
+                : rewriteState.hadInitialError
+                  ? "Você corrigiu e reescreveu a frase corretamente."
+                  : "Você reconstruiu a frase corretamente na primeira tentativa."
+              : "Sua resposta está correta."}
             correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"

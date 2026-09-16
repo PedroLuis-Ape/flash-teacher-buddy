@@ -55,6 +55,41 @@ related:
 - [CONFLITO RESOLVIDO] O processo de 15/09 declarava `xrnf…` como project ref de
   produção. Estava errado — o correto é `ymah…`.
 
+### FECHAMENTO 2026-09-15 (reescrita visual x ditado)
+
+- **Reescrever e "Escrever o que ouviu" viraram atividades IRMÃS — CONCLUÍDO:**
+  o modo Escrever voltou a ter três experiências (Traduzir / Reescrever vendo o
+  texto / Escrever o que ouviu). Contrato: `writeActivityMode = "rewrite"` +
+  **novo** `writeRewritePromptMode = "visible" | "listening"` — sem terceiro
+  valor, preservando `writeRewriteSide`, `writeCorrectionMode`, `studyFlowMode` e
+  os presets antigos. Arquivos: `writeActivityMode.ts`, `studyPreset.ts`,
+  `studySettingsSnapshotV3.ts`, `studyPreferenceRepository.ts`,
+  `WriteActivitySettings.tsx`, `WriteStudyView.impl.tsx`, `writeRewriteFlow.ts`,
+  `Study.tsx`, `MixedStudy.tsx`. Ver [[areas/study-runtime]].
+- [FATO CONFIRMADO 2026-09-15] **Backward compatibility explícita:** preset/snapshot
+  antigo com `writeActivityMode = "rewrite"` e sem o campo novo normaliza para
+  **"visible"** (a reescrita visual original, que o ditado havia substituído).
+  Nada de converter rewrite antigo em listening em silêncio.
+- [DECISÃO VIGENTE 2026-09-15] **Snapshots separados:** identidade
+  `card:rewrite-{promptMode}-{side}` via `buildRewriteCardIdentity`; a identidade
+  legada `card:rewrite-{side}` continua legível e alimenta SOMENTE `listening`
+  (`buildLegacyRewriteCardIdentity`).
+- [FATO CONFIRMADO 2026-09-15] **Migration aditiva aplicada em produção**
+  (`ymahldldyxvwjeruaxpr`): `write_rewrite_prompt_mode text NOT NULL DEFAULT
+  'visible'` em `user_study_preferences` e anulável em
+  `user_list_study_preferences`, com checks `('visible','listening')`; versão
+  `20260915190000` registrada em `supabase_migrations.schema_migrations`.
+  Arquivo: `supabase/migrations/20260915190000_write_rewrite_prompt_mode.sql`.
+- Gate desta rodada: suíte **339 arquivos / 2197 testes, 100% verde**, `tsc` exit 0
+  (app + node), `eslint` 0 erros (75 avisos pré-existentes), `vite build` ok.
+- [ARMADILHA CONFIRMADA] `vite build` **reescreve**
+  `supabase/functions/mcp/index.ts` via `mcpPlugin()` e deixa um stub de 8 linhas
+  (-8117 linhas). É artefato do plugin, não código: **nunca** commitar essa
+  alteração. Foi restaurada nesta rodada — mesma origem da "alteração não
+  commitada" observada em outros worktrees.
+- **Não entrou:** fila/ordem de cards, `mastery_rounds`, engine adaptativa do
+  Misto, TTS, Pontos de atenção/Reforço, economia e MCP.
+
 ### FECHAMENTO 2026-09-15
 
 - **“Revisar cards / Revisar depois” — CONCLUÍDO no `main`:** marcador one-click

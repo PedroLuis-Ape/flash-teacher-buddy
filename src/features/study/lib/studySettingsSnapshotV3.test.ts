@@ -16,9 +16,9 @@ describe("contrato único de configurações v3", () => {
   it("cobre todos os campos ajustáveis na janela", () => {
     expect(Object.keys(DEFAULT_STUDY_SETTINGS_SNAPSHOT).sort()).toEqual([
       "direction", "fastMode", "order", "playTarget", "redFocus",
-      "scope", "studyFlowMode", "version", "writeActivityMode",
-      "writeCorrectionMode", "writeRewriteSide",
-    ]);
+       "scope", "studyFlowMode", "version", "writeActivityMode",
+       "writeCorrectionMode", "writeRewritePromptMode", "writeRewriteSide",
+     ]);
   });
 
   it("migra snapshots v1 (subset, sem configuração de Play)", () => {

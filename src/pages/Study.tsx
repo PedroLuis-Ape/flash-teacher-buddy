@@ -1396,11 +1396,13 @@ const Study = () => {
   const writeSessionSettings = useMemo(() => ({
     writeActivityMode: studySettings.writeActivityMode,
     writeRewriteSide: studySettings.writeRewriteSide,
+    writeRewritePromptMode: studySettings.writeRewritePromptMode,
     writeCorrectionMode: studySettings.writeCorrectionMode,
     studyFlowMode: studySettings.studyFlowMode,
   }), [
     studySettings.writeActivityMode,
     studySettings.writeRewriteSide,
+    studySettings.writeRewritePromptMode,
     studySettings.writeCorrectionMode,
     studySettings.studyFlowMode,
   ]);
@@ -2701,6 +2703,7 @@ const Study = () => {
               direction={resolvedDirection}
               writeActivityMode={writeSessionSettings.writeActivityMode}
               writeRewriteSide={writeSessionSettings.writeRewriteSide}
+              writeRewritePromptMode={writeSessionSettings.writeRewritePromptMode}
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}
               rewriteSnapshotScope={studySnapshotKey}

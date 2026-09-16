@@ -20,7 +20,7 @@ Relatório de auditoria versionado:
 - **BASE PREFERENCE** (persistida em `user_study_preferences` /
   `user_list_study_preferences`): `direction`, `order`, `scope`, `fastMode`,
   `studyFlowMode`, `playTarget`, `writeActivityMode`, `writeRewriteSide`,
-  `writeCorrectionMode`.
+  `writeRewritePromptMode`, `writeCorrectionMode`.
 - **TEMPORARY CONSTRAINT** (nunca persiste como preferência): Foco Vermelho e
   `mastery_rounds` forçando `effectiveDirection = "any"`; saída restaura a base
   via `releaseRedFocusConstraints` / `releaseMasteryRoundsConstraints`.
@@ -31,6 +31,23 @@ Relatório de auditoria versionado:
 - **LEGACY WIRE / MIGRATION**: `playMode`/`playSide` existem apenas em
   `legacyPlayToTarget`, na leitura de linhas antigas do repositório de
   preferências e no envelope v1 de `studySessionContext`. Nunca no runtime.
+
+### Reescrever x "Escrever o que ouviu" (2026-09-15)
+
+- `writeActivityMode` mantém DOIS valores (`translate` | `rewrite`); qual
+  experiência de reescrita roda é decidido por `writeRewritePromptMode`
+  (`visible` | `listening`). Ditado NÃO é fase obrigatória da reescrita.
+- `visible` (reescrita visual, default): a frase-alvo é montada desde o início,
+  sem fase LISTENING, áudio manual opcional e correção exata.
+- `listening` (ditado): mantém TTS, velocidade, hints graduais e reveal, também
+  com correção exata.
+- Estado inicial por modalidade: `createRewriteFlowState("visible")` nasce em
+  `REWRITE`; `createRewriteFlowState("listening")` (default legado) nasce em
+  `LISTENING`.
+- Snapshots próprios por modalidade (`buildRewriteCardIdentity`); o formato
+  legado (`buildLegacyRewriteCardIdentity`) é lido apenas em `listening`.
+- Migration `20260915190000_write_rewrite_prompt_mode.sql` (aditiva, default
+  'visible') aplicada em `ymahldldyxvwjeruaxpr`.
 
 ## Compatibilidade de sessões antigas (P0 desta rodada)
 

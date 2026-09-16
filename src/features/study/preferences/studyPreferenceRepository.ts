@@ -21,6 +21,7 @@ type GlobalPreferenceRow = {
   study_flow_mode?: unknown;
   write_activity_mode?: unknown;
   write_rewrite_side?: unknown;
+  write_rewrite_prompt_mode?: unknown;
   write_correction_mode?: unknown;
 };
 
@@ -52,6 +53,7 @@ export function mapGlobalPreferenceRow(
     studyFlowMode: row.study_flow_mode,
     writeActivityMode: row.write_activity_mode,
     writeRewriteSide: row.write_rewrite_side,
+    writeRewritePromptMode: row.write_rewrite_prompt_mode,
     writeCorrectionMode: row.write_correction_mode,
   });
 }
@@ -73,6 +75,7 @@ export function mapListPreferenceRow(
     studyFlowMode: row.study_flow_mode,
     writeActivityMode: row.write_activity_mode,
     writeRewriteSide: row.write_rewrite_side,
+    writeRewritePromptMode: row.write_rewrite_prompt_mode,
     writeCorrectionMode: row.write_correction_mode,
   });
   return Object.keys(override).length > 0 ? override : null;
@@ -97,6 +100,7 @@ export function toGlobalPreferenceRow(
     study_flow_mode: normalized.studyFlowMode,
     write_activity_mode: normalized.writeActivityMode,
     write_rewrite_side: normalized.writeRewriteSide,
+    write_rewrite_prompt_mode: normalized.writeRewritePromptMode,
     write_correction_mode: normalized.writeCorrectionMode,
   };
 }
@@ -122,6 +126,7 @@ export function toListPreferenceRow(
     study_flow_mode: normalized.studyFlowMode ?? null,
     write_activity_mode: normalized.writeActivityMode ?? null,
     write_rewrite_side: normalized.writeRewriteSide ?? null,
+    write_rewrite_prompt_mode: normalized.writeRewritePromptMode ?? null,
     write_correction_mode: normalized.writeCorrectionMode ?? null,
   };
 }
@@ -139,6 +144,7 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
     || message.includes("study_flow_mode") && message.includes("column")
     || message.includes("write_activity_mode") && message.includes("column")
     || message.includes("write_rewrite_side") && message.includes("column")
+    || message.includes("write_rewrite_prompt_mode") && message.includes("column")
     || message.includes("write_correction_mode") && message.includes("column");
 }
 
@@ -172,7 +178,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_rewrite_prompt_mode,write_correction_mode")
         .eq("user_id", userId)
         .eq("game_mode", identityMode)
         .maybeSingle();
@@ -209,7 +215,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,play_target,study_flow_mode,write_activity_mode,write_rewrite_side,write_rewrite_prompt_mode,write_correction_mode")
         .eq("user_id", userId)
         .eq("list_id", listId)
         .eq("game_mode", identityMode)
