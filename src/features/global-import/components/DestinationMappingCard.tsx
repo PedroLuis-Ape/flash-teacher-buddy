@@ -1,4 +1,5 @@
-import { AlertTriangle, FolderInput, FolderPlus, ListPlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FolderInput, FolderPlus, ListPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import type { GlobalImportPackage } from "../schema";
 import type {
   GlobalImportDestinationPlan,
@@ -16,6 +18,10 @@ import type {
   ListDestination,
 } from "../destination";
 import type { GlobalImportDestinationMode } from "../destinationModes";
+import {
+  resolveImportLanguageCompatibility,
+  resolveIncomingListDirection,
+} from "../languageCompatibility";
 
 interface Props {
   packageValue: GlobalImportPackage;
@@ -39,6 +45,11 @@ function replaceFolderPlan(
       [folderIndex]: nextFolderPlan,
     },
   };
+}
+
+function languageDisplay(code: string): string {
+  const label = getLangLabel(code);
+  return label && label !== code ? `${label} (${code})` : code;
 }
 
 export function DestinationMappingCard({
@@ -182,6 +193,13 @@ export function DestinationMappingCard({
                   if (!listPlan) return null;
                   const canUseExisting = folderTarget.mode === "existing" && availableLists.length > 0;
                   const baseId = `destination-${folderIndex}-${listIndex}`;
+                  const existingTarget = listPlan.mode === "existing"
+                    ? availableLists.find((item) => item.id === listPlan.listId) ?? null
+                    : null;
+                  const incomingDirection = resolveIncomingListDirection(list, packageValue);
+                  const compatibility = existingTarget && incomingDirection && selectedFolder
+                    ? resolveImportLanguageCompatibility(incomingDirection, existingTarget, selectedFolder)
+                    : null;
 
                   return (
                     <article key={`${list.name}-${listIndex}`} className="space-y-3 rounded-lg border bg-muted/20 p-4">
@@ -241,47 +259,80 @@ export function DestinationMappingCard({
                       )}
 
                       {listPlan.mode === "existing" && (
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <div>
-                            <Label htmlFor={`${baseId}-list`}>Lista</Label>
-                            <Select
-                              value={listPlan.listId}
-                              onValueChange={(listId) => updateList(folderIndex, listIndex, {
-                                ...listPlan,
-                                listId,
-                              })}
-                            >
-                              <SelectTrigger id={`${baseId}-list`}>
-                                <SelectValue placeholder="Escolha uma lista" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableLists.map((existingList) => (
-                                  <SelectItem key={existingList.id} value={existingList.id}>
-                                    {existingList.title}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                        <>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                              <Label htmlFor={`${baseId}-list`}>Lista</Label>
+                              <Select
+                                value={listPlan.listId}
+                                onValueChange={(listId) => updateList(folderIndex, listIndex, {
+                                  ...listPlan,
+                                  listId,
+                                })}
+                              >
+                                <SelectTrigger id={`${baseId}-list`}>
+                                  <SelectValue placeholder="Escolha uma lista" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableLists.map((existingList) => (
+                                    <SelectItem key={existingList.id} value={existingList.id}>
+                                      {existingList.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label htmlFor={`${baseId}-strategy`}>Ação</Label>
+                              <Select
+                                value={listPlan.strategy ?? "append"}
+                                onValueChange={(strategy) => updateList(folderIndex, listIndex, {
+                                  ...listPlan,
+                                  strategy: strategy as "append" | "replace",
+                                })}
+                              >
+                                <SelectTrigger id={`${baseId}-strategy`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="append">Adicionar os novos cards</SelectItem>
+                                  <SelectItem value="replace">Substituir os cards existentes</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                          <div>
-                            <Label htmlFor={`${baseId}-strategy`}>Ação</Label>
-                            <Select
-                              value={listPlan.strategy ?? "append"}
-                              onValueChange={(strategy) => updateList(folderIndex, listIndex, {
-                                ...listPlan,
-                                strategy: strategy as "append" | "replace",
-                              })}
-                            >
-                              <SelectTrigger id={`${baseId}-strategy`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="append">Adicionar os novos cards</SelectItem>
-                                <SelectItem value="replace">Substituir os cards existentes</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+
+                          {compatibility && (
+                            <div className={`space-y-2 rounded-lg border p-3 text-xs ${compatibility.compatible ? "border-emerald-500/30 bg-emerald-500/5" : "border-destructive/40 bg-destructive/5"}`}>
+                              <div className="flex items-center gap-2 font-medium">
+                                {compatibility.compatible
+                                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                  : <AlertTriangle className="h-4 w-4 text-destructive" />}
+                                <span>{compatibility.compatible ? "Lados compatíveis" : "Lados incompatíveis"}</span>
+                              </div>
+                              <div className="grid gap-1 text-muted-foreground sm:grid-cols-2">
+                                <p>
+                                  <strong className="text-foreground">Recebido:</strong>{" "}
+                                  A · {languageDisplay(compatibility.incoming.front)} | B · {languageDisplay(compatibility.incoming.back)}
+                                </p>
+                                <p>
+                                  <strong className="text-foreground">Destino:</strong>{" "}
+                                  A · {languageDisplay(compatibility.target.front)} | B · {languageDisplay(compatibility.target.back)}
+                                </p>
+                              </div>
+                              <p className="text-muted-foreground">
+                                Fonte do destino: {compatibility.authorityLabel}.
+                              </p>
+                              {!compatibility.compatible && existingTarget && (
+                                <Button asChild type="button" variant="outline" size="sm" className="min-h-9">
+                                  <a href={`/list/${existingTarget.id}`} target="_blank" rel="noreferrer">
+                                    Abrir lista para corrigir em ⋮ → Configurações A/B
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {listPlan.mode === "existing" && listPlan.strategy === "replace" && (

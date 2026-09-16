@@ -39,6 +39,8 @@ const invertedFolder = {
   labels_b: "English",
 };
 
+const DIRECTION_ERROR = "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.";
+
 function plan(destination: GlobalImportDestinationPlan["folders"][number]["lists"][number]): GlobalImportDestinationPlan {
   return {
     folders: {
@@ -91,7 +93,7 @@ describe("Super Import canonical A/B language authority", () => {
     )).toEqual([]);
   });
 
-  it("keeps the historical fallback for legacy en/pt lists", () => {
+  it("accepts pt-BR into a legacy en/pt list without rewriting old cards", () => {
     const catalog: ImportDestinationCatalog = {
       folders: [invertedFolder],
       lists: [{
@@ -100,6 +102,8 @@ describe("Super Import canonical A/B language authority", () => {
         folder_id: invertedFolder.id,
         lang_a: "en",
         lang_b: "pt",
+        labels_a: "English",
+        labels_b: "Português",
         language_settings_mode: "legacy",
       }],
     };
@@ -113,8 +117,54 @@ describe("Super Import canonical A/B language authority", () => {
         strategy: "append",
         consolidate: true,
       }),
-    )).toContain(
-      "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.",
-    );
+    )).toEqual([]);
+  });
+
+  it("still obeys an explicitly inherited folder direction", () => {
+    const catalog: ImportDestinationCatalog = {
+      folders: [invertedFolder],
+      lists: [{
+        id: "list-inherited",
+        title: "Lista herdada",
+        folder_id: invertedFolder.id,
+        lang_a: "en",
+        lang_b: "pt",
+        language_settings_mode: "inherited",
+      }],
+    };
+
+    expect(validateDestinationPlan(
+      incomingEnPt,
+      catalog,
+      plan({
+        mode: "existing",
+        listId: "list-inherited",
+        strategy: "append",
+      }),
+    )).toContain(DIRECTION_ERROR);
+  });
+
+  it("validates an individually mapped existing list even without consolidate=true", () => {
+    const catalog: ImportDestinationCatalog = {
+      folders: [invertedFolder],
+      lists: [{
+        id: "list-explicit-inverted",
+        title: "Portuguese → English",
+        folder_id: invertedFolder.id,
+        lang_a: "pt-BR",
+        lang_b: "en",
+        language_settings_mode: "explicit",
+      }],
+    };
+
+    expect(validateDestinationPlan(
+      incomingEnPt,
+      catalog,
+      plan({
+        mode: "existing",
+        listId: "list-explicit-inverted",
+        strategy: "append",
+      }),
+    )).toContain(DIRECTION_ERROR);
   });
 });
