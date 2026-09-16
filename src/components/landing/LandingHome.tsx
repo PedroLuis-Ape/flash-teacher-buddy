@@ -3,6 +3,7 @@ import { Gamepad2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
+import { LandingGalaxyBackdrop } from "@/components/landing/LandingGalaxyBackdrop";
 import { editorialMeta, getEditorialRouteLabel, type EditorialPageDefinition } from "@/content/public/editorialMaster";
 import { FeaturedPublicResource } from "@/features/public-home/FeaturedPublicResource";
 import { LandingMiniGame } from "@/features/public-home/LandingMiniGame";
@@ -16,18 +17,28 @@ import {
 } from "@/features/public-home/LandingMotion";
 import { MarketingCarousel } from "@/features/public-home/MarketingCarousel";
 import { useFeaturedPublicResource } from "@/features/public-home/useFeaturedPublicResource";
+import { usePalette } from "@/hooks/usePalette";
 import { usePointerTilt } from "@/hooks/usePointerTilt";
 import "@/styles/landing-home.css";
 import "@/styles/landing-mini-game.css";
 import "@/styles/landing-featured.css";
+import "@/styles/landing-galaxy-official.css";
+
+const GALAXY_STORY_ART = [
+  "/assets/landing/galaxy/piteco-learning.webp",
+  "/assets/landing/galaxy/piteco-organize.webp",
+  "/assets/landing/galaxy/piteco-progress.webp",
+] as const;
 
 export function LandingHome({ page }: { page: EditorialPageDefinition }) {
   const [steps, student, teacher, author, methodology] = page.sections;
   const demo = page.landingDemo;
   const { t } = useTranslation();
+  const { palette } = usePalette();
   const { data: featured } = useFeaturedPublicResource();
   const primaryHref = featured?.play_path ?? "/portal";
   const reducedMotion = useReducedMotionPreference();
+  const galaxyMode = palette === "galaxy";
   const landingRef = useLandingPointerGlow<HTMLDivElement>(reducedMotion);
   const heroRef = useHeroScrollMotion<HTMLElement>(reducedMotion);
   const demoTiltRef = usePointerTilt<HTMLDivElement>({ maxTilt: 4, disabled: reducedMotion });
@@ -35,7 +46,13 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
   const { ref: storyRef, activeStep } = useLandingStoryProgress<HTMLElement>(steps.items.length, reducedMotion);
 
   return (
-    <div ref={landingRef} className="landing-home" data-reduced-motion={reducedMotion ? "true" : "false"}>
+    <div
+      ref={landingRef}
+      className={`landing-home${galaxyMode ? " landing-home--galaxy" : ""}`}
+      data-reduced-motion={reducedMotion ? "true" : "false"}
+    >
+      {galaxyMode && <LandingGalaxyBackdrop animated={!reducedMotion} />}
+
       <div className="landing-ambient" aria-hidden="true">
         <span className="landing-ambient-orb landing-ambient-orb-a" />
         <span className="landing-ambient-orb landing-ambient-orb-b" />
@@ -126,6 +143,21 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
                   );
                 })}
               </div>
+              {galaxyMode && (
+                <div className="landing-galaxy-story-art">
+                  {GALAXY_STORY_ART.map((src, index) => (
+                    <img
+                      key={src}
+                      src={src}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                      className={activeStep === index ? "is-active" : undefined}
+                    />
+                  ))}
+                </div>
+              )}
               <div className="landing-story-meter">
                 {steps.items.map((item, index) => (
                   <span key={`${item}-meter`} className={activeStep === index ? "is-active" : undefined} />
@@ -155,6 +187,18 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
                     {index === 0 ? "Encontrar um material" : "Conhecer os recursos para professores"}
                     <ArrowRight aria-hidden="true" className="h-4 w-4" />
                   </Link>
+                  {galaxyMode && (
+                    <img
+                      src={index === 0
+                        ? "/assets/landing/galaxy/flashcards-stack.webp"
+                        : "/assets/landing/galaxy/piteco-teacher.webp"}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                      className={`landing-galaxy-audience-art${index === 1 ? " landing-galaxy-audience-art--teacher" : ""}`}
+                    />
+                  )}
                 </section>
               </MotionReveal>
             );
@@ -204,6 +248,16 @@ export function LandingHome({ page }: { page: EditorialPageDefinition }) {
             <AuthAwareCTA guestMode="signup" size="lg" className="landing-primary">
               {page.cta.primary}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
             </AuthAwareCTA>
+            {galaxyMode && (
+              <img
+                src="/assets/landing/galaxy/play-planet.webp"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                className="landing-galaxy-final-art"
+              />
+            )}
           </section>
         </MotionReveal>
 
