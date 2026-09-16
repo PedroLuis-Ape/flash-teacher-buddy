@@ -18,6 +18,10 @@ related:
 
 # Context Packet e telemetria de contexto
 
+Política canônica (fonte única): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
+Packet só existe quando a tarefa realmente precisa de memória (níveis 1–3 da política). Em tarefa
+simples/local (nível 0) não há leitura e não há packet — ausência de memória é o resultado normal.
+
 Nota canônica do protocolo de custo de contexto do App Piteco:
 **READ ONCE -> COMPACT -> SHARE -> REUSE**. Ela complementa
 [[10-CONTEXT-FEEDING-RULE]] (rota de entrada) e

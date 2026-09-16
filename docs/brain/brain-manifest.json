@@ -3,10 +3,10 @@
   "brain_root": "docs/brain",
   "generated_by": "scripts/brain-index.mjs",
   "byte_basis": "utf8-bytes-lf-normalized",
-  "note_count": 111,
+  "note_count": 113,
   "historical_note_count": 38,
-  "total_bytes": 459586,
-  "brain_version": "81ce8eb19afb3d292916f2660e1988e4dfe749b1c99042feec9cefa67a8b8c5d",
+  "total_bytes": 480196,
+  "brain_version": "8e5370a7ed060ed7c587ded9e0313ee550d63044e93c99482a0903c4f2541e51",
   "canonical_documents": {
     "adaptive-learning": {
       "path": "learning/00-LEARNING-HUB.md",
@@ -156,7 +156,7 @@
     },
     "current-state": {
       "notes": 1,
-      "bytes": 56285,
+      "bytes": 63804,
       "historical_notes": 0,
       "canonical_document": "01-CURRENT-STATE.md",
       "canonical_confidence": "declared"
@@ -191,7 +191,7 @@
     },
     "knowledge-management": {
       "notes": 6,
-      "bytes": 29669,
+      "bytes": 31515,
       "historical_notes": 0,
       "canonical_document": "10-CONTEXT-FEEDING-RULE.md",
       "canonical_confidence": "declared"
@@ -274,8 +274,8 @@
       "canonical_confidence": null
     },
     "study": {
-      "notes": 19,
-      "bytes": 66893,
+      "notes": 21,
+      "bytes": 77131,
       "historical_notes": 7,
       "canonical_document": null,
       "canonical_confidence": null
@@ -289,7 +289,7 @@
     },
     "study-runtime": {
       "notes": 1,
-      "bytes": 3498,
+      "bytes": 4505,
       "historical_notes": 0,
       "canonical_document": null,
       "canonical_confidence": null
@@ -356,8 +356,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 4841,
-      "sha256": "a8ad87c799e7457aa6f05f98b7b850f6ab3dee81835e198d0fc28e56d64b6559"
+      "bytes": 5282,
+      "sha256": "4fc7f688c334ba3efd858a4eb9fe1a5f8ed50c199aa174adeebbb9d41f02a80e"
     },
     {
       "path": "01-CURRENT-STATE.md",
@@ -365,13 +365,13 @@
       "canonical": true,
       "canonical_document": "01-CURRENT-STATE.md",
       "title": "Current State",
-      "description": "publicada: uma autoridade por decisão (direction define o lado da",
+      "description": "usuários, pastas, listas, flashcards, glossários, favoritos e progresso — e é",
       "type": "current-state",
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 56285,
-      "sha256": "626895f72d8feaa1a4d1b1a5333c30196fac9cac337d488dc82c41a4610af2c0"
+      "bytes": 63804,
+      "sha256": "51117acea62e481ecaa24c9a828781549b16011482bb573f47d57b5c8003afbd"
     },
     {
       "path": "02-MASTER-PLAN.md",
@@ -491,13 +491,13 @@
       "canonical": true,
       "canonical_document": "10-CONTEXT-FEEDING-RULE.md",
       "title": "START HERE — Protocolo de contexto do App Piteco",
-      "description": "Toda sessão relevante termina com uma entrada datada no bloco FECHAMENTOS,",
+      "description": "Toda tarefa que mudou o estado durável do projeto termina com uma entrada curta e datada em FECHAMENTOS,",
       "type": "protocol",
       "status": "active",
       "last_reviewed": "2026-09-13",
       "historical": false,
-      "bytes": 10418,
-      "sha256": "974a48087b2ebace3df381b1f2ebf1d2e308e4b5386731a77860d16892de5092"
+      "bytes": 11516,
+      "sha256": "72277df7ec9ae69224c812029faeae2fd706b00e41abab6c4c7cbfe883d1a4e8"
     },
     {
       "path": "11-ARCHIVE-IMPORT-2026-09-11.md",
@@ -645,13 +645,13 @@
       "canonical": false,
       "canonical_document": "10-CONTEXT-FEEDING-RULE.md",
       "title": "Context Packet e telemetria de contexto",
-      "description": "Nota canônica do protocolo de custo de contexto do App Piteco:",
+      "description": "Política canônica (fonte única): C:\\Users\\pedro\\.codex\\policies\\second-brain-policy.md.",
       "type": "protocol",
       "status": "active",
       "last_reviewed": "2026-09-13",
       "historical": false,
-      "bytes": 7246,
-      "sha256": "500a5b913206d838ca831d739d39f6857021263b776f5aa15a286dd05bc89f60"
+      "bytes": 7553,
+      "sha256": "fe6ddf855e57524b743de36aeb0c8da3a7c46a52626f5f24a321a90efb398f75"
     },
     {
       "path": "README.md",
@@ -776,8 +776,8 @@
       "status": "active",
       "last_reviewed": null,
       "historical": false,
-      "bytes": 3498,
-      "sha256": "bcd97d9b7c7b36aeeb39b31fca88be2b38c15e3b1e0e2e9b32c6da19890dd38f"
+      "bytes": 4505,
+      "sha256": "fb74420d7b2d458a63a1e4ed45a4172d575d5721c009cb014f740f227985e762"
     },
     {
       "path": "areas/supabase-runtime.md",
@@ -1856,6 +1856,34 @@
       "historical": false,
       "bytes": 3130,
       "sha256": "4301cd0b87132e0ba56a4bf8bcb4c029c85dbf8102fbb7f15e76aa19a8258a98"
+    },
+    {
+      "path": "sessions/2026-09-15-finalizacao-revisar-cards.md",
+      "domain": "study",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "Finalização — Revisar cards / Revisar depois",
+      "description": "Marcar no jogo → metadata lateral persistida no Supabase → /review-cards referencia o original → Editar card altera o original com as permi...",
+      "type": "session-checkpoint",
+      "status": "active",
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 3611,
+      "sha256": "122bb4dbdc5abd4dd3af62bd893fce2848b7d1b731b6a1ed90a2031f70597d73"
+    },
+    {
+      "path": "sessions/2026-09-15-plano-revisar-cards.md",
+      "domain": "study",
+      "canonical": false,
+      "canonical_document": null,
+      "title": "Plano — “Revisar cards / Revisar depois” (spec recebida, NÃO implementada)",
+      "description": "nesta rodada, mas a implementação NÃO foi feita. Esta nota existe para que a",
+      "type": "session-checkpoint",
+      "status": "pending",
+      "last_reviewed": null,
+      "historical": false,
+      "bytes": 6627,
+      "sha256": "f07d94e8560b983ded8e2d10caf84d074aefef776412f207f122d2b68be693a3"
     },
     {
       "path": "sessions/checkpoint-2026-09-13-mcp-pause.md",

@@ -8,64 +8,63 @@
 - Não troque project refs, chaves, Auth, RLS, migrations, RPCs ou fronteiras público/privado sem uma tarefa explícita, testes específicos e evidência de rollback.
 - Nunca crie dados fictícios para mascarar falhas de descoberta pública.
 
-## Segundo Cérebro e aprendizado adaptativo — obrigatório
+## Segundo Cérebro e aprendizado adaptativo — condicional e seletivo
 
-O primeiro passo padrão é consultar [[10-CONTEXT-FEEDING-RULE|START HERE — Protocolo de contexto]] na cópia sincronizada de `docs/brain/` e recuperar somente o contexto conectado à tarefa. A entrada operacional oficial do Obsidian fica em `C:\Users\pedro\Documents\App-Piteco-Brain`; `docs/brain/` é a cópia versionada que deve permanecer reconciliada, sem uma segunda memória concorrente.
+Memória seletiva: **não ler e não gravar é o resultado normal** em tarefa simples ou local.
+Política canônica (fonte única; não duplicar o texto aqui): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
 
-Todo trabalho significativo de engenharia do App Piteco / APE Education deve
-usar, do início ao fim, as Skills `piteco-second-brain-protocol` e
-`piteco-adaptive-learning-loop`.
+Níveis de leitura: **0** simples/local (CSS, texto, tipagem, lint, teste, erro evidente) → nada;
+**1** normal → no máximo o índice; **2** sistema conhecido (persistência, flashcards, auth, importação,
+banco, arquitetura, progresso, gamificação) → índice e 1 ou poucas notas do domínio, parando quando
+houver contexto suficiente; **3** exige histórico (decisão arquitetural, bug dependente de histórico,
+contradição, retomada antiga) → busca direcionada (`rg`), somente o que responde à pergunta.
 
-O vault operacional oficial do Obsidian é
-`C:\Users\pedro\Documents\App-Piteco-Brain`. `docs/brain/` é a cópia
-versionada e reconciliada no Git; Git continua sendo a fonte de verdade da
-implementação, e o Segundo Cérebro registra contexto, arquitetura, decisões,
-relações, riscos, evidências e handoff. Não criar outra estrutura de memória
-nem manter explicações ativas concorrentes.
+Regras de custo: nada de leitura recursiva nem vault inteiro; **busca antes de leitura** (`rg` pelo
+termo, abrindo só o arquivo/trecho útil); documento grande se lê por trecho; `brain-manifest.json`
+(~70 KB, artefato derivado) só por filtro.
 
-Antes de trabalhar:
+As Skills `piteco-second-brain-protocol` (recuperação/registro seletivo) e `piteco-adaptive-learning-loop`
+(aprendizado com evidência) são **opcionais**: entram quando a tarefa realmente precisar delas.
 
-1. fazer o preflight da Skill `piteco-second-brain-protocol` lendo
-   `docs/brain/01-CURRENT-STATE.md`, a área afetada, decisões, bugs, riscos,
-   handoff e commits recentes;
-2. comparar essas notas com o código/Git atual e marcar informação obsoleta;
-3. pela Skill `piteco-adaptive-learning-loop`, recuperar somente lições,
-   anti-patterns e playbooks relevantes;
-4. para trabalho arriscado ou não trivial, registrar objetivo, hipótese,
-   expectativa, evidência falsificadora, risco e confiança antes da tentativa.
+O vault do Obsidian (`C:\Users\pedro\Documents\App-Piteco-Brain`) e `docs/brain/` são a MESMA memória:
+`docs/brain/` é a cópia versionada e reconciliada; Git é a fonte de verdade da implementação e a memória
+registra intenção, decisões, contratos, riscos e handoff. Não criar segunda estrutura de memória.
+
+Quando a tarefa exigir memória:
+
+1. abrir o índice `docs/brain/00-HOME.md` e seguir apenas o domínio afetado;
+2. de `01-CURRENT-STATE.md`, ler somente o bloco **FECHAMENTOS** mais recente — nunca o arquivo inteiro
+   (60+ KB); o mesmo vale para qualquer nota grande: busca primeiro, trecho depois;
+3. comparar o que recuperou com o código/Git atual e marcar informação obsoleta;
+4. usar `piteco-adaptive-learning-loop` apenas se houver valor material de aprendizado.
 
 Durante o trabalho, separar fato de hipótese, preferir a menor tentativa
 informativa, registrar evidência externa e manter relações importantes por
 links internos em formato `[[Nome-da-nota]]`.
 
-Depois de uma tentativa significativa, comparar expectativa com resultado
-observado, diagnosticar a causa com evidência, corrigir, repetir o mesmo teste
-e uma regressão relacionada, e extrair uma lição somente quando o escopo e as
-limitações estiverem justificados. Classificar honestamente a aprendizagem;
-anti-patterns, playbooks e mudanças do `SKILL.md` exigem promoção explícita.
+Se o loop de aprendizado for usado: comparar expectativa com resultado, diagnosticar a causa com
+evidência, corrigir, repetir o mesmo teste e uma regressão, e extrair lição somente quando escopo e
+limitações estiverem justificados. Anti-pattern, playbook e mudança de `SKILL.md` exigem promoção explícita.
 
-Antes de concluir:
+Antes de concluir (somente quando houver conhecimento durável novo — não atualizar é normal):
 
-1. atualizar área, sessão, bugs/riscos/decisões e `CURRENT-STATE` quando
-   aplicável;
-2. garantir que notas novas não estejam órfãs e que Properties/YAML e
-   wikilinks continuem válidos;
-3. executar `npm run brain:check` e os gates técnicos aplicáveis;
-4. incluir no relatório o checklist do Segundo Cérebro e o bloco
-   `ADAPTIVE LEARNING` com lições usadas, erro de previsão, causa, status,
-   atualização de anti-pattern/playbook e impacto no plano futuro.
+1. atualizar a nota-fonte existente (área / decisões / bugs / riscos / `CURRENT-STATE`), sem criar
+   versão contraditória ao lado;
+2. manter Properties/YAML e wikilinks válidos, sem nota órfã;
+3. rodar `npm run brain:check` e os gates técnicos aplicáveis;
+4. o bloco `ADAPTIVE LEARNING` no relatório final só aparece quando o loop de aprendizado foi usado.
 
-O trabalho não é considerado completo enquanto a memória estiver
-materialmente desatualizada em relação ao código.
+O trabalho não exige memória atualizada para ser considerado completo. Exige que, **se** um contrato,
+decisão ou risco já documentado mudou, a nota-fonte existente seja atualizada.
 
-## Custo de contexto — READ ONCE -> COMPACT -> SHARE -> REUSE (obrigatório)
+## Custo de contexto — READ ONCE -> COMPACT -> SHARE -> REUSE (quando houver memória)
 
 Consultar o Segundo Cérebro é custo UMA VEZ por tarefa, não um ritual por agente.
 Regra completa em `docs/brain/27-CONTEXT-PACKET-E-TELEMETRIA.md`.
 
-1. **READ ONCE** — ler o mínimo útil: o manifesto
-   `docs/brain/brain-manifest.json` (metadados por nota) mais as notas do domínio
-   afetado. Não ler o vault inteiro.
+1. **READ ONCE** — ler o mínimo útil: o índice `docs/brain/00-HOME.md` e, no máximo, as notas do
+   domínio afetado. `docs/brain/brain-manifest.json` é artefato derivado e grande: consulte por filtro
+   (`rg`), nunca integralmente. Não ler o vault inteiro.
 2. **COMPACT** — transformar a leitura em um CONTEXT PACKET
    (`node scripts/context-packet.mjs new --task <id> --objective "<texto>" --domain <dominio>`)
    com objetivo, regras relevantes, contratos, decisões, riscos, arquivos,
@@ -221,8 +220,8 @@ Limites que valem para toda Clara neste projeto:
   relatório final;
 - memória é carregada de forma seletiva (`README`/`00-HOME` → nota relevante → packet compartilhado),
   nunca o vault inteiro;
-- o preflight e o fechamento do Segundo Cérebro continuam obrigatórios: as Claras executam o trabalho,
-  não substituem as Skills nem os gates técnicos.
+- memória segue a política seletiva: preflight só quando a tarefa exigir e fechamento só com
+  conhecimento durável; as Claras executam o trabalho e não substituem os gates técnicos.
 
 ## Criação e importação de flashcards
 
