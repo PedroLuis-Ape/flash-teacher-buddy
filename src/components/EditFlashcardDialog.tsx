@@ -16,6 +16,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const IN_GAME_CARD_NOTES_UPDATED_EVENT = "ape:flashcard:notes-updated";
 
+const RICH_NOTE_KEYS = [
+  "note_text",
+  "short_explanation",
+  "detailed_explanation",
+  "usage_notes",
+  "common_mistakes",
+] as const;
+
 interface EditFlashcardDialogProps {
   flashcard: {
     id: string;
@@ -48,6 +56,14 @@ interface EditFlashcardDialogProps {
   contentMode?: "full" | "notes-only";
 }
 
+function normalizeNotes(notes: string[] | null | undefined): string[] {
+  return (notes || []).map((note) => note.trim()).filter(Boolean);
+}
+
+function normalizeOptionalText(value: string | null | undefined): string {
+  return (value || "").trim();
+}
+
 export const EditFlashcardDialog = ({
   flashcard,
   isOpen,
@@ -73,6 +89,14 @@ export const EditFlashcardDialog = ({
   const [meta, setMeta] = useState<{ listId: string } | null>(null);
 
   const notesOnly = contentMode === "notes-only";
+  // Several legacy callers intentionally fetch only the basic card columns.
+  // Never render/save empty rich fields for those callers: otherwise opening
+  // an old editor and pressing Save could erase explanations that were never
+  // loaded into this dialog in the first place.
+  const hasLoadedRichNotes = Boolean(
+    flashcard && RICH_NOTE_KEYS.some((key) => Object.prototype.hasOwnProperty.call(flashcard, key)),
+  );
+  const showRichNotes = notesOnly || hasLoadedRichNotes;
   const showImages = !notesOnly && supportsImages(studyType);
   const showWordHints = !notesOnly && studyType === "language";
   const showLayers =
@@ -89,7 +113,7 @@ export const EditFlashcardDialog = ({
       setImageUrlA(flashcard.image_url_a || "");
       setImageUrlB(flashcard.image_url_b || "");
       setWordHints(parseWordHints(flashcard.word_hints));
-      setNoteText((flashcard.note_text || []).join("\n"));
+      setNoteText(normalizeNotes(flashcard.note_text).join("\n"));
       setShortExplanation(flashcard.short_explanation || "");
       setDetailedExplanation(flashcard.detailed_explanation || "");
       setUsageNotes(flashcard.usage_notes || "");
@@ -124,10 +148,7 @@ export const EditFlashcardDialog = ({
     if (!notesOnly && (!term.trim() || !translation.trim())) return;
 
     const validHints = wordHints.filter((wordHint) => wordHint.text.trim() && wordHint.translation.trim());
-    const normalizedNotes = noteText
-      .split(/\r?\n/)
-      .map((note) => note.trim())
-      .filter(Boolean);
+    const normalizedNotes = normalizeNotes(noteText.split(/\r?\n/));
     const extendedPayload = {
       note_text: normalizedNotes.length > 0 ? normalizedNotes : null,
       short_explanation: shortExplanation.trim() || null,
@@ -135,6 +156,14 @@ export const EditFlashcardDialog = ({
       usage_notes: usageNotes.trim() || null,
       common_mistakes: commonMistakes.trim() || null,
     };
+    const richNotesDirty = showRichNotes && (
+      JSON.stringify(normalizedNotes) !== JSON.stringify(normalizeNotes(flashcard.note_text))
+      || normalizeOptionalText(extendedPayload.short_explanation) !== normalizeOptionalText(flashcard.short_explanation)
+      || normalizeOptionalText(extendedPayload.detailed_explanation) !== normalizeOptionalText(flashcard.detailed_explanation)
+      || normalizeOptionalText(extendedPayload.usage_notes) !== normalizeOptionalText(flashcard.usage_notes)
+      || normalizeOptionalText(extendedPayload.common_mistakes) !== normalizeOptionalText(flashcard.common_mistakes)
+    );
+    const shouldPersistRichNotes = showRichNotes && richNotesDirty;
 
     setSaving(true);
     try {
@@ -150,49 +179,50 @@ export const EditFlashcardDialog = ({
         );
       }
 
-      // The rich note fields belong to the flashcard itself. Persist them here
-      // so every caller (ListDetail, Study, ReviewCards and Mixed Study) shares
-      // one implementation instead of maintaining mode-specific write paths.
-      const { data: confirmed, error: notesError } = await supabase
-        .from("flashcards")
-        .update(extendedPayload)
-        .eq("id", flashcard.id)
-        .select("id")
-        .maybeSingle();
+      if (shouldPersistRichNotes) {
+        // Rich note fields belong to the flashcard itself. Persist them only
+        // when this caller actually loaded those columns (or explicitly opened
+        // notes-only mode) and the user changed them. This avoids erasing
+        // pre-existing explanations from older/basic editor call sites.
+        const { data: confirmed, error: notesError } = await supabase
+          .from("flashcards")
+          .update(extendedPayload)
+          .eq("id", flashcard.id)
+          .select("id")
+          .maybeSingle();
 
-      if (notesError || !confirmed) {
-        console.error("[EditFlashcardDialog] Falha ao salvar notas do card:", notesError);
-        toast.error("Não foi possível salvar as notas deste card.");
-        return;
+        if (notesError || !confirmed) {
+          console.error("[EditFlashcardDialog] Falha ao salvar notas do card:", notesError);
+          toast.error("Não foi possível salvar as notas deste card.");
+          return;
+        }
+
+        // Keep the exact object used by an active Study session fresh. These
+        // note-only changes must not rebuild the deck or move currentIndex.
+        flashcard.note_text = extendedPayload.note_text;
+        flashcard.short_explanation = extendedPayload.short_explanation;
+        flashcard.detailed_explanation = extendedPayload.detailed_explanation;
+        flashcard.usage_notes = extendedPayload.usage_notes;
+        flashcard.common_mistakes = extendedPayload.common_mistakes;
+
+        setCurrentDetailedExplanation({
+          explanation: extendedPayload.detailed_explanation,
+          usageNotes: extendedPayload.usage_notes,
+          commonMistakes: extendedPayload.common_mistakes,
+        });
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(IN_GAME_CARD_NOTES_UPDATED_EVENT, {
+            detail: {
+              flashcardId: flashcard.id,
+              ...extendedPayload,
+            },
+          }));
+        }
+
+        if (notesOnly) toast.success("Notas salvas neste card");
       }
 
-      // Keep the exact object used by an active Study session fresh. Study
-      // passes the visible card/layer object directly to this dialog; mutating
-      // these note-only fields means the parent re-render caused by closing the
-      // dialog immediately sees the saved explanation without rebuilding the
-      // deck, currentIndex or cardsOrder.
-      flashcard.note_text = extendedPayload.note_text;
-      flashcard.short_explanation = extendedPayload.short_explanation;
-      flashcard.detailed_explanation = extendedPayload.detailed_explanation;
-      flashcard.usage_notes = extendedPayload.usage_notes;
-      flashcard.common_mistakes = extendedPayload.common_mistakes;
-
-      setCurrentDetailedExplanation({
-        explanation: extendedPayload.detailed_explanation,
-        usageNotes: extendedPayload.usage_notes,
-        commonMistakes: extendedPayload.common_mistakes,
-      });
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(IN_GAME_CARD_NOTES_UPDATED_EVENT, {
-          detail: {
-            flashcardId: flashcard.id,
-            ...extendedPayload,
-          },
-        }));
-      }
-
-      if (notesOnly) toast.success("Notas salvas neste card");
       onClose();
     } finally {
       setSaving(false);
@@ -242,69 +272,71 @@ export const EditFlashcardDialog = ({
             </>
           )}
 
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-            <div>
-              <div className="text-sm font-semibold">Notas e explicações</div>
-              <p className="text-xs text-muted-foreground">
-                Salvas diretamente neste card. Você pode pesquisar uma dúvida e colar a explicação aqui sem perder a partida.
-              </p>
-            </div>
+          {showRichNotes && (
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+              <div>
+                <div className="text-sm font-semibold">Notas e explicações</div>
+                <p className="text-xs text-muted-foreground">
+                  Salvas diretamente neste card. Você pode pesquisar uma dúvida e colar a explicação aqui sem perder a partida.
+                </p>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-detailed-explanation">Explicação detalhada</Label>
-              <Textarea
-                id="edit-detailed-explanation"
-                value={detailedExplanation}
-                onChange={(event) => setDetailedExplanation(event.target.value)}
-                placeholder="Cole aqui uma explicação completa do contexto, gramática ou uso deste card."
-                rows={6}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-detailed-explanation">Explicação detalhada</Label>
+                <Textarea
+                  id="edit-detailed-explanation"
+                  value={detailedExplanation}
+                  onChange={(event) => setDetailedExplanation(event.target.value)}
+                  placeholder="Cole aqui uma explicação completa do contexto, gramática ou uso deste card."
+                  rows={6}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-short-explanation">Explicação curta</Label>
-              <Textarea
-                id="edit-short-explanation"
-                value={shortExplanation}
-                onChange={(event) => setShortExplanation(event.target.value)}
-                placeholder="Resumo curto para consulta rápida."
-                rows={2}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-short-explanation">Explicação curta</Label>
+                <Textarea
+                  id="edit-short-explanation"
+                  value={shortExplanation}
+                  onChange={(event) => setShortExplanation(event.target.value)}
+                  placeholder="Resumo curto para consulta rápida."
+                  rows={2}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-usage-notes">Observações de uso</Label>
-              <Textarea
-                id="edit-usage-notes"
-                value={usageNotes}
-                onChange={(event) => setUsageNotes(event.target.value)}
-                placeholder="Quando usar, registro, contexto, combinações naturais..."
-                rows={3}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-usage-notes">Observações de uso</Label>
+                <Textarea
+                  id="edit-usage-notes"
+                  value={usageNotes}
+                  onChange={(event) => setUsageNotes(event.target.value)}
+                  placeholder="Quando usar, registro, contexto, combinações naturais..."
+                  rows={3}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-common-mistakes">Erros comuns</Label>
-              <Textarea
-                id="edit-common-mistakes"
-                value={commonMistakes}
-                onChange={(event) => setCommonMistakes(event.target.value)}
-                placeholder="Confusões ou erros que você quer lembrar de evitar."
-                rows={3}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-common-mistakes">Erros comuns</Label>
+                <Textarea
+                  id="edit-common-mistakes"
+                  value={commonMistakes}
+                  onChange={(event) => setCommonMistakes(event.target.value)}
+                  placeholder="Confusões ou erros que você quer lembrar de evitar."
+                  rows={3}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-note-text">Notas rápidas</Label>
-              <Textarea
-                id="edit-note-text"
-                value={noteText}
-                onChange={(event) => setNoteText(event.target.value)}
-                placeholder="Uma nota por linha."
-                rows={3}
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-note-text">Notas rápidas</Label>
+                <Textarea
+                  id="edit-note-text"
+                  value={noteText}
+                  onChange={(event) => setNoteText(event.target.value)}
+                  placeholder="Uma nota por linha."
+                  rows={3}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {showImages && (
             <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
