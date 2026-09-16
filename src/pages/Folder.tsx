@@ -489,10 +489,18 @@ const Folder = () => {
     }
   };
 
-  const handleEditList = (list: ListType) => {
+  // "Editar lista" SEMPRE abre o editor completo em /list/:id (cards, edição e
+  // exclusão individual). O diálogo de título/descrição é ação separada de
+  // renomear/propriedades e nunca deve ocupar o rótulo de edição da lista.
+  const handleOpenListEditor = (list: ListType) => {
+    navigate(`/list/${list.id}`);
+  };
+
+  const handleRenameList = (list: ListType) => {
     setEditingList(list);
     setEditDialogOpen(true);
   };
+
 
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
