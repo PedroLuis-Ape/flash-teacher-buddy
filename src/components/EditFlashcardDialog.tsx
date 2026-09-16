@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 import { supportsImages } from "@/features/study/lib/studyTypeConfig";
 import { WordHintEditor } from "@/features/study/components/WordHintEditor";
 import { parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
+import { setCurrentDetailedExplanation } from "@/features/study/lib/currentDetailedExplanation";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { LayeredCardEditor } from "@/features/cards/components/LayeredCardEditor";
 import { supabase } from "@/integrations/supabase/client";
+
+export const IN_GAME_CARD_NOTES_UPDATED_EVENT = "ape:flashcard:notes-updated";
 
 interface EditFlashcardDialogProps {
   flashcard: {
@@ -24,28 +28,55 @@ interface EditFlashcardDialogProps {
     list_id?: string;
     user_id?: string;
     parent_card_id?: string | null;
+    note_text?: string[] | null;
+    short_explanation?: string | null;
+    detailed_explanation?: string | null;
+    usage_notes?: string | null;
+    common_mistakes?: string | null;
   } | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: WordHint[]) => Promise<void>;
+  onSave?: (id: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: WordHint[]) => Promise<void>;
   studyType?: string;
   labelA?: string;
   labelB?: string;
+  /**
+   * `notes-only` is used by the in-game fallback editor (notably Mixed Study):
+   * it edits pedagogical notes without changing the prompt/answer while the
+   * activity is running.
+   */
+  contentMode?: "full" | "notes-only";
 }
 
-export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyType = "language", labelA, labelB }: EditFlashcardDialogProps) => {
+export const EditFlashcardDialog = ({
+  flashcard,
+  isOpen,
+  onClose,
+  onSave,
+  studyType = "language",
+  labelA,
+  labelB,
+  contentMode = "full",
+}: EditFlashcardDialogProps) => {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
   const [hint, setHint] = useState("");
   const [imageUrlA, setImageUrlA] = useState("");
   const [imageUrlB, setImageUrlB] = useState("");
   const [wordHints, setWordHints] = useState<WordHint[]>([]);
+  const [noteText, setNoteText] = useState("");
+  const [shortExplanation, setShortExplanation] = useState("");
+  const [detailedExplanation, setDetailedExplanation] = useState("");
+  const [usageNotes, setUsageNotes] = useState("");
+  const [commonMistakes, setCommonMistakes] = useState("");
   const [saving, setSaving] = useState(false);
   const [meta, setMeta] = useState<{ listId: string } | null>(null);
 
-  const showImages = supportsImages(studyType);
-  const showWordHints = studyType === "language";
+  const notesOnly = contentMode === "notes-only";
+  const showImages = !notesOnly && supportsImages(studyType);
+  const showWordHints = !notesOnly && studyType === "language";
   const showLayers =
+    !notesOnly &&
     FEATURE_FLAGS.layered_cards &&
     !!flashcard &&
     !flashcard.parent_card_id;
@@ -58,11 +89,16 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
       setImageUrlA(flashcard.image_url_a || "");
       setImageUrlB(flashcard.image_url_b || "");
       setWordHints(parseWordHints(flashcard.word_hints));
+      setNoteText((flashcard.note_text || []).join("\n"));
+      setShortExplanation(flashcard.short_explanation || "");
+      setDetailedExplanation(flashcard.detailed_explanation || "");
+      setUsageNotes(flashcard.usage_notes || "");
+      setCommonMistakes(flashcard.common_mistakes || "");
     }
   }, [flashcard]);
 
   useEffect(() => {
-    if (!FEATURE_FLAGS.layered_cards || !flashcard || !isOpen) return;
+    if (!FEATURE_FLAGS.layered_cards || !flashcard || !isOpen || notesOnly) return;
     if (flashcard.list_id) {
       setMeta({ listId: flashcard.list_id });
       return;
@@ -81,24 +117,82 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
     return () => {
       cancelled = true;
     };
-  }, [flashcard, isOpen]);
+  }, [flashcard, isOpen, notesOnly]);
 
   const handleSave = async () => {
-    if (!flashcard || !term.trim() || !translation.trim()) return;
+    if (!flashcard) return;
+    if (!notesOnly && (!term.trim() || !translation.trim())) return;
 
     const validHints = wordHints.filter((wordHint) => wordHint.text.trim() && wordHint.translation.trim());
+    const normalizedNotes = noteText
+      .split(/\r?\n/)
+      .map((note) => note.trim())
+      .filter(Boolean);
+    const extendedPayload = {
+      note_text: normalizedNotes.length > 0 ? normalizedNotes : null,
+      short_explanation: shortExplanation.trim() || null,
+      detailed_explanation: detailedExplanation.trim() || null,
+      usage_notes: usageNotes.trim() || null,
+      common_mistakes: commonMistakes.trim() || null,
+    };
 
     setSaving(true);
     try {
-      await onSave(
-        flashcard.id,
-        term.trim(),
-        translation.trim(),
-        hint.trim(),
-        imageUrlA.trim() || undefined,
-        imageUrlB.trim() || undefined,
-        validHints.length > 0 ? validHints : undefined,
-      );
+      if (!notesOnly) {
+        await onSave?.(
+          flashcard.id,
+          term.trim(),
+          translation.trim(),
+          hint.trim(),
+          imageUrlA.trim() || undefined,
+          imageUrlB.trim() || undefined,
+          validHints.length > 0 ? validHints : undefined,
+        );
+      }
+
+      // The rich note fields belong to the flashcard itself. Persist them here
+      // so every caller (ListDetail, Study, ReviewCards and Mixed Study) shares
+      // one implementation instead of maintaining mode-specific write paths.
+      const { data: confirmed, error: notesError } = await supabase
+        .from("flashcards")
+        .update(extendedPayload)
+        .eq("id", flashcard.id)
+        .select("id")
+        .maybeSingle();
+
+      if (notesError || !confirmed) {
+        console.error("[EditFlashcardDialog] Falha ao salvar notas do card:", notesError);
+        toast.error("Não foi possível salvar as notas deste card.");
+        return;
+      }
+
+      // Keep the exact object used by an active Study session fresh. Study
+      // passes the visible card/layer object directly to this dialog; mutating
+      // these note-only fields means the parent re-render caused by closing the
+      // dialog immediately sees the saved explanation without rebuilding the
+      // deck, currentIndex or cardsOrder.
+      flashcard.note_text = extendedPayload.note_text;
+      flashcard.short_explanation = extendedPayload.short_explanation;
+      flashcard.detailed_explanation = extendedPayload.detailed_explanation;
+      flashcard.usage_notes = extendedPayload.usage_notes;
+      flashcard.common_mistakes = extendedPayload.common_mistakes;
+
+      setCurrentDetailedExplanation({
+        explanation: extendedPayload.detailed_explanation,
+        usageNotes: extendedPayload.usage_notes,
+        commonMistakes: extendedPayload.common_mistakes,
+      });
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(IN_GAME_CARD_NOTES_UPDATED_EVENT, {
+          detail: {
+            flashcardId: flashcard.id,
+            ...extendedPayload,
+          },
+        }));
+      }
+
+      if (notesOnly) toast.success("Notas salvas neste card");
       onClose();
     } finally {
       setSaving(false);
@@ -109,39 +203,107 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] min-h-0 flex flex-col overflow-hidden ape-overlay-scroll sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Flashcard</DialogTitle>
+          <DialogTitle>{notesOnly ? "Anotar card atual" : "Editar Flashcard"}</DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto space-y-4 py-4 ape-overlay-scroll">
-          <div className="space-y-2">
-            <Label htmlFor="edit-term">{labelA || "Lado A"}</Label>
-            <Input
-              id="edit-term"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder={`Conteúdo do ${labelA || "Lado A"}`}
-            />
-          </div>
+          {!notesOnly && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-term">{labelA || "Lado A"}</Label>
+                <Input
+                  id="edit-term"
+                  value={term}
+                  onChange={(event) => setTerm(event.target.value)}
+                  placeholder={`Conteúdo do ${labelA || "Lado A"}`}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-translation">{labelB || "Lado B"}</Label>
-            <Input
-              id="edit-translation"
-              value={translation}
-              onChange={(event) => setTranslation(event.target.value)}
-              placeholder={`Conteúdo do ${labelB || "Lado B"}`}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-translation">{labelB || "Lado B"}</Label>
+                <Input
+                  id="edit-translation"
+                  value={translation}
+                  onChange={(event) => setTranslation(event.target.value)}
+                  placeholder={`Conteúdo do ${labelB || "Lado B"}`}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-hint">Descrição / Dica (opcional)</Label>
-            <Textarea
-              id="edit-hint"
-              value={hint}
-              onChange={(event) => setHint(event.target.value)}
-              placeholder="Adicione uma explicação, observação ou dica para este card (opcional)"
-              rows={2}
-            />
+              <div className="space-y-2">
+                <Label htmlFor="edit-hint">Descrição / Dica (opcional)</Label>
+                <Textarea
+                  id="edit-hint"
+                  value={hint}
+                  onChange={(event) => setHint(event.target.value)}
+                  placeholder="Adicione uma explicação, observação ou dica para este card (opcional)"
+                  rows={2}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div>
+              <div className="text-sm font-semibold">Notas e explicações</div>
+              <p className="text-xs text-muted-foreground">
+                Salvas diretamente neste card. Você pode pesquisar uma dúvida e colar a explicação aqui sem perder a partida.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-detailed-explanation">Explicação detalhada</Label>
+              <Textarea
+                id="edit-detailed-explanation"
+                value={detailedExplanation}
+                onChange={(event) => setDetailedExplanation(event.target.value)}
+                placeholder="Cole aqui uma explicação completa do contexto, gramática ou uso deste card."
+                rows={6}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-short-explanation">Explicação curta</Label>
+              <Textarea
+                id="edit-short-explanation"
+                value={shortExplanation}
+                onChange={(event) => setShortExplanation(event.target.value)}
+                placeholder="Resumo curto para consulta rápida."
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-usage-notes">Observações de uso</Label>
+              <Textarea
+                id="edit-usage-notes"
+                value={usageNotes}
+                onChange={(event) => setUsageNotes(event.target.value)}
+                placeholder="Quando usar, registro, contexto, combinações naturais..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-common-mistakes">Erros comuns</Label>
+              <Textarea
+                id="edit-common-mistakes"
+                value={commonMistakes}
+                onChange={(event) => setCommonMistakes(event.target.value)}
+                placeholder="Confusões ou erros que você quer lembrar de evitar."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-note-text">Notas rápidas</Label>
+              <Textarea
+                id="edit-note-text"
+                value={noteText}
+                onChange={(event) => setNoteText(event.target.value)}
+                placeholder="Uma nota por linha."
+                rows={3}
+              />
+            </div>
           </div>
 
           {showImages && (
@@ -204,8 +366,12 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
           <Button variant="outline" className="min-h-11 touch-manipulation" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button className="min-h-11 touch-manipulation" onClick={handleSave} disabled={saving || !term.trim() || !translation.trim()}>
-            {saving ? "Salvando..." : "Salvar"}
+          <Button
+            className="min-h-11 touch-manipulation"
+            onClick={handleSave}
+            disabled={saving || (!notesOnly && (!term.trim() || !translation.trim()))}
+          >
+            {saving ? "Salvando..." : notesOnly ? "Salvar notas" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
