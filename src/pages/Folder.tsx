@@ -1400,10 +1400,21 @@ const Folder = () => {
                                   {canEdit && (
                                     <>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onSelect={() => handleEditList(list)}>
+                                      <DropdownMenuItem
+                                        data-testid="list-open-editor-action-row"
+                                        onSelect={() => handleOpenListEditor(list)}
+                                      >
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar lista
                                       </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        data-testid="list-rename-action-row"
+                                        onSelect={() => handleRenameList(list)}
+                                      >
+                                        <Type className="mr-2 h-4 w-4" />
+                                        Renomear / propriedades
+                                      </DropdownMenuItem>
+
                                       <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setListToDelete(list)}>
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Excluir lista
