@@ -4,6 +4,10 @@ import {
   setCurrentDetailedExplanation,
   subscribeCurrentDetailedExplanation,
 } from "@/features/study/lib/currentDetailedExplanation";
+import {
+  getCurrentStudyCardIdentity,
+  subscribeCurrentStudyCardIdentity,
+} from "@/features/study/lib/currentStudyCardIdentity";
 import { UnifiedDetailedExplanationPanel } from "./UnifiedDetailedExplanationPanel";
 
 interface DetailedExplanationPanelProps {
@@ -22,13 +26,28 @@ export function DetailedExplanationPanel({
     getCurrentDetailedExplanation,
     getCurrentDetailedExplanation,
   );
+  const cardIdentity = useSyncExternalStore(
+    subscribeCurrentStudyCardIdentity,
+    getCurrentStudyCardIdentity,
+    getCurrentStudyCardIdentity,
+  );
 
-  // Card navigation remains authoritative: when the visible card changes, its
-  // persisted fields refresh the shared snapshot. In-game editing can update
-  // the same snapshot immediately without rebuilding the study deck/session.
+  // Card navigation remains authoritative. The explicit card/layer identity is
+  // part of this boundary because two consecutive cards can legitimately have
+  // identical persisted note props (most often null). Without identity here,
+  // an explanation edited on card A could remain in the transient live store
+  // and be rendered on card B even though only A was persisted in the database.
+  // In-game editing can still update the live snapshot immediately without
+  // rebuilding the study deck/session.
   useLayoutEffect(() => {
     setCurrentDetailedExplanation({ explanation, usageNotes, commonMistakes });
-  }, [explanation, usageNotes, commonMistakes]);
+  }, [
+    cardIdentity.cardId,
+    cardIdentity.layerIndex,
+    explanation,
+    usageNotes,
+    commonMistakes,
+  ]);
 
   return (
     <UnifiedDetailedExplanationPanel
