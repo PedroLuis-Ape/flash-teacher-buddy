@@ -195,10 +195,11 @@ export function resolveImportLanguageCompatibility(
   };
 }
 
-export function formatImportLanguageMismatch(result: ImportLanguageCompatibility): string {
-  return [
-    "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.",
-    `Recebido: A=${result.incoming.front}, B=${result.incoming.back}.`,
-    `Destino: A=${result.target.front}, B=${result.target.back} (${result.authorityLabel}).`,
-  ].join(" ");
+/**
+ * Keep the validation string stable for existing callers/tests. The mapping UI
+ * renders the structured incoming/target/authority diagnostics from the result
+ * itself, so we do not need to overload the blocking error with presentation.
+ */
+export function formatImportLanguageMismatch(_result: ImportLanguageCompatibility): string {
+  return "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.";
 }
