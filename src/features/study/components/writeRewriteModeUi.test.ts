@@ -10,36 +10,56 @@ const mixedSource = readFileSync(new URL("../../../pages/MixedStudy.tsx", import
 const mixedMultipleSource = readFileSync(new URL("./MultipleChoiceStudyView.tsx", import.meta.url), "utf8");
 
 describe("write rewrite activity UI", () => {
-  it("exposes translate and rewrite choices with side selection", () => {
+  it("exposes translate, visible rewrite and listening as three sibling options", () => {
     expect(settingsSource).toContain("Atividade de escrita");
-    expect(settingsSource).toContain("Traduzir");
-    expect(settingsSource).toContain("Reescrever");
+    expect(settingsSource).toContain('{ value: "translate", label: "Traduzir" }');
+    expect(settingsSource).toContain('{ value: "rewrite-visible", label: "Reescrever" }');
+    expect(settingsSource).toContain('{ value: "rewrite-listening", label: "Escrever o que ouviu" }');
+    // Reescrever e Escrever o que ouviu são irmãs: mesmos campos, sem duplicar config.
+    expect(settingsSource).toContain('writeActivityMode: "rewrite"');
+    expect(settingsSource).toContain('writeRewritePromptMode: option === "rewrite-listening" ? "listening" : "visible"');
+    expect(settingsSource).toContain("Reescrever vendo o texto");
+    expect(settingsSource).toContain("Escrever o que ouviu");
     // Componente controlado: os lados usam os rótulos dinâmicos do runtime.
     expect(settingsSource).toContain('{ value: "a", label: playRuntime.labelA }');
     expect(settingsSource).toContain('{ value: "b", label: playRuntime.labelB }');
     expect(settingsSource).toContain("Alternar");
     expect(settingsSource).not.toContain("useWriteStudyPreferences");
     expect(modalSource).toContain("<WriteActivitySettings");
+    expect(modalSource).toContain("rewritePromptMode={settings.writeRewritePromptMode}");
   });
 
   it("keeps the write view fully controlled by the session owner", () => {
     expect(writeSource).not.toContain("useWriteStudyPreferences");
     expect(writeSource).toContain("writeActivityMode: WriteActivityMode");
     expect(writeSource).toContain("writeRewriteSide: WriteRewriteSide");
+    expect(writeSource).toContain("writeRewritePromptMode: WriteRewritePromptMode");
     expect(writeSource).toContain('const isRewriteActivity = writeActivityMode === "rewrite"');
+    expect(writeSource).toContain('const isListeningRewrite = isRewriteActivity && writeRewritePromptMode === "listening"');
+    expect(writeSource).toContain('const isVisibleRewrite = isRewriteActivity && writeRewritePromptMode === "visible"');
     expect(writeBoundarySource).not.toContain("readWriteActivityPreference");
     expect(writeBoundarySource).not.toContain("WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT");
   });
 
-  it("routes rewrite submissions through exact-copy evaluation", () => {
+  it("routes rewrite submissions through exact-copy evaluation in both modalities", () => {
     expect(writeSource).toContain("evaluateRewriteAnswer");
     expect(writeSource).toContain("Ouça e reconstrua a frase sem vê-la:");
     expect(writeSource).toContain("Reescreva corretamente a frase revelada:");
+    // Reescrita visual: a frase já está na tela desde o começo.
+    expect(writeSource).toContain("Reescreva exatamente a frase acima:");
     expect(writeSource).toContain('effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard"');
   });
 
-  it("does not mount the target or interactive glossary during LISTENING", () => {
+  it("keeps visible and listening attempts in separate snapshots", () => {
+    expect(writeSource).toContain("buildRewriteCardIdentity(cardIdentity, writeRewritePromptMode, resolvedRewriteSide)");
+    expect(writeSource).toContain("buildLegacyRewriteCardIdentity(cardIdentity, resolvedRewriteSide)");
+    expect(writeSource).toContain("restoreRewriteFlowState({");
+  });
+
+  it("mounts the target immediately in visible and hides it only while listening", () => {
     expect(writeSource).toContain("(!isRewriteActivity || rewriteTargetRevealed)");
+    expect(writeSource).toContain("promptMode: writeRewritePromptMode");
+    expect(writeSource).toContain("createRewriteFlowState(options.promptMode)");
     expect(writeSource).toContain('rewriteState.phase !== "LISTENING"');
     expect(writeSource).toContain("<InteractiveText");
     expect(writeSource).toContain("<SpeechRateControl />");
@@ -57,7 +77,7 @@ describe("write rewrite activity UI", () => {
 
   it("shows the translation only during listening and hides duplicates", () => {
     expect(writeSource).toContain(
-      'isRewriteActivity && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0',
+      'isListeningRewrite && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0',
     );
     expect(writeSource).toContain(
       "normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)",
@@ -76,7 +96,8 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).not.toContain("insertAdjacentElement");
     expect(writeBoundarySource).not.toContain("findRewriteInstruction");
     expect(writeBoundarySource).not.toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
-    expect(writeBoundarySource).toContain('`${props.rewriteSnapshotScope ?? "local"}|${props.flashcardId ?? "card"}|${props.front}|${props.back}`');
+    expect(writeBoundarySource).toContain("rewriteLayerKey");
+    expect(writeBoundarySource).toContain('?? "local"');
     expect(writeBoundarySource).toContain("key={rewriteLayerKey}");
   });
 
@@ -85,6 +106,14 @@ describe("write rewrite activity UI", () => {
     expect(mixedSource).toContain("const mixedSnapshotKey = buildStudySnapshotKey");
     expect(mixedSource).toContain("rewriteSnapshotScope={mixedSnapshotKey}");
     expect(mixedMultipleSource).toContain("rewriteSnapshotScope={props.rewriteSnapshotScope}");
+  });
+
+  it("propagates the rewrite prompt mode through Study and Mixed", () => {
+    expect(studySource).toContain("writeRewritePromptMode: studySettings.writeRewritePromptMode");
+    expect(studySource).toContain("writeRewritePromptMode={writeSessionSettings.writeRewritePromptMode}");
+    expect(mixedSource).toContain("writeRewritePromptMode: studySettings.writeRewritePromptMode");
+    expect(mixedSource).toContain("writeRewritePromptMode={writeSessionSettings.writeRewritePromptMode}");
+    expect(mixedMultipleSource).toContain("...(props.writeSettings ?? DEFAULT_WRITE_SESSION_SETTINGS)");
   });
 
   it("keeps navigation, duplicate-submit protection, and mobile action controls", () => {

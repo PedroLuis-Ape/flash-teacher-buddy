@@ -1,4 +1,5 @@
 import type { WriteAnswerEvaluation } from "./writeAnswerEvaluation";
+import type { WriteRewritePromptMode } from "./writeActivityMode";
 
 export type RewritePhase = "LISTENING" | "REVIEW" | "REWRITE" | "COMPLETED";
 
@@ -20,8 +21,19 @@ export const INITIAL_REWRITE_FLOW_STATE: RewriteFlowState = Object.freeze({
   hadInitialError: false,
 });
 
-export function createRewriteFlowState(): RewriteFlowState {
-  return { ...INITIAL_REWRITE_FLOW_STATE };
+/**
+ * Estado inicial de uma tentativa de reescrita.
+ *
+ * "listening" (ditado) começa escondido, na fase LISTENING. "visible"
+ * (reescrita visual) começa direto na digitação, porque o texto-alvo já está
+ * na tela — não existe fase escondida de escuta na reescrita visual.
+ */
+export function createRewriteFlowState(
+  promptMode: WriteRewritePromptMode = "listening",
+): RewriteFlowState {
+  return promptMode === "visible"
+    ? { ...INITIAL_REWRITE_FLOW_STATE, phase: "REWRITE" }
+    : { ...INITIAL_REWRITE_FLOW_STATE };
 }
 
 export function updateRewriteDraft(state: RewriteFlowState, draft: string): RewriteFlowState {

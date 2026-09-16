@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import type {
   StudyWriteActivityModePreset,
+  StudyWriteRewritePromptModePreset,
   StudyWriteRewriteSidePreset,
 } from "@/features/study/preferences/studyPreset";
 
@@ -12,11 +13,31 @@ interface WriteActivitySettingsProps {
   /** Valores efetivamente usados pela sessão — vindos do controlador único. */
   activityMode: StudyWriteActivityModePreset;
   rewriteSide: StudyWriteRewriteSidePreset;
+  /** Reescrita visual ("visible") x escrever o que ouviu ("listening"). */
+  rewritePromptMode: StudyWriteRewritePromptModePreset;
   onChange: (patch: {
     writeActivityMode?: StudyWriteActivityModePreset;
     writeRewriteSide?: StudyWriteRewriteSidePreset;
+    writeRewritePromptMode?: StudyWriteRewritePromptModePreset;
   }) => void;
 }
+
+/**
+ * Três experiências para o aluno, mapeadas em DOIS campos do contrato:
+ *
+ *   Traduzir             -> writeActivityMode = "translate"
+ *   Reescrever           -> "rewrite" + writeRewritePromptMode = "visible"
+ *   Escrever o que ouviu -> "rewrite" + writeRewritePromptMode = "listening"
+ *
+ * São atividades irmãs: escrever o que ouviu nunca é uma fase da reescrita.
+ */
+type WritePracticeOption = "translate" | "rewrite-visible" | "rewrite-listening";
+
+const WRITE_PRACTICE_OPTIONS: { value: WritePracticeOption; label: string }[] = [
+  { value: "translate", label: "Traduzir" },
+  { value: "rewrite-visible", label: "Reescrever" },
+  { value: "rewrite-listening", label: "Escrever o que ouviu" },
+];
 
 /**
  * Componente controlado: mantém apenas estado de interface (seção expandida).
@@ -25,6 +46,7 @@ interface WriteActivitySettingsProps {
 export function WriteActivitySettings({
   activityMode,
   rewriteSide,
+  rewritePromptMode,
   onChange,
 }: WriteActivitySettingsProps) {
   const playRuntime = usePlayPresetRuntime();
@@ -35,9 +57,28 @@ export function WriteActivitySettings({
     : rewriteSide === "b"
       ? playRuntime.labelB
       : "alternando os lados";
-  const summary = activityMode === "translate"
+
+  const selectedPractice: WritePracticeOption = activityMode === "translate"
+    ? "translate"
+    : rewritePromptMode === "listening"
+      ? "rewrite-listening"
+      : "rewrite-visible";
+  const summary = selectedPractice === "translate"
     ? "Traduzir de um lado para o outro"
-    : `Reescrever · ${sideSummary}`;
+    : selectedPractice === "rewrite-listening"
+      ? `Escrever o que ouviu · ${sideSummary}`
+      : `Reescrever vendo o texto · ${sideSummary}`;
+
+  const selectPractice = (option: WritePracticeOption) => {
+    if (option === "translate") {
+      onChange({ writeActivityMode: "translate" });
+      return;
+    }
+    onChange({
+      writeActivityMode: "rewrite",
+      writeRewritePromptMode: option === "rewrite-listening" ? "listening" : "visible",
+    });
+  };
 
   const sideOptions: { value: StudyWriteRewriteSidePreset; label: string }[] = [
     { value: "a", label: playRuntime.labelA },
@@ -73,34 +114,29 @@ export function WriteActivitySettings({
           <div>
             <p className="font-medium">Como você quer praticar?</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Traduza o card ou reescreva o texto que está vendo no mesmo idioma.
+              Traduza o card, reescreva o texto que está vendo ou escreva o que ouviu no áudio.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Button
-              type="button"
-              variant={activityMode === "translate" ? "default" : "outline"}
-              aria-pressed={activityMode === "translate"}
-              onClick={() => onChange({ writeActivityMode: "translate" })}
-              className="min-h-[44px]"
-            >
-              Traduzir
-            </Button>
-            <Button
-              type="button"
-              variant={activityMode === "rewrite" ? "default" : "outline"}
-              aria-pressed={activityMode === "rewrite"}
-              onClick={() => onChange({ writeActivityMode: "rewrite" })}
-              className="min-h-[44px]"
-            >
-              Reescrever
-            </Button>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {WRITE_PRACTICE_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={selectedPractice === option.value ? "default" : "outline"}
+                aria-pressed={selectedPractice === option.value}
+                data-write-practice-option={option.value}
+                onClick={() => selectPractice(option.value)}
+                className="h-auto min-h-[44px] whitespace-normal px-3 py-2 text-sm leading-tight"
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
 
           {activityMode === "rewrite" && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Qual lado você quer reescrever?</p>
+              <p className="text-sm font-medium">Qual lado você quer praticar?</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {sideOptions.map((option) => (
                   <Button

@@ -24,6 +24,7 @@ import {
   STUDY_PRESET_SCOPES,
   STUDY_PRESET_WRITE_ACTIVITY_MODES,
   STUDY_PRESET_WRITE_CORRECTION_MODES,
+  STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES,
   STUDY_PRESET_WRITE_REWRITE_SIDES,
   type StudyDirectionPreset,
   type StudyFlowModePreset,
@@ -34,6 +35,7 @@ import {
   type StudyScopePreset,
   type StudyWriteActivityModePreset,
   type StudyWriteCorrectionModePreset,
+  type StudyWriteRewritePromptModePreset,
   type StudyWriteRewriteSidePreset,
 } from "@/features/study/preferences/studyPreset";
 import {
@@ -55,6 +57,11 @@ export interface StudySettingsSnapshotV3 {
   studyFlowMode: StudyFlowModePreset;
   writeActivityMode: StudyWriteActivityModePreset;
   writeRewriteSide: StudyWriteRewriteSidePreset;
+  /**
+   * Reescrita visual ("visible") x ditado ("listening"). Snapshots gravados
+   * antes da separação não têm o campo e valem como reescrita visual.
+   */
+  writeRewritePromptMode: StudyWriteRewritePromptModePreset;
   writeCorrectionMode: StudyWriteCorrectionModePreset;
 }
 
@@ -71,6 +78,7 @@ export const DEFAULT_STUDY_SETTINGS_SNAPSHOT: StudySettingsSnapshotV3 = Object.f
   studyFlowMode: DEFAULT_STUDY_PRESET.studyFlowMode,
   writeActivityMode: DEFAULT_STUDY_PRESET.writeActivityMode,
   writeRewriteSide: DEFAULT_STUDY_PRESET.writeRewriteSide,
+  writeRewritePromptMode: DEFAULT_STUDY_PRESET.writeRewritePromptMode,
   writeCorrectionMode: DEFAULT_STUDY_PRESET.writeCorrectionMode,
 });
 
@@ -121,6 +129,11 @@ export function normalizeStudySettingsSnapshotV3(
       STUDY_PRESET_WRITE_REWRITE_SIDES,
       raw.writeRewriteSide,
       fallback.writeRewriteSide,
+    ),
+    writeRewritePromptMode: pick(
+      STUDY_PRESET_WRITE_REWRITE_PROMPT_MODES,
+      raw.writeRewritePromptMode,
+      fallback.writeRewritePromptMode,
     ),
     writeCorrectionMode: pick(
       STUDY_PRESET_WRITE_CORRECTION_MODES,
@@ -299,6 +312,7 @@ export function studySettingsToPresetOverride(
     studyFlowMode: snapshot.studyFlowMode,
     writeActivityMode: snapshot.writeActivityMode,
     writeRewriteSide: snapshot.writeRewriteSide,
+    writeRewritePromptMode: snapshot.writeRewritePromptMode,
     writeCorrectionMode: snapshot.writeCorrectionMode,
   };
 }

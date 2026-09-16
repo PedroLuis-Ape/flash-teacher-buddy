@@ -29,6 +29,7 @@ describe("studyPreferenceRepository", () => {
       studyFlowMode: "continuous",
       writeActivityMode: "translate",
       writeRewriteSide: "alternating",
+      writeRewritePromptMode: "visible",
       writeCorrectionMode: "flexible",
     });
   });
@@ -83,6 +84,7 @@ describe("studyPreferenceRepository", () => {
     expect(isMissingStudyPreferenceSchemaError({ code: "PGRST205" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "game_mode column" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "study_flow_mode column" })).toBe(true);
+    expect(isMissingStudyPreferenceSchemaError({ code: "PGRST204", message: "Could not find the 'write_rewrite_prompt_mode' column" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42501" })).toBe(false);
   });
 });
