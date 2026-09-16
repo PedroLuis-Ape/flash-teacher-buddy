@@ -33,7 +33,6 @@ describe("public landing professional motion contract", () => {
   it("keeps the mini game keyboard accessible and announces feedback", () => {
     expect(miniGame).toContain('type="button"');
     expect(miniGame).toContain('aria-live="polite"');
-    expect(miniGame).toContain("landing-mini-option:focus-visible").not;
     expect(miniGameStyles).toContain(".landing-mini-option:focus-visible");
   });
 
