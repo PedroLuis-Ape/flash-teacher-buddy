@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 
 /**
  * Listas combinadas ("embedded lists").
@@ -166,12 +167,22 @@ export async function clearEmbeddedList(
   return { removed: Number(row.removed ?? 0) };
 }
 
+/**
+ * Carrega TODOS os membros da lista combinada.
+ *
+ * `get_embedded_list_members` retorna SETOF e portanto continua sujeito ao
+ * limite de linhas do PostgREST/Supabase quando chamado uma única vez. Como a
+ * UI agrupa as fontes a partir destes membros, um corte em 1.000 linhas fazia
+ * fontes posteriores simplesmente desaparecerem do gerenciamento. Paginar o
+ * RPC preserva a ordenação estável definida pela função SQL e elimina esse
+ * falso subconjunto.
+ */
 export async function fetchEmbeddedListMembers(
   embeddedListId: string,
 ): Promise<EmbeddedListMember[]> {
-  const { data, error } = await rpc("get_embedded_list_members", {
-    _embedded_list_id: embeddedListId,
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? (data as EmbeddedListMember[]) : [];
+  return fetchAllSupabaseRows<EmbeddedListMember>((from, to) =>
+    rpc("get_embedded_list_members", {
+      _embedded_list_id: embeddedListId,
+    }).range(from, to),
+  );
 }
