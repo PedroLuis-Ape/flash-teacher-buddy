@@ -406,9 +406,12 @@ export function listRowToSettings(row: {
   };
 }
 
-export function settingsToDbColumns(settings: ListStudySettings) {
+export function settingsToDbColumns(settings: ListStudySettings): any {
   persistListPrimarySideFromCurrentRoute(settings.primarySide);
-  const columns: Record<string, string | boolean> = {
+  // Generated Supabase types can lag the additive migration during rollout.
+  // Keep this one payload deploy-safe while runtime capability checks guard the
+  // new column and the database trigger preserves legacy rows until a real edit.
+  const columns: any = {
     study_type: settings.studyType,
     lang_a: settings.langA,
     lang_b: settings.langB,
