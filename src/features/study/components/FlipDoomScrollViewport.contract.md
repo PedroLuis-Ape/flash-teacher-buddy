@@ -1,1 +1,0 @@
-Optional mobile Flip navigation. The Study engine remains the only owner of queue/progress; this component only animates and calls existing next/previous callbacks.
