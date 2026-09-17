@@ -5,7 +5,7 @@ cssclasses:
 type: protocol
 status: active
 area: knowledge-management
-last_reviewed: 2026-09-13
+last_reviewed: 2026-09-16
 related:
   - "[[00-HOME]]"
   - "[[10-CONTEXT-FEEDING-RULE]]"
@@ -18,51 +18,53 @@ related:
 
 # Context Packet e telemetria de contexto
 
-Política canônica (fonte única): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
-Packet só existe quando a tarefa realmente precisa de memória (níveis 1–3 da política). Em tarefa
-simples/local (nível 0) não há leitura e não há packet — ausência de memória é o resultado normal.
+Política canônica: `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
+Este protocolo é uma otimização de **reuso de contexto**, não um preflight obrigatório.
 
-Nota canônica do protocolo de custo de contexto do App Piteco:
-**READ ONCE -> COMPACT -> SHARE -> REUSE**. Ela complementa
-[[10-CONTEXT-FEEDING-RULE]] (rota de entrada) e
-[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]] (conexões do grafo).
+## Quando usar
 
-## Problema que esta nota resolve
+O Context Packet só deve ser criado quando as duas condições forem verdadeiras:
 
-Cada agente da cadeia (main, worker, reviewer, correção) refazia o preflight
-completo e relia as mesmas notas do Segundo Cérebro na MESMA tarefa. O custo de
-contexto crescia com o número de etapas, sem ganho de qualidade, e decisões já
-recuperadas eram reconstruídas em vez de reutilizadas.
+1. a tarefa realmente precisou recuperar memória/histórico; e
+2. o mesmo contexto recuperado será reutilizado por **dois ou mais atores/etapas**.
 
-## Protocolo
+Se a MAIN resolve a tarefa sozinha, mesmo após uma leitura seletiva do Brain, não há obrigação de
+criar packet. Em tarefa simples/local normalmente não há leitura, packet ou telemetria de memória.
 
-1. **READ ONCE** - o Segundo Cérebro é lido uma vez por tarefa, no início, pelo
-   caminho mais estreito disponível (manifesto + notas do domínio).
-2. **COMPACT** - o resultado vira um CONTEXT PACKET compacto: objetivo, regras,
-   contratos, decisões, riscos, arquivos, invariantes e incertezas, mais
-   PONTEIROS com `sha256` para as notas relevantes. O packet não copia o vault.
-3. **SHARE** - o MESMO packet é entregue a worker, reviewer e correção, com o
-   mesmo `brain_version` e `packet_hash`.
-4. **REUSE** - quem já recebeu um packet válido não refaz o preflight completo:
-   presume o packet válido até evidência contrária.
+## Problema que o protocolo resolve
+
+Em cadeias com múltiplos atores, cada etapa costumava refazer preflight e reler as mesmas notas.
+O objetivo é pagar o custo de retrieval uma vez e compartilhar um resumo verificável, sem transformar
+o próprio protocolo em custo fixo de toda tarefa.
+
+## READ ONCE → COMPACT → SHARE → REUSE
+
+Quando houver reutilização real:
+
+1. **READ ONCE** — a MAIN recupera somente notas/trechos capazes de mudar a decisão.
+2. **COMPACT** — cria um packet curto com objetivo, regras, contratos, decisões, riscos, arquivos,
+   invariantes, incertezas e ponteiros `sha256`; o packet não copia o vault.
+3. **SHARE** — entrega o mesmo packet aos atores/etapas que precisam dele.
+4. **REUSE** — quem recebeu packet válido não refaz preflight nem relê Brain/PRs por precaução.
+
+Lacuna material = recuperar uma nota/trecho e fazer patch do packet. Não reconstruir o contexto inteiro.
 
 ## Artefatos
 
 | Artefato | Caminho | Papel |
 | --- | --- | --- |
-| Manifesto | `docs/brain/brain-manifest.json` | Metadados por nota: domínio, documento canônico, descrição de 1 linha, type, last_reviewed, bytes, sha256 e `brain_version`. Gerado por `scripts/brain-index.mjs`. |
-| Context Packet | `.superpowers/sdd/context-packets/<task>.packet.json` | Artefato compartilhável da tarefa, com os 11 campos e hash próprio. |
-| Ledger | `.superpowers/sdd/brain-telemetry.jsonl` | Registro append-only do custo de contexto por tarefa e etapa. |
+| Manifesto | `docs/brain/brain-manifest.json` | Índice derivado de notas; consultar por filtro, nunca despejar integralmente no contexto. |
+| Context Packet | `.superpowers/sdd/context-packets/<task>.packet.json` | Resumo compartilhável da tarefa quando há reuso real. |
+| Ledger | `.superpowers/sdd/brain-telemetry.jsonl` | Telemetria de tarefas que efetivamente usaram o protocolo. |
 
-Os dois últimos são artefatos por execução (não são memória canônica) e ficam
-fora do vault. O manifesto é versionado junto de `docs/brain/`.
+Packet e ledger são artefatos de execução, não memória canônica.
 
 ## Comandos
 
 ```bash
-node scripts/brain-index.mjs                  # regenera docs/brain/brain-manifest.json
-node scripts/brain-index.mjs --check          # falha se o manifesto estiver desatualizado
-node scripts/brain-index.mjs --compare <dir>  # reconcilia vault externo x docs/brain
+node scripts/brain-index.mjs
+node scripts/brain-index.mjs --check
+node scripts/brain-index.mjs --compare <dir>
 
 node scripts/context-packet.mjs new --task <id> --objective "<texto>" --domain <dominio>
 node scripts/context-packet.mjs show --packet <arquivo> --actor worker
@@ -73,94 +75,66 @@ node scripts/context-packet.mjs patch --packet <arquivo> --append CAMPO=valor --
 node scripts/brain-telemetry.mjs report [--task <id>] [--format md|json]
 ```
 
+Esses comandos são ferramentas disponíveis, não checklist obrigatório. Não gerar packet/ledger só para
+registrar que a tarefa não usou memória.
+
 ## Campos do packet
 
 `PROJECT`, `OBJECTIVE`, `BRAIN_VERSION`, `RELEVANT_RULES`,
 `RELEVANT_ARCHITECTURE`, `CONTRACTS`, `DECISIONS`, `KNOWN_RISKS`,
 `FILES_MODULES`, `DO_NOT_BREAK`, `OPEN_UNCERTAINTIES`.
 
-O packet carrega decisões e invariantes em texto curto; o detalhe continua na
-nota-fonte, referenciada por caminho + `sha256`. Ler o packet NÃO substitui a
-fonte quando a tarefa exige o texto integral: nesse caso, retrieval de UMA nota.
+Detalhes permanecem na nota-fonte referenciada. Se faltar um fato material, recuperar somente a fonte
+necessária em vez de expandir o packet preventivamente.
 
 ## Invalidação
 
-Invalidar/atualizar o packet SOMENTE por mudança material:
+Invalidar ou rebasear somente por mudança material:
 
-- objetivo da tarefa mudou;
-- alguma nota referenciada pelo packet mudou (`REF_CHANGED`) ou sumiu
-  (`REF_MISSING`);
+- objetivo/escopo mudou;
+- nota referenciada mudou (`REF_CHANGED`) ou sumiu (`REF_MISSING`);
 - contrato, decisão ou risco referenciado mudou;
-- domínio/área da tarefa mudou.
+- domínio material da tarefa mudou.
 
-`validate` distingue dois casos: **DRIFT** (o `brain_version` global avançou,
-mas nenhuma nota do packet mudou - reutilizar, sem rebase) e **STALE** (mudança
-material em nota referenciada - patch + `--rebase`). Nunca invalidar por tempo
-decorrido, por ansiedade ou por "reler para ter certeza".
-
-## Retrieval sob demanda
-
-Lacuna material identificada durante a execução:
-
-1. ler UMA nota (`context-packet read --note-path <nota>`), que já registra o
-   evento na telemetria;
-2. **PATCH** do packet (`context-packet patch --reason "<motivo>"`) para que o
-   próximo agente não repita a leitura;
-3. continuar a execução - nunca reconstruir o packet inteiro.
+`DRIFT` em nota não referenciada não obriga reconstrução. Não invalidar por tempo decorrido nem por
+“reler para ter certeza”.
 
 ## Papéis
 
-- **MAIN** lê uma vez, cria e compartilha o packet, decide invalidação e
-  consolida o conhecimento durável no fim.
-- **WORKER** executa a partir do packet; não refaz preflight; lacuna pontual =
-  uma nota + patch.
-- **REVIEWER** recebe objetivo, regras relevantes, diff, testes, evidências e
-  riscos pelo packet e NÃO relê o vault inteiro; revisa o que o packet aponta e
-  busca UMA nota quando o fato material não estiver coberto.
-- **CORREÇÃO / SEGUNDA REVISÃO** continuam do mesmo packet patchado, sem
-  reconstruir contexto.
+- **MAIN** — decide se memória é necessária e, só se houver reuso previsto, cria/compartilha o packet.
+- **WORKER** — trabalha a partir do objetivo + arquivos/trechos + packet/resumo recebido; não refaz preflight.
+- **REVIEWER** — recebe objetivo, diff, testes, evidências, riscos e contexto compacto; só busca fonte extra
+  se faltar informação material.
+- **CORREÇÃO / SEGUNDA REVISÃO** — reutilizam o mesmo packet patchado quando o packet existe.
 
-## Telemetria e estimativa de tokens
+Não existe obrigação de abrir Brain, Worker ou Reviewer em toda tarefa, nem cadeia fixa entre esses papéis.
 
-Contadores do ledger: `brain_reads`, `brain_files_read`, `brain_tokens_loaded`,
+## Telemetria
+
+Contadores disponíveis: `brain_reads`, `brain_files_read`, `brain_tokens_loaded`,
 `context_packet_tokens`, `context_reuse_count`, `context_patch_count`,
-`context_invalidations` e `invalidation_reason` (além de detecções de stale e
-drift).
+`context_invalidations` e `invalidation_reason`.
 
-**Estimativa declarada:** `tokens = ceil(bytes / 4)`. É uma estimativa, não uma
-contagem de tokenizer; o que se compara antes x depois é o mesmo estimador
-aplicado a bytes reais medidos no disco.
+Estimativa declarada: `tokens = ceil(bytes / 4)`. É proxy comparável de bytes carregados, não contagem
+real de tokenizer. Para avaliar economia, compare antes/depois no mesmo tipo de tarefa e registre também
+número de agentes, esforço de raciocínio, leituras, packets e gates repetidos.
 
-## Evidência medida - 2026-09-13
+## Evidência histórica medida — 2026-09-13
 
-Tarefa real medida: P1 "Ponto de atenção não materializa Reforço no preview"
-([[06-BUGS]]), cadeia MAIN -> WORKER -> REVIEWER -> CORREÇÃO -> REVIEWER, com
-preflight de 10 notas por etapa.
+Na tarefa P1 “Ponto de atenção não materializa Reforço no preview”, uma cadeia
+MAIN → WORKER → REVIEWER → CORREÇÃO → REVIEWER com preflight repetido teve 5 leituras, 50 arquivos e
+~122.045 tokens estimados. Com contexto reutilizado, a medição caiu para ~35.003 tokens no cenário
+conservador e ~18.163 no cenário enxuto, sem perder os 7 fatos materiais avaliados.
 
-[VERIFIED-RUNTIME] Antes: 5 leituras, 50 arquivos, 488.180 B, ~122.045 tokens
-estimados. Depois (conservador, com uma leitura completa do MAIN): 2 leituras
-(1 leitura única + 1 retrieval sob demanda de uma nota), 11 arquivos,
-~35.003 tokens estimados - redução de 71,3%, com 6 reúsos do packet e 2 patches.
-Depois (enxuto, MAIN lê apenas o núcleo material): 2 leituras, 4 arquivos,
-~18.163 tokens estimados - redução de 85,1%.
+Essa medição demonstra o valor de **reuso quando há cadeia multiagente**; ela não justifica criar
+cadeia, packet ou telemetria em tarefas que não precisam deles.
 
-Medição executada com `brain_version` `6c7fcf90` (97 notas); o ledger e o
-harness ficam em `.superpowers/sdd/` e são reproduzíveis.
+## Limites
 
-Qualidade: os 7 fatos materiais da tarefa continuaram presentes no material
-entregue à revisão (nenhuma regressão). A contagem vem do ledger JSONL gerado
-pela execução real das ferramentas, não de estimativa manual.
-
-## Limites conhecidos
-
-- O `brain_version` é global: qualquer nota nova muda o hash. Por isso
-  `validate` trata drift global como não bloqueante e só marca STALE quando uma
-  nota referenciada muda.
-- O packet não substitui código, Git, banco ou testes: essas continuam sendo as
-  fontes de verdade da implementação.
-- O vault externo e `docs/brain/` ainda apresentam divergências de redação
-  anteriores a esta nota; a reconciliação é decisão da Clara Principal e não
-  deve ser feita em silêncio.
+- Packet não substitui código, Git, banco ou testes.
+- `brain_version` global pode mudar por nota irrelevante; por isso drift global não bloqueia reuso.
+- Vault externo e `docs/brain/` devem ser reconciliados quando houver mudança material, sem criar memória paralela.
+- A melhor otimização continua sendo **não carregar contexto que não pode mudar a decisão**.
 
 ## Related
 
