@@ -50,12 +50,18 @@ Related: [[areas/visual-polish]] · [[01-CURRENT-STATE]] · [[08-RISKS]]
 
 Related: [[areas/mcp-reference-ids-and-importers]] · [[areas/mcp-agent-api]] · [[01-CURRENT-STATE]] · [[08-RISKS]]
 
-## Time CLARA como subagentes padrão — vigente em 2026-09-14
+## Delegação CLARA e orçamento de contexto — vigente em 2026-09-16
 
-- [DECISAO VIGENTE] Os subagentes do App Piteco são o time CLARA — `clara_brain`, `clara_explorer`, `clara_worker` e `clara_reviewer` — sempre criados com `agent_type` explícito. Fluxo: Brain (contexto) → Explorer (mapa) → Worker (implementação) → Reviewer (revisão) → Brain (conhecimento durável).
-- [DECISAO VIGENTE] Todo subagente usa `model = gpt-5.6-luna` e `reasoning_effort = high`; proibido `xhigh`, `ultra` e escalonamento automático. A MAIN mantém o modelo que o usuário configurou e decide qualquer troca quando o subagente devolve BLOCKED.
-- [DECISAO SUBSTITUIDA] A decisão de 2026-09-12 de fixar as Claras em DeepSeek `deepseek/deepseek-v4-flash` com esforço `ultra` está substituída pela linha acima.
-- [DECISAO VIGENTE] Nenhuma Clara substitui os gates técnicos nem os “Acordos de trabalho” (não trabalhar em `main`, sem merge/deploy/migration remota automática, escopo de escrita disjunto, sem Supabase/auth/dados de produção em subagente).
+- [DECISAO VIGENTE] **MAIN FIRST; zero subagentes é o padrão.** `clara_brain`, `clara_explorer`, `clara_worker` e `clara_reviewer` continuam disponíveis, sempre com `agent_type` explícito, mas são papéis sob demanda e não um pipeline obrigatório.
+- [DECISAO VIGENTE] Tarefa simples/local não usa Segundo Cérebro, Context Packet, histórico Git/PR nem subagente por precaução. Tarefa média usa no máximo um delegado quando houver ganho claro; tarefa complexa/alto risco usa até dois por padrão. Delegação recursiva/aninhada é proibida por padrão.
+- [DECISAO VIGENTE] Não existe obrigação de executar Brain → Explorer → Worker → Reviewer → Brain. `clara_brain` só entra se memória puder mudar a decisão; Explorer só se o escopo precisar de descoberta; Worker só se houver implementação separável; Reviewer só quando risco/escopo justificar revisão independente.
+- [DECISAO VIGENTE] Luna permanece o modelo econômico preferido para subagentes, mas a regra global `reasoning_effort = high` foi substituída. Memória/exploração mecânica usa baixo ou médio quando suficiente; worker/reviewer usam médio por padrão e High apenas quando complexidade/risco justificarem. Sem `xhigh`, `ultra` ou escalonamento automático.
+- [DECISAO VIGENTE] O pai entrega somente objetivo, restrições, arquivos/trechos relevantes e contexto compacto. Delegado que recebe packet/resumo válido não refaz preflight, não relê vault/PRs por rotina e não recebe histórico completo sem necessidade.
+- [DECISAO VIGENTE] Gates são proporcionais e consolidados pela MAIN; subagentes fazem checks focados e não repetem automaticamente suíte completa já coberta no mesmo estado.
+- [DECISAO VIGENTE] GitHub e `docs/brain/` não são diário automático: histórico, clone, PRs e gravação de memória só entram quando materialmente necessários. Atualização do Brain é exceção, restrita a conhecimento durável novo ou contrato/decisão/risco que realmente mudou.
+- [DECISAO SUBSTITUIDA] A decisão de 2026-09-14 tratava o time CLARA como fluxo padrão Brain → Explorer → Worker → Reviewer → Brain e fixava todo subagente em Luna + High; foi substituída pelas regras acima após evidência de overhead excessivo.
+- [DECISAO SUBSTITUIDA] A decisão de 2026-09-12 de fixar as Claras em DeepSeek `deepseek/deepseek-v4-flash` com esforço `ultra` continua substituída.
+- [DECISAO VIGENTE] Nenhuma Clara substitui os “Acordos de trabalho”: não trabalhar em `main`, sem merge/deploy/migration remota automática, escopo de escrita disjunto quando houver múltiplos atores e sem Supabase/auth/dados de produção em subagente sem tarefa explícita.
 
 ## Protocolo CCL — Clara Compact Language
 
