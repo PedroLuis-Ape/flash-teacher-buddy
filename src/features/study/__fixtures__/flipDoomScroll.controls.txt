@@ -1,1 +1,0 @@
-Preserved active-card controls: flip front/back, TTS, autoplay, favorites, red list, review flag, difficulty, layers, in-game edit/notes.
