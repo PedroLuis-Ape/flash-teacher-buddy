@@ -1,0 +1,1 @@
+Scope: Flip mobile only. Classic Flip remains default. Mixed mode excluded. No new persistence authority.
