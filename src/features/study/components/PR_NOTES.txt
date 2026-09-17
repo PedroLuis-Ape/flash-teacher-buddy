@@ -1,1 +1,0 @@
-Optional mobile Flip doom scrolling; classic Flip preserved.
