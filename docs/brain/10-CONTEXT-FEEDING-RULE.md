@@ -8,244 +8,153 @@ aliases:
 type: protocol
 status: active
 area: knowledge-management
-last_reviewed: 2026-09-13
+last_reviewed: 2026-09-16
 related:
   - "[[00-HOME]]"
   - "[[01-CURRENT-STATE]]"
-  - "[[03-ARCHITECTURE]]"
   - "[[04-DECISIONS]]"
   - "[[06-BUGS]]"
   - "[[07-TESTS]]"
   - "[[08-RISKS]]"
-  - "[[09-ASTRA-HANDOFF]]"
-  - "[[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]"
   - "[[27-CONTEXT-PACKET-E-TELEMETRIA]]"
-  - "[[areas/visual-polish]]"
-  - "[[areas/motion-system]]"
-  - "[[areas/adaptive-learning]]"
-  - "[[areas/supabase-runtime]]"
-  - "[[12-PROCESS-LOG-2026-09-12]]"
-  - "[[README]]"
 ---
 
 # START HERE — Protocolo de contexto do App Piteco
 
-## Fechamento de sessão (formato)
+Política canônica (fonte única): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
+Este documento só explica a rota do Brain do Piteco; não transforma memória em etapa obrigatória.
 
-Toda tarefa que mudou o estado durável do projeto termina com uma entrada curta e datada em **FECHAMENTOS**,
-no topo de [[01-CURRENT-STATE]], neste formato:
+## Regra principal
 
-`### FECHAMENTO <AAAA-MM-DD>` · **Finalizado** · **Pronto até** · **Não entrou** ·
-**Em espera por decisão** (ou **Depende de**).
+**Resolver primeiro com o contexto já disponível e com o código atual.** O Segundo Cérebro entra
+somente quando informação histórica/persistente puder mudar materialmente a decisão.
 
-O objetivo é econômico: um agente novo lê **um bloco** e sabe onde o projeto
-parou, sem varrer o vault. Detalhe longo continua nas notas de sessão linkadas;
-aqui fica só o estado datado. Se uma informação antiga ficar incorreta, atualize
-a entrada existente — não empilhe versões contraditórias.
+### Níveis
 
-Esta é a nota central permanente para qualquer trabalho relacionado ao App
-Piteco / APE Education. Ela é uma rota de entrada e uma regra de operação; não
-é um substituto para as notas profundas de arquitetura, áreas, decisões,
-bugs, testes, riscos ou handoff.
+- **0 — simples/local:** texto, CSS, tipagem, lint, teste localizado, erro evidente, pequena edição em
+  arquivo conhecido. Não consultar nem gravar memória. Não criar Context Packet.
+- **1 — normal:** começar pelo código. Se necessário, consultar no máximo o índice [[00-HOME]]; não
+  seguir links automaticamente.
+- **2 — sistêmico:** persistência, flashcards, auth, importação, banco, arquitetura, progresso,
+  gamificação ou contrato compartilhado. Índice → uma ou poucas notas diretamente relevantes → parar
+  assim que houver contexto suficiente.
+- **3 — histórico:** regressão dependente de histórico, decisão arquitetural antiga, contradição ou
+  retomada. Busca direcionada por termo/trecho; nunca varredura do vault.
 
-## Regra estrutural — leitura condicional
+## Limites de leitura
 
-Política canônica (fonte única, não duplicar): `C:\Users\pedro\.codex\policies\second-brain-policy.md`.
+- busca antes de leitura;
+- nunca ler o vault inteiro nem seguir referências recursivamente por reflexo;
+- nota grande é lida por trecho;
+- de [[01-CURRENT-STATE]], preferir apenas o bloco **FECHAMENTOS** mais recente quando estado/retomada
+  for realmente necessário;
+- `docs/brain/brain-manifest.json` é artefato derivado e grande: consultar por filtro, nunca despejar no
+  contexto;
+- notas históricas em `imports/` só entram quando o núcleo específico da tarefa exigir revalidação;
+- código/Git atual, backend real, testes e runtime vencem memória antiga não revalidada.
 
-Consultar a memória **não é o primeiro passo de toda tarefa**. Níveis:
+O vault operacional externo é `C:\Users\pedro\Documents\App-Piteco-Brain`; `docs/brain/` é seu espelho
+versionado. Não criar uma segunda memória independente.
 
-1. **0 — simples/local** (CSS, texto, tipagem, lint, teste, erro evidente): não consultar; não gravar.
-2. **1 — normal**: no máximo o índice [[00-HOME]]; não abrir automaticamente o que ele aponta.
-3. **2 — sistema conhecido** (persistência, flashcards, auth, importação, banco, arquitetura, progresso,
-   gamificação): índice → 1 ou poucas notas do domínio → parar quando houver contexto suficiente.
-4. **3 — exige histórico** (decisão arquitetural, bug dependente de histórico, contradição, retomada
-   antiga): busca direcionada com `rg`, somente o que responde à pergunta atual.
+## Context Packet — somente quando há reutilização real
 
-Regras de custo sempre válidas: nunca ler o vault inteiro nem seguir referências recursivamente por
-reflexo; **busca antes de leitura** (localize o termo e abra só o arquivo/trecho útil); nota grande se
-lê por trecho — de [[01-CURRENT-STATE]] (60+ KB) use apenas o bloco **FECHAMENTOS** mais recente;
-`brain-manifest.json` (~70 KB) é artefato derivado e se consulta por filtro, nunca integralmente.
+READ ONCE → COMPACT → SHARE → REUSE existe para evitar que vários atores releiam o Brain.
 
-O caminho operacional confirmado do vault externo é
-`C:\Users\pedro\Documents\App-Piteco-Brain`. O nome
-`C:\Users\pedro\Documents\App-Piteco-Braine` não existe e não deve originar
-uma segunda estrutura.
+**Não criar packet por ritual.** Se a MAIN resolver a tarefa sozinha, a leitura seletiva que foi
+necessária pode permanecer na própria execução. Packet é indicado quando o mesmo contexto recuperado
+será reutilizado por **dois ou mais atores/etapas**.
 
-## READ ONCE -> COMPACT -> SHARE -> REUSE (regra de custo de contexto)
+Quando aplicável:
 
-Regra vigente para eliminar releitura redundante do Segundo Cérebro dentro da
-MESMA tarefa. Schema do packet, comandos e telemetria estão em
-[[27-CONTEXT-PACKET-E-TELEMETRIA]].
+1. **READ ONCE:** MAIN recupera apenas as notas/trechos necessários.
+2. **COMPACT:** cria um packet curto com objetivo, regras, contratos, decisões, riscos, arquivos,
+   invariantes, incertezas e ponteiros/hash; não copia as notas.
+3. **SHARE:** o mesmo packet vai aos atores seguintes.
+4. **REUSE:** quem recebeu packet válido não refaz preflight.
 
-1. **READ ONCE** - quando a tarefa exigir memória, consultar uma única vez, pelo caminho mais estreito:
-   o índice [[00-HOME]] e, no máximo, as notas do domínio afetado. O manifesto
-   `docs/brain/brain-manifest.json` é artefato derivado e grande: consulte por filtro, nunca integralmente.
-2. **COMPACT** - transformar a leitura em um CONTEXT PACKET compacto
-   (`node scripts/context-packet.mjs new`): objetivo, regras relevantes,
-   arquitetura, contratos, decisões, riscos, arquivos, invariantes e incertezas
-   abertas, mais PONTEIROS com `sha256` para as notas relevantes. O packet não
-   copia o vault e não substitui o código/Git.
-3. **SHARE** - entregar o MESMO packet às etapas seguintes (worker, reviewer,
-   correção), sempre com o mesmo `brain_version` e `packet_hash`.
-4. **REUSE** - quem já recebeu um packet válido NÃO refaz o preflight completo.
-   Presume o packet válido até evidência contrária
-   (`context-packet validate`) e só busca contexto quando faltar informação
-   material.
+Invalidar/rebasear somente por mudança material no objetivo, domínio ou nota referenciada. Drift em
+nota não referenciada não exige reconstrução. Lacuna pontual = ler **uma** nota/trecho + patch, nunca
+reler o vault inteiro.
 
-### Invalidação
+Comandos e telemetria: [[27-CONTEXT-PACKET-E-TELEMETRIA]].
 
-O packet só é invalidado ou rebaseado por mudança MATERIAL:
+## Delegação e memória
 
-- objetivo ou escopo da tarefa mudou;
-- alguma nota referenciada pelo packet mudou (`REF_CHANGED`) ou deixou de
-  existir (`REF_MISSING`);
-- contrato, decisão ou risco referenciado mudou;
-- domínio/área da tarefa mudou.
+- `clara_brain` só é aberta quando memória pode alterar a solução.
+- Worker/reviewer que receberam resumo/packet não reabrem o Brain “para confirmar”.
+- Não existe obrigação de Brain → Explorer → Worker → Reviewer → Brain.
+- Subagente não consulta histórico Git/PR nem Brain por precaução se o pai já forneceu o contexto
+  relevante.
 
-Nunca invalidar por minutos decorridos, por ansiedade ou por "reler para ter
-certeza": drift global do vault (nota que o packet não referencia) é reportado
-como `DRIFT` e não obriga reconstrução.
+## O que registrar
 
-### Retrieval sob demanda
+Somente conhecimento durável e caro de reconstruir, por exemplo:
 
-Faltou informação material:
+- causa-raiz demonstrada e condição de reprodução;
+- decisão técnica cuja razão importa no futuro;
+- mudança de arquitetura ou limite de responsabilidade;
+- contrato de identidade, estado, persistência, migration, RPC ou RLS;
+- risco, incompatibilidade ou bloqueio ainda relevante;
+- teste que protege comportamento importante;
+- handoff/estado necessário para retomada futura.
 
-1. ler **UMA** nota (`context-packet read --note-path <nota>`);
-2. **PATCH** do packet (`context-packet patch --reason "<motivo>"`) para que o
-   próximo agente não repita a leitura;
-3. continuar a execução, no mesmo `brain_version`.
+Separar fato de hipótese e marcar histórico não revalidado como tal.
 
-Reler o vault inteiro ou reconstruir o packet como resposta a uma lacuna
-pontual é proibido.
+## O que NÃO registrar
 
-### Papéis
-
-- **MAIN**: lê uma vez, cria e compartilha o packet, decide invalidação.
-- **WORKER**: executa a partir do packet; não refaz preflight; lacuna pontual =
-  uma nota + patch.
-- **REVIEWER**: recebe objetivo, regras relevantes, diff, testes, evidências e
-  riscos pelo packet e NÃO relê o vault inteiro; busca UMA nota quando o fato
-  material não estiver coberto.
-- **CORREÇÃO / SEGUNDA REVISÃO**: continuam do mesmo packet patchado.
-
-### Fechamento
-
-No fim da tarefa, atualizar apenas conhecimento durável na nota-fonte correta,
-sem reabrir o vault inteiro. O custo de contexto da tarefa fica no ledger
-`.superpowers/sdd/brain-telemetry.jsonl` e é lido com
-`node scripts/brain-telemetry.mjs report`.
-
-## Como recuperar contexto sem desperdiçar contexto
-
-Quando a memória for necessária, comece pelo índice [[00-HOME]]. Para estado/retomada, leia apenas o
-bloco **FECHAMENTOS** mais recente de [[01-CURRENT-STATE]] — não o arquivo inteiro. Depois use as
-palavras-chave da tarefa para seguir somente o subgrafo necessário:
-
-- comportamento/arquitetura → [[03-ARCHITECTURE]] → [[04-DECISIONS]];
-- bug ou regressão → [[06-BUGS]] → [[08-RISKS]] → [[07-TESTS]];
-- estado, retomada ou próxima ação → [[01-CURRENT-STATE]] →
-  [[09-ASTRA-HANDOFF]] → o processo recente;
-- UI/mobile/motion → [[areas/visual-polish]] → [[areas/motion-system]] →
-  [[07-TESTS]];
-- aprendizado e processo → [[areas/adaptive-learning]] →
-  [[learning/00-LEARNING-HUB]];
-- banco, sessões, jogos, importação ou glossário → [[areas/supabase-runtime]]
-  e as notas históricas preservadas em `imports/` somente quando o núcleo
-  específico for relevante.
-
-As notas em `imports/` são contexto histórico preservado, não uma segunda
-fonte ativa. Quando uma informação histórica for usada, comparar com o código
-atual e marcar a conclusão como `[HISTORICAL]`, `[REVALIDATE]`, `[UNKNOWN]` ou
-`[VERIFIED-REPO]` conforme a evidência disponível.
-
-## Durante o trabalho
-
-Registrar somente conhecimento que seja durável e útil para uma tarefa futura:
-
-- causas-raiz demonstradas e condições de reprodução;
-- decisões técnicas e alternativas rejeitadas quando a razão importar;
-- mudanças de arquitetura e limites de responsabilidade;
-- contratos de identidade, estado, persistência, migrations, RPCs e RLS;
-- riscos, incompatibilidades, bloqueios e incertezas ainda abertas;
-- testes que protegem o comportamento e evidências de browser/dispositivo;
-- progresso atual, handoff e próximo passo seguro.
-
-Separar fato de hipótese. O código/Git atual, o banco correto, os testes e a
-execução real vencem uma nota antiga que não tenha sido revalidada.
-
-## O que não registrar
-
-Não transformar o Segundo Cérebro em:
+Não transformar o Brain em:
 
 - log de commits;
-- diário de execução linha a linha;
-- cópia de conversas ou de arquivos-fonte;
-- depósito de mensagens temporárias, tentativas descartadas ou detalhes que
-  um agente pode obter trivialmente do código.
+- diário passo a passo;
+- cópia de conversa;
+- cópia de arquivo-fonte;
+- relatório de toda tarefa;
+- depósito de tentativas descartadas;
+- informação que pode ser recuperada trivialmente do código atual.
 
-Um registro cronológico só deve existir quando preservar decisões, evidências,
-falhas, bloqueios ou handoff que seriam caros de reconstruir. Nesse caso,
-conectá-lo à área, aos bugs, às decisões, aos testes e aos riscos relacionados.
+GitHub também não é extensão do Brain: não criar arquivos/commits apenas para memória do agente.
 
-## Ao terminar uma etapa importante
+## Fechamento — exceção, não obrigação
 
-Não atualizar é o resultado normal. Se (e somente se) a etapa gerou conhecimento durável novo,
-revisar o Segundo Cérebro e:
+**Não atualizar memória é o resultado normal.** Só atualizar quando a tarefa mudou ou descobriu
+conhecimento durável que uma execução futura precisará recuperar.
 
-1. atualizar a nota de área ou a nota de arquitetura já existente, quando ela
-   for a fonte correta;
-2. criar uma decisão, bug, risco ou checkpoint somente se houver conhecimento
-   durável que não caiba na fonte existente;
-3. conectar a informação nova às notas relacionadas por wikilinks internos;
-4. atualizar [[01-CURRENT-STATE]] somente com o estado atual compacto;
-5. registrar testes, limitações e próximo passo seguro em [[07-TESTS]],
-   [[08-RISKS]] ou no processo quando aplicável;
-6. se uma informação antiga ficou incorreta, corrigir a fonte existente e
-   explicar a transição — não criar uma versão contraditória ao lado.
+Quando houver mudança durável:
 
-Toda nova anotação do agente deve preservar a classe `ape-ai-note`, mantendo
-as anotações em vermelho pelo snippet `.obsidian/snippets/ape-ai-notes.css`.
-Properties/YAML, wikilinks, backlinks e a estrutura histórica devem ser
-preservados.
+1. atualizar a nota-fonte existente, se houver;
+2. criar decisão/bug/risco/checkpoint apenas se não houver fonte adequada;
+3. conectar por wikilinks somente relações úteis;
+4. atualizar [[01-CURRENT-STATE]] apenas se o estado de retomada realmente mudou;
+5. registrar teste/risco na nota correspondente quando material;
+6. corrigir informação antiga contraditória em vez de empilhar versões incompatíveis.
 
-## Grafo e navegação
+Rodar `npm run brain:check` quando `docs/brain/` foi alterado. Telemetria de contexto só é registrada
+para tarefa que realmente usou o protocolo; nível 0/1 não precisa produzir evento apenas para dizer
+que nada foi lido.
 
-O índice principal é [[00-HOME]]. O mapa factual é [[01-CURRENT-STATE]]. O
-protocolo de conexões está em [[22-OBSIDIAN-KNOWLEDGE-GRAPH-PROTOCOL]]. Use
-Backlinks e Local Graph quando disponíveis para descobrir dependências, mas
-não crie links apenas para aumentar a densidade do grafo.
+## Rotas seletivas
 
-As conexões principais deste protocolo são:
+Quando realmente necessárias:
 
-[[03-ARCHITECTURE]] · [[04-DECISIONS]] · [[06-BUGS]] · [[07-TESTS]] ·
-[[08-RISKS]] · [[09-ASTRA-HANDOFF]] · [[areas/visual-polish]] ·
-[[areas/motion-system]] · [[areas/adaptive-learning]] ·
-[[areas/supabase-runtime]] · [[12-PROCESS-LOG-2026-09-12]] · [[README]]
+- arquitetura/decisão → [[03-ARCHITECTURE]] → [[04-DECISIONS]];
+- bug/regressão → [[06-BUGS]] → [[08-RISKS]] → [[07-TESTS]];
+- retomada → último fechamento de [[01-CURRENT-STATE]] e checkpoint específico;
+- banco/persistência → [[areas/supabase-runtime]];
+- aprendizado de processo → [[areas/adaptive-learning]].
+
+Não percorrer a rota inteira se uma única nota/trecho já respondeu à pergunta.
 
 ## Fontes de verdade
 
-- Git e o código atual são a fonte de verdade da implementação.
-- O backend real é a fonte de verdade de dados e schema quando a tarefa tocar
-  em persistência, Supabase, migrations, RPCs ou RLS.
-- Testes e browser/dispositivo fornecem evidência de comportamento executado.
-- O vault externo é a entrada operacional oficial do Obsidian. Se um checkout
-  do repositório contiver uma cópia em `docs/brain/`, ela será somente um
-  espelho versionado para revisão e continuidade no Git.
-- Nenhuma cópia deve evoluir como memória independente ou contraditória;
-  mudanças materiais devem ser reconciliadas com o vault oficial.
+- Git e código atual: implementação.
+- Backend correto: dados/schema quando a tarefa toca persistência.
+- Testes e runtime: comportamento executado.
+- Brain: intenção, decisões, riscos e continuidade durável, sempre subordinado às fontes acima quando
+  houver conflito.
 
-## Próximo passo padrão
+## Critério final
 
-O primeiro passo é resolver com o que já está no contexto e no código. A memória entra apenas nos
-níveis 1–3 definidos acima:
+> **Puxe apenas o contexto capaz de mudar a decisão atual. Compartilhe-o somente quando houver
+> reutilização real. Grave de volta somente conhecimento durável.**
 
-> **Se a tarefa exigir contexto histórico, consultar o índice e recuperar apenas o que está
-> conectado à tarefa atual.**
-
-Ao terminar:
-
-> **Se (e somente se) surgiu conhecimento durável novo, conectá-lo de volta ao Segundo Cérebro.**
-> Quando não surgiu, não existe atualização de memória — e esse é o resultado esperado.
-
-O objetivo é que um agente futuro recupere rapidamente o estado, as decisões,
-os riscos e o próximo movimento sem reconstruir todo o contexto do zero.
+Related: [[00-HOME]] · [[04-DECISIONS]] · [[05-AGENTS]] · [[06-BUGS]] · [[07-TESTS]] · [[08-RISKS]] · [[27-CONTEXT-PACKET-E-TELEMETRIA]]
