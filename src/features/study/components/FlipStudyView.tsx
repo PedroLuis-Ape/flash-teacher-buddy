@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { ArrowUpDown, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
@@ -18,6 +19,7 @@ import {
   type FlipDoomPreviewCard,
 } from "@/features/study/lib/flipDoomScroll";
 import { StudyCardDeck } from "./StudyCardDeck";
+import { FlipDoomScrollViewport } from "./FlipDoomScrollViewport";
 import { MixedSlotActivity } from "./MixedSlotActivity";
 import type { WriteSessionSettings } from "@/features/study/lib/writeActivityMode";
 
@@ -65,6 +67,46 @@ function currentPreviewFromProps(props: FlipStudyViewProps): FlipDoomPreviewCard
     imageUrlA: props.imageUrlA,
     imageUrlB: props.imageUrlB,
   };
+}
+
+function DoomAdjacentPreview({
+  card,
+  direction,
+  labelA,
+  labelB,
+}: {
+  card: FlipDoomPreviewCard | null;
+  direction: string;
+  labelA?: string;
+  labelB?: string;
+}) {
+  if (!card) return <div className="h-full w-full bg-background" />;
+  const showBFirst = direction === "b-a";
+  const text = showBFirst ? card.back : card.front;
+  const label = showBFirst ? labelB : labelA;
+  const imageUrl = showBFirst ? card.imageUrlB : card.imageUrlA;
+
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-background px-0.5 py-14">
+      <Card className="flex h-60 w-full max-w-2xl flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-card to-muted/20 p-4 shadow-sm">
+        <p className="mb-3 text-[10px] uppercase tracking-wide text-muted-foreground">
+          {label || (showBFirst ? "Definição" : "Termo")}
+        </p>
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt=""
+            className="mb-3 max-h-20 max-w-[70%] rounded-lg object-contain"
+            loading="eager"
+            decoding="async"
+          />
+        )}
+        <p className="max-h-28 overflow-hidden px-3 text-center text-xl font-semibold leading-relaxed">
+          {text}
+        </p>
+      </Card>
+    </div>
+  );
 }
 
 export const FlipStudyView = (props: FlipStudyViewProps) => {
@@ -206,19 +248,42 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
       <LazyFlipStudyView
         {...props}
         autoSpeakOnCardChange={autoSpeakOnCardChange && !mixedSlotMode}
-        doomScrollEnabled={doomScrollActive}
-        doomPreviousCard={doomPreviousCard ?? undefined}
-        doomNextCard={doomNextCard ?? undefined}
       />
     </Suspense>
   );
 
-  const deck = doomScrollActive ? flipView : (
+  const deck = doomScrollActive ? (
+    <FlipDoomScrollViewport
+      enabled
+      cardKey={cardKey}
+      current={flipView}
+      previous={(
+        <DoomAdjacentPreview
+          card={doomPreviousCard}
+          direction={props.direction}
+          labelA={props.labelA}
+          labelB={props.labelB}
+        />
+      )}
+      next={(
+        <DoomAdjacentPreview
+          card={doomNextCard}
+          direction={props.direction}
+          labelA={props.labelA}
+          labelB={props.labelB}
+        />
+      )}
+      canGoPrevious={props.canGoPrevious !== false}
+      canGoNext={props.canGoNext !== false && Boolean(props.onNext)}
+      onPrevious={props.onPrevious}
+      onNext={props.onNext}
+    />
+  ) : (
     <StudyCardDeck
       cardKey={cardKey}
       density={props.fastMode ? "regular" : "tall"}
-      // Dono único de swipe no Flip clássico. No Doom Scroll, a view assume
-      // apenas o gesto vertical e continua chamando os mesmos next/previous.
+      // Dono único de swipe no Flip clássico. O Doom Scroll preserva o motor
+      // e troca apenas a superfície de navegação no mobile.
       swipeNavigation={{
         onNext: props.onNext,
         onPrevious: props.onPrevious,
