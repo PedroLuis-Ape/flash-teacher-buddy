@@ -1,0 +1,1 @@
+The doom-scroll option is presentation-only. The Study engine remains the only queue/progress authority.
