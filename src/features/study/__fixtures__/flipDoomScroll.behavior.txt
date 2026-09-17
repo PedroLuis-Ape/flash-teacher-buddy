@@ -1,1 +1,0 @@
-Vertical drag follows the finger; threshold/flick commits; otherwise it snaps back. Previous/next previews are read-only.
