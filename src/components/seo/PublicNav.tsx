@@ -7,20 +7,35 @@ import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { PublicThemeToggle } from "@/components/seo/PublicThemeToggle";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { getEditorialFamilyRoutes, getEditorialHomePath, type EditorialLocale } from "@/content/public/editorialMaster";
 
-const NAV_LINKS = [
-  { to: "/", label: "Início" },
-  { to: "/ingles-para-iniciantes", label: "Iniciantes" },
-  { to: "/atividades-de-ingles", label: "Atividades" },
-  { to: "/flashcards-de-ingles", label: "Flashcards" },
-  { to: "/para-professores", label: "Professores" },
-  { to: "/pt-br/metodologia", label: "Metodologia" },
-  { to: "/portal", label: "Portal" },
-];
+const NAV_COPY: Record<EditorialLocale, { home: string; features: string; flashcards: string; teachers: string; methodology: string; portal: string; login: string; signup: string; menu: string }> = {
+  "pt-BR": { home: "Início", features: "Recursos", flashcards: "Flashcards", teachers: "Professores", methodology: "Metodologia", portal: "Portal", login: "Entrar", signup: "Começar agora", menu: "Abrir menu" },
+  en: { home: "Home", features: "Features", flashcards: "Flashcards", teachers: "Teachers", methodology: "Methodology", portal: "Portal", login: "Sign in", signup: "Get started", menu: "Open menu" },
+  es: { home: "Inicio", features: "Recursos", flashcards: "Flashcards", teachers: "Profesores", methodology: "Metodología", portal: "Portal", login: "Entrar", signup: "Empezar", menu: "Abrir menú" },
+  fr: { home: "Accueil", features: "Ressources", flashcards: "Flashcards", teachers: "Enseignants", methodology: "Méthodologie", portal: "Portail", login: "Se connecter", signup: "Commencer", menu: "Ouvrir le menu" },
+  it: { home: "Home", features: "Risorse", flashcards: "Flashcard", teachers: "Insegnanti", methodology: "Metodologia", portal: "Portale", login: "Accedi", signup: "Inizia ora", menu: "Apri menu" },
+  de: { home: "Startseite", features: "Funktionen", flashcards: "Lernkarten", teachers: "Lehrkräfte", methodology: "Methodik", portal: "Portal", login: "Anmelden", signup: "Jetzt starten", menu: "Menü öffnen" },
+};
 
-export function PublicNav({ compact = false }: { compact?: boolean }) {
+function getNavLinks(locale: EditorialLocale) {
+  const routes = getEditorialFamilyRoutes();
+  const copy = NAV_COPY[locale];
+  return [
+    { to: getEditorialHomePath(locale), label: copy.home },
+    { to: routes.features[locale], label: copy.features },
+    { to: routes.flashcards[locale], label: copy.flashcards },
+    { to: routes.teachers[locale], label: copy.teachers },
+    { to: routes.methodology[locale], label: copy.methodology },
+    { to: "/portal", label: copy.portal },
+  ];
+}
+
+export function PublicNav({ compact = false, locale = "pt-BR" }: { compact?: boolean; locale?: EditorialLocale }) {
   const [open, setOpen] = useState(false);
-  const links = compact ? NAV_LINKS.filter(link => ["/atividades-de-ingles", "/para-professores", "/portal"].includes(link.to)) : NAV_LINKS;
+  const copy = NAV_COPY[locale];
+  const navLinks = getNavLinks(locale);
+  const links = compact ? navLinks.filter(link => [navLinks[1].to, navLinks[3].to, "/portal"].includes(link.to)) : navLinks;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -50,15 +65,15 @@ export function PublicNav({ compact = false }: { compact?: boolean }) {
           <PublicThemeToggle />
 
           <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className={compact ? "inline-flex" : "hidden 2xl:inline-flex"}>
-            Entrar
+            {copy.login}
           </AuthAwareCTA>
           {!compact && <AuthAwareCTA guestMode="signup" size="sm" className="hidden 2xl:inline-flex">
-            Começar agora
+            {copy.signup}
           </AuthAwareCTA>}
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 xl:hidden" aria-label="Abrir menu">
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 xl:hidden" aria-label={copy.menu}>
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -76,10 +91,10 @@ export function PublicNav({ compact = false }: { compact?: boolean }) {
                 ))}
                 <div className="my-3 h-px bg-border" />
                 <AuthAwareCTA guestMode="login" variant="outline" onClick={() => setOpen(false)}>
-                  Entrar
+                  {copy.login}
                 </AuthAwareCTA>
                 <AuthAwareCTA guestMode="signup" onClick={() => setOpen(false)}>
-                  Começar agora
+                  {copy.signup}
                 </AuthAwareCTA>
               </nav>
             </SheetContent>
@@ -90,18 +105,24 @@ export function PublicNav({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function PublicFooter() {
+export function PublicFooter({ locale = "pt-BR" }: { locale?: EditorialLocale }) {
+  const copy = NAV_COPY[locale];
+  const routes = getEditorialFamilyRoutes();
+  const about = routes.about[locale];
+  const methodology = routes.methodology[locale];
+  const evidence = routes.evidence[locale];
+  const official = routes.official[locale];
   return (
     <footer className="mt-16 border-t border-border/50 py-8 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-6">
         <p>© {new Date().getFullYear()} APE — Apprentice Practice & Enhancement</p>
         <nav className="flex flex-wrap gap-4">
-          <Link to="/about" className="nav-link-animated hover:text-foreground">Sobre</Link>
-          <Link to="/pt-br/metodologia" className="nav-link-animated hover:text-foreground">Metodologia</Link>
-          <Link to="/pt-br/evidencias" className="nav-link-animated hover:text-foreground">Evidências</Link>
-          <Link to="/pt-br/fonte-oficial" className="nav-link-animated hover:text-foreground">Fonte oficial</Link>
-          <Link to="/portal" className="nav-link-animated hover:text-foreground">Portal</Link>
-          <Link to="/auth" className="nav-link-animated hover:text-foreground">Entrar</Link>
+          <Link to={about} className="nav-link-animated hover:text-foreground">{locale === "en" ? "About" : locale === "pt-BR" ? "Sobre" : "About"}</Link>
+          <Link to={methodology} className="nav-link-animated hover:text-foreground">{copy.methodology}</Link>
+          <Link to={evidence} className="nav-link-animated hover:text-foreground">{locale === "en" ? "Evidence" : locale === "pt-BR" ? "Evidências" : "Evidence"}</Link>
+          <Link to={official} className="nav-link-animated hover:text-foreground">{locale === "en" ? "Official source" : locale === "pt-BR" ? "Fonte oficial" : "Official source"}</Link>
+          <Link to="/portal" className="nav-link-animated hover:text-foreground">{copy.portal}</Link>
+          <Link to="/auth" className="nav-link-animated hover:text-foreground">{copy.login}</Link>
         </nav>
       </div>
     </footer>

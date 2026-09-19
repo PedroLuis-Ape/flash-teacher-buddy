@@ -1364,6 +1364,7 @@ export default function MixedStudy() {
               onFlowModeChange={handleFlowModeChange}
               gameMode="mixed"
               showDirection={isListRoute}
+              directionLabels={{ labelA: effectiveListSettings.labelA, labelB: effectiveListSettings.labelB }}
               onRestart={restartJourneyManually}
               showFastMode={false}
             />

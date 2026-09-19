@@ -11,6 +11,7 @@ import ptDocsB1Source from "../../../config/editorial/pt-docs-b1.json";
 import ptDocsB2Source from "../../../config/editorial/pt-docs-b2.json";
 import enASource from "../../../config/editorial/en-a.json";
 import enBSource from "../../../config/editorial/en-b.json";
+import internationalSource from "../../../config/editorial/international-locales.json";
 
 export interface EditorialLink {
   href: string;
@@ -60,7 +61,7 @@ export interface EditorialPageDefinition {
   description: string;
   h1: string;
   schema: string;
-  locale: "pt-BR" | "en";
+  locale: "pt-BR" | "en" | "es" | "fr" | "it" | "de";
   cta: {
     primary: string;
     secondary: string;
@@ -79,6 +80,39 @@ export interface EditorialPageDefinition {
     role: string;
   };
 }
+
+export type EditorialLocale = EditorialPageDefinition["locale"];
+
+export interface EditorialLocaleCopy {
+  home: string;
+  related: string;
+  explore: string;
+  section: string;
+  faq: string;
+  faqIntro: string;
+  published: string;
+  reviewed: string;
+  author: string;
+  verify: string;
+  language: string;
+  imageAlt: string;
+  homeLabel: string;
+  role: string;
+  jobTitle: string;
+  breadcrumb: string;
+}
+
+type InternationalSource = {
+  version: number;
+  datePublished: string;
+  dateModified: string;
+  locales: Record<Exclude<EditorialLocale, "pt-BR" | "en">, {
+    language: Exclude<EditorialLocale, "pt-BR" | "en">;
+    paths: Record<string, string>;
+    ui: EditorialLocaleCopy;
+    pages: Record<string, Omit<EditorialPageDefinition, "path" | "locale" | "relatedLinks" | "implementationNotes" | "highlights" | "datePublished" | "dateModified" | "author" | "landingDemo" | "references">>;
+  }>;
+};
 
 export interface EditorialMeta {
   version: string;
@@ -123,8 +157,34 @@ const groupedPages = [
   ...enBSource,
 ] as unknown as EditorialPageDefinition[];
 
+const localizedSource = internationalSource as unknown as InternationalSource;
+const localizedLocales = Object.keys(localizedSource.locales) as Array<Exclude<EditorialLocale, "pt-BR" | "en">>;
+
+const localizedPages = localizedLocales.flatMap((locale) => {
+  const source = localizedSource.locales[locale];
+  return Object.entries(source.pages).map(([key, page]) => ({
+    ...page,
+    path: source.paths[key],
+    locale,
+    intent: `Apresentar o APE em ${locale}.`,
+    cta: {
+      primary: locale === "de" ? "APE öffnen" : locale === "es" ? "Empezar a practicar" : locale === "fr" ? "Commencer à pratiquer" : "Inizia a praticare",
+      secondary: locale === "de" ? "Öffentliche Materialien" : locale === "es" ? "Materiales públicos" : locale === "fr" ? "Matériel public" : "Materiali pubblici",
+    },
+    relatedLinks: Object.entries(source.paths)
+      .filter(([relatedKey]) => relatedKey !== key)
+      .slice(0, 3)
+      .map(([relatedKey, href]) => ({ href, label: relatedKey })),
+    implementationNotes: ["Conteúdo editorial localizado a partir do registro internacional canônico."],
+    highlights: [],
+    datePublished: localizedSource.datePublished,
+    dateModified: localizedSource.dateModified,
+    author: { name: "Pedro Luis", role: source.ui.role },
+  })) as EditorialPageDefinition[];
+});
+
 export const editorialMeta = editorialMetaSource as EditorialMeta;
-export const editorialPages = [...individualPages, ...groupedPages] as EditorialPageDefinition[];
+export const editorialPages = [...individualPages, ...groupedPages, ...localizedPages] as EditorialPageDefinition[];
 
 const editorialPageMap = new Map(editorialPages.map((page) => [page.path, page]));
 
@@ -145,6 +205,30 @@ const pairedRoutes: Record<string, string> = {
   "/en/official-source": "/pt-br/fonte-oficial",
   "/en/methodology": "/pt-br/metodologia",
   "/en/evidence": "/pt-br/evidencias",
+};
+
+const localeFamilies: Record<string, Record<EditorialLocale, string>> = {
+  home: { "pt-BR": "/pt-br", en: "/en", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.home])) } as Record<EditorialLocale, string>,
+  features: { "pt-BR": "/pt-br/recursos", en: "/en/features", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.features])) } as Record<EditorialLocale, string>,
+  flashcards: { "pt-BR": "/pt-br/flashcards", en: "/en/flashcards", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.flashcards])) } as Record<EditorialLocale, string>,
+  teachers: { "pt-BR": "/pt-br/para-professores", en: "/en/for-teachers", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.teachers])) } as Record<EditorialLocale, string>,
+  about: { "pt-BR": "/pt-br/sobre", en: "/en/about", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.about])) } as Record<EditorialLocale, string>,
+  official: { "pt-BR": "/pt-br/fonte-oficial", en: "/en/official-source", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.official])) } as Record<EditorialLocale, string>,
+  methodology: { "pt-BR": "/pt-br/metodologia", en: "/en/methodology", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.methodology])) } as Record<EditorialLocale, string>,
+  evidence: { "pt-BR": "/pt-br/evidencias", en: "/en/evidence", ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].paths.evidence])) } as Record<EditorialLocale, string>,
+};
+
+const routeFamilyByPath = new Map(
+  Object.entries(localeFamilies).flatMap(([family, routes]) => Object.entries(routes).map(([locale, path]) => [path, { family, locale: locale as EditorialLocale }] as const)),
+);
+
+const familyLabels: Record<EditorialLocale, Record<string, string>> = {
+  "pt-BR": { home: "Página inicial", features: "Recursos do APE", flashcards: "Sistema de flashcards", teachers: "Para professores", about: "Sobre o projeto", official: "Fonte oficial", methodology: "Metodologia", evidence: "Evidências e limites" },
+  en: { home: "Home", features: "APE features", flashcards: "Flashcard system", teachers: "For teachers", about: "About the project", official: "Official source", methodology: "Methodology", evidence: "Evidence and limits" },
+  es: { home: "Inicio", features: "Recursos de APE", flashcards: "Sistema de flashcards", teachers: "Para profesores", about: "Sobre el proyecto", official: "Fuente oficial", methodology: "Metodología", evidence: "Evidencias y límites" },
+  fr: { home: "Accueil", features: "Fonctionnalités d’APE", flashcards: "Système de flashcards", teachers: "Pour enseignants", about: "À propos du projet", official: "Source officielle", methodology: "Méthodologie", evidence: "Preuves et limites" },
+  it: { home: "Home", features: "Funzioni di APE", flashcards: "Sistema di flashcard", teachers: "Per insegnanti", about: "Informazioni sul progetto", official: "Fonte ufficiale", methodology: "Metodologia", evidence: "Prove e limiti" },
+  de: { home: "Startseite", features: "APE-Funktionen", flashcards: "Lernkartensystem", teachers: "Für Lehrkräfte", about: "Über das Projekt", official: "Offizielle Quelle", methodology: "Methodik", evidence: "Belege und Grenzen" },
 };
 
 const routeLabels: Record<string, { pt: string; en: string }> = {
@@ -173,6 +257,16 @@ const routeLabels: Record<string, { pt: string; en: string }> = {
   "/en/evidence": { pt: "Evidências em inglês", en: "Evidence" },
 };
 
+const editorialLocaleCopies: Record<EditorialLocale, EditorialLocaleCopy> = {
+  "pt-BR": {
+    home: "Início", related: "Páginas relacionadas", explore: "Continue explorando", section: "Seção", faq: "Perguntas frequentes", faqIntro: "Respostas diretas baseadas no conteúdo visível e revisado desta página.", published: "Publicada em", reviewed: "última revisão", author: "Autoria e contexto profissional", verify: "Verificar na Preply", language: "English/Español/Français/Italiano/Deutsch", imageAlt: "Página editorial pública do APE", homeLabel: "APE em português", role: "Criador de APE — App Piteco", jobTitle: "Professor de inglês e criador do APE", breadcrumb: "Início",
+  },
+  en: {
+    home: "Home", related: "Related pages", explore: "Continue exploring", section: "Section", faq: "Frequently asked questions", faqIntro: "Direct answers based on the visible, reviewed content of this page.", published: "Published", reviewed: "last reviewed", author: "Authorship and professional context", verify: "Verify on Preply", language: "Português/Español/Français/Italiano/Deutsch", imageAlt: "APE editorial public page", homeLabel: "APE in English", role: "Creator of APE — App Piteco", jobTitle: "English tutor and creator of APE", breadcrumb: "Home",
+  },
+  ...Object.fromEntries(localizedLocales.map((locale) => [locale, localizedSource.locales[locale].ui])) as Record<Exclude<EditorialLocale, "pt-BR" | "en">, EditorialLocaleCopy>,
+};
+
 export function normalizeEditorialPath(pathname: string) {
   if (!pathname || pathname === "/landing") return "/";
   if (pathname.length > 1) return pathname.replace(/\/+$/, "");
@@ -193,25 +287,69 @@ export function getPairedEditorialRoute(pathname: string) {
   return pairedRoutes[normalizeEditorialPath(pathname)] ?? null;
 }
 
+export function getEditorialLocaleCopy(locale: EditorialLocale) {
+  return editorialLocaleCopies[locale];
+}
+
+export function getEditorialHomePath(locale: EditorialLocale) {
+  if (locale === "pt-BR") return "/pt-br";
+  if (locale === "en") return "/en";
+  return localizedSource.locales[locale].paths.home;
+}
+
+export function getEditorialAlternates(pathname: string) {
+  const normalized = normalizeEditorialPath(pathname);
+  const family = routeFamilyByPath.get(normalized);
+  if (!family) {
+    if (normalized !== "/") return [];
+    return [
+      { hrefLang: "pt-BR", href: "/" },
+      ...Object.entries(localeFamilies.home).filter(([locale]) => locale !== "pt-BR").map(([hrefLang, href]) => ({ hrefLang, href })),
+      { hrefLang: "x-default", href: "/" },
+    ];
+  }
+  return [
+    ...Object.entries(localeFamilies[family.family]).map(([locale, href]) => ({ hrefLang: locale, href })),
+    { hrefLang: "x-default", href: "/" },
+  ];
+}
+
+export function getEditorialLocaleSwitch(pathname: string) {
+  const normalized = normalizeEditorialPath(pathname);
+  const family = routeFamilyByPath.get(normalized);
+  if (!family) return getPairedEditorialRoute(normalized);
+  const currentIndex = Object.keys(localeFamilies[family.family]).indexOf(family.locale);
+  const locales = Object.keys(localeFamilies[family.family]);
+  const targetLocale = locales[(currentIndex + 1) % locales.length] as EditorialLocale;
+  return localeFamilies[family.family][targetLocale];
+}
+
+export function getEditorialFamilyRoutes() {
+  return localeFamilies;
+}
+
 export function getEditorialRouteLabel(href: string, locale: EditorialPageDefinition["locale"]) {
   if (/^https?:\/\//i.test(href)) {
-    if (href.includes("preply.com")) return locale === "en" ? "Pedro Luis on Preply" : "Pedro Luis na Preply";
-    if (href.includes("github.com")) return locale === "en" ? "APE source repository" : "Repositório público do APE";
+    if (href.includes("preply.com")) return locale === "en" ? "Pedro Luis on Preply" : locale === "pt-BR" ? "Pedro Luis na Preply" : "Pedro Luis on Preply";
+    if (href.includes("github.com")) return locale === "en" ? "APE source repository" : locale === "pt-BR" ? "Repositório público do APE" : "APE source repository";
     return href;
   }
 
   const label = routeLabels[href];
+  const family = routeFamilyByPath.get(href);
+  if (family) return familyLabels[locale][family.family];
   if (!label) return href;
-  return locale === "en" ? label.en : label.pt;
+  return locale === "en" ? label.en : locale === "pt-BR" ? label.pt : href;
 }
 
 export function getEditorialSecondaryHref(page: EditorialPageDefinition) {
   const text = page.cta.secondary.toLocaleLowerCase();
   if (text.includes("portal") || text.includes("materiais") || text.includes("materials")) return "/portal";
-  if (text.includes("evid") || text.includes("evidence")) return page.locale === "en" ? "/en/evidence" : "/pt-br/evidencias";
-  if (text.includes("metod") || text.includes("method")) return page.locale === "en" ? "/en/methodology" : "/pt-br/metodologia";
-  if (text.includes("fonte") || text.includes("official")) return page.locale === "en" ? "/en/official-source" : "/pt-br/fonte-oficial";
-  if (text.includes("recurso") || text.includes("feature")) return page.locale === "en" ? "/en/features" : "/pt-br/recursos";
+  const localeRoutes = page.locale === "pt-BR" ? null : page.locale === "en" ? null : localizedSource.locales[page.locale];
+  if (text.includes("evid") || text.includes("evidence")) return page.locale === "en" ? "/en/evidence" : page.locale === "pt-BR" ? "/pt-br/evidencias" : localeRoutes!.paths.evidence;
+  if (text.includes("metod") || text.includes("method")) return page.locale === "en" ? "/en/methodology" : page.locale === "pt-BR" ? "/pt-br/metodologia" : localeRoutes!.paths.methodology;
+  if (text.includes("fonte") || text.includes("official") || text.includes("offizi")) return page.locale === "en" ? "/en/official-source" : page.locale === "pt-BR" ? "/pt-br/fonte-oficial" : localeRoutes!.paths.official;
+  if (text.includes("recurso") || text.includes("feature") || text.includes("funktion") || text.includes("ressource") || text.includes("risorse")) return page.locale === "en" ? "/en/features" : page.locale === "pt-BR" ? "/pt-br/recursos" : localeRoutes!.paths.features;
   return page.relatedLinks.find((link) => link.href.startsWith("/"))?.href ?? "/portal";
 }
 

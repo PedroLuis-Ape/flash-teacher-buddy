@@ -25,6 +25,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
+import {
+  StudyDirectionSelector,
+} from "./StudyDirectionSelector";
+import { formatStudyDirection, type StudyDirectionLabels } from "@/features/study/lib/studyDirectionSelector";
 import type {
   StudyFlowModePreset,
   StudyPlayTargetPreset,
@@ -83,6 +87,8 @@ interface GameSettingsModalProps {
   gameMode: string;
   /** Sessão de lista privada — habilita a direção da prática. */
   showDirection?: boolean;
+  /** Labels semânticos do conteúdo atual, sem misturar locale da interface. */
+  directionLabels?: StudyDirectionLabels;
   onRestart: () => void;
   disabled?: boolean;
   showFastMode?: boolean;
@@ -96,6 +102,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   onFlowModeChange,
   gameMode,
   showDirection = false,
+  directionLabels,
   onRestart,
   disabled = false,
   showFastMode = false,
@@ -242,19 +249,23 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   // No Modo gamificado a direção efetiva é sempre automática: as rodadas
   // alternam os lados por card. A preferência base do usuário fica intocada.
   const directionLockedByFlow = isDirectionLockedByFlowMode(settings.studyFlowMode);
-  const promptLabel = currentDirection === "b-a" ? playRuntime.labelB : playRuntime.labelA;
-  const answerLabel = currentDirection === "b-a" ? playRuntime.labelA : playRuntime.labelB;
+  const semanticDirectionLabels: StudyDirectionLabels = directionLabels ?? {
+    labelA: playRuntime.labelA,
+    labelB: playRuntime.labelB,
+  };
+  const promptLabel = currentDirection === "b-a"
+    ? semanticDirectionLabels.labelB
+    : semanticDirectionLabels.labelA;
+  const answerLabel = currentDirection === "b-a"
+    ? semanticDirectionLabels.labelA
+    : semanticDirectionLabels.labelB;
   const derivedSidesHint = currentDirection === "any"
     ? "Os lados alternam por card."
     : `Pergunta em ${promptLabel} · resposta em ${answerLabel}.`;
 
-  const directionSummary = currentDirection === "a-b"
-    ? `Responder em ${playRuntime.labelB}`
-    : currentDirection === "b-a"
-      ? `Responder em ${playRuntime.labelA}`
-      : directionLockedByFlow
-        ? "Automática (modo gamificado)"
-        : "Misto (alternado)";
+  const directionSummary = formatStudyDirection(currentDirection, semanticDirectionLabels, {
+    locked: directionLockedByFlow,
+  });
   // Cada resumo mostra SOMENTE os valores da própria categoria: ordem não
   // repete filtros, formato não repete conteúdo, e quem fala de Foco Vermelho é
   // o conteúdo. O formato vem do snapshot efetivo (já com a restrição aplicada).
@@ -486,44 +497,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <p className="text-sm text-muted-foreground">
                   Escolha em qual lado você quer responder durante esta sessão.
                 </p>
-                {directionLockedByFlow && (
-                  <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
-                    Direção automática — o modo gamificado alterna os lados por card.
-                    Troque para o modo extenso para escolher um lado fixo.
-                  </p>
-                )}
-                <div className="grid grid-cols-1 gap-2">
-                  <Button
-                    type="button"
+                <div className="space-y-3">
+                  <StudyDirectionSelector
+                    variant="buttons"
+                    direction={currentDirection}
+                    labels={semanticDirectionLabels}
                     disabled={directionLockedByFlow}
-                    variant={currentDirection === "a-b" ? "default" : "outline"}
-                    aria-pressed={currentDirection === "a-b"}
-                    onClick={() => applyDirection("a-b")}
-                    className="min-h-[44px] justify-start"
-                  >
-                    <span className="truncate">Responder em {playRuntime.labelB}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={directionLockedByFlow}
-                    variant={currentDirection === "b-a" ? "default" : "outline"}
-                    aria-pressed={currentDirection === "b-a"}
-                    onClick={() => applyDirection("b-a")}
-                    className="min-h-[44px] justify-start"
-                  >
-                    <span className="truncate">Responder em {playRuntime.labelA}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={directionLockedByFlow}
-                    variant={currentDirection === "any" ? "default" : "outline"}
-                    aria-pressed={currentDirection === "any"}
-                    onClick={() => applyDirection("any")}
-                    className="min-h-[44px] justify-start"
-                  >
-                    <Shuffle className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">Misto (alternado)</span>
-                  </Button>
+                    lockedMessage={directionLockedByFlow
+                      ? "Direção automática no modo gamificado. Troque para o modo extenso para escolher um lado fixo."
+                      : undefined}
+                    onChange={applyDirection}
+                  />
                   <Button
                     type="button"
                     onClick={handleInvertDirection}

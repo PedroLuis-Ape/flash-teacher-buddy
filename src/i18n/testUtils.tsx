@@ -58,4 +58,4 @@ export function wrapWithI18n(element: ReactElement): ReactElement {
   return <I18nextProvider i18n={i18n}>{element}</I18nextProvider>;
 }
 
-export const TESTED_LOCALES: readonly AppLocale[] = ['pt-BR', 'en', 'es', 'fr', 'it'];
+export const TESTED_LOCALES: readonly AppLocale[] = ['pt-BR', 'en', 'es', 'fr', 'it', 'de'];

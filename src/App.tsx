@@ -172,6 +172,38 @@ const App = () => {
                           <Route path="/en/official-source" element={<OfficialSourcePage />} />
                           <Route path="/en/methodology" element={<MethodologyEvidencePage />} />
                           <Route path="/en/evidence" element={<MethodologyEvidencePage />} />
+                          <Route path="/es" element={<InternationalSEOPage />} />
+                          <Route path="/es/recursos" element={<InternationalSEOPage />} />
+                          <Route path="/es/flashcards" element={<InternationalSEOPage />} />
+                          <Route path="/es/para-profesores" element={<InternationalSEOPage />} />
+                          <Route path="/es/sobre" element={<InternationalSEOPage />} />
+                          <Route path="/es/fuente-oficial" element={<OfficialSourcePage />} />
+                          <Route path="/es/metodologia" element={<MethodologyEvidencePage />} />
+                          <Route path="/es/evidencias" element={<MethodologyEvidencePage />} />
+                          <Route path="/fr" element={<InternationalSEOPage />} />
+                          <Route path="/fr/ressources" element={<InternationalSEOPage />} />
+                          <Route path="/fr/flashcards" element={<InternationalSEOPage />} />
+                          <Route path="/fr/pour-enseignants" element={<InternationalSEOPage />} />
+                          <Route path="/fr/a-propos" element={<InternationalSEOPage />} />
+                          <Route path="/fr/source-officielle" element={<OfficialSourcePage />} />
+                          <Route path="/fr/methodologie" element={<MethodologyEvidencePage />} />
+                          <Route path="/fr/preuves" element={<MethodologyEvidencePage />} />
+                          <Route path="/it" element={<InternationalSEOPage />} />
+                          <Route path="/it/risorse" element={<InternationalSEOPage />} />
+                          <Route path="/it/flashcards" element={<InternationalSEOPage />} />
+                          <Route path="/it/per-insegnanti" element={<InternationalSEOPage />} />
+                          <Route path="/it/informazioni" element={<InternationalSEOPage />} />
+                          <Route path="/it/fonte-ufficiale" element={<OfficialSourcePage />} />
+                          <Route path="/it/metodologia" element={<MethodologyEvidencePage />} />
+                          <Route path="/it/evidenze" element={<MethodologyEvidencePage />} />
+                          <Route path="/de" element={<InternationalSEOPage />} />
+                          <Route path="/de/funktionen" element={<InternationalSEOPage />} />
+                          <Route path="/de/lernkartei" element={<InternationalSEOPage />} />
+                          <Route path="/de/fuer-lehrkraefte" element={<InternationalSEOPage />} />
+                          <Route path="/de/ueber-ape" element={<InternationalSEOPage />} />
+                          <Route path="/de/offizielle-quelle" element={<OfficialSourcePage />} />
+                          <Route path="/de/methodik" element={<MethodologyEvidencePage />} />
+                          <Route path="/de/evidenz" element={<MethodologyEvidencePage />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/auth/callback" element={<AuthCallback />} />
                           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />

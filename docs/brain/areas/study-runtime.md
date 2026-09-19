@@ -49,6 +49,40 @@ Relatório de auditoria versionado:
 - Migration `20260915190000_write_rewrite_prompt_mode.sql` (aditiva, default
   'visible') aplicada em `ymahldldyxvwjeruaxpr`.
 
+### Direção semântica compartilhada (2026-09-19)
+
+- `StudyDirectionSelector` é a superfície comum para GamesHub, configurações
+  da sessão, Study e MixedStudy; a lista de opções e o resumo são derivados de
+  `studyDirectionSelector.ts`, não de textos A/B duplicados em cada tela.
+- Os rótulos exibidos vêm de `labelsA`/`labelsB` do conteúdo estudado. Locale da
+  interface, idioma do conteúdo e locale do TTS continuam sendo dimensões
+  separadas.
+- `a-b`, `b-a` e `any` permanecem o contrato interno. Em `mastery_rounds`, a
+  direção efetiva é automática e a preferência base não é sobrescrita.
+- O contrato regressivo está em
+  `src/features/study/components/studyDirectionSelector.contract.test.ts`.
+
+### Cobertura internacional — estado final da camada editorial (2026-09-19)
+
+- O registry de Study/TTS já cobre `de`, `ja`, `zh` e `ko`, incluindo BCP-47,
+  labels e fallback por idioma-base; isso não equivale a interface traduzida.
+- A interface agora possui seis catálogos (`pt-BR`, `en`, `es`, `fr`, `it`,
+  `de`), com o registro alemão cobrindo as 595 chaves base e aliases `de`/
+  `de-DE`.
+- `config/editorial/international-locales.json` é a fonte editorial localizada
+  de ES/FR/IT/DE. Ela alimenta o master editorial React, a navegação pública,
+  JSON-LD, o prerender e os validadores; não criar uma segunda tabela de cópia.
+- As oito famílias editoriais têm 32 novas rotas localizadas, além das rotas
+  PT/EN existentes. Cada família emite os seis alternates BCP-47 mais
+  `x-default` para `/`, com canonical próprio e reciprocidade validada.
+- O build chama `scripts/prerender-international-pages.mjs`; o script também
+  inclui metodologia/evidências e aceita `PITECO_DIST_DIR` para validação
+  isolada. O contrato foi validado com 48 HTMLs prerenderizados e 48 páginas
+  internacionais no verificador. O sitemap e `_redirects` incluem as 32 novas
+  rotas.
+- O catálogo de Study/TTS continua cobrindo `de`, `ja`, `zh` e `ko`; Tier 2
+  permanece Study/TTS/importação sem páginas SEO até haver conteúdo editorial.
+
 ## Compatibilidade de sessões antigas (P0 desta rodada)
 
 A chave v1 era o JSON do envelope inteiro e embutia o par físico do Play, que

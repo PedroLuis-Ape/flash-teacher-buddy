@@ -48,13 +48,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { FlipStudyView } from "@/features/study/components/FlipStudyView";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -63,6 +56,7 @@ import { PronunciationStudyView } from "@/features/study/components/Pronunciatio
 import { DetailedExplanationPanel } from "@/features/study/components/DetailedExplanationPanel";
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
+import { StudyDirectionSelector } from "@/features/study/components/StudyDirectionSelector";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
 import { awaitSaveProgress, describeSaveProgressResult } from "@/features/study/lib/saveProgressResult";
@@ -75,6 +69,7 @@ import {
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
 import {
+  isDirectionLockedByFlowMode,
   resolveEffectiveStudyDirection,
   type StudySettingsPatchV3,
   type StudySettingsSnapshotV3,
@@ -2484,6 +2479,7 @@ const Study = () => {
                     onFlowModeChange={handleFlowModeChange}
                     gameMode={normalizedMode}
                     showDirection={isListRoute}
+                    directionLabels={{ labelA: effectiveStudySettings.labelsA, labelB: effectiveStudySettings.labelsB }}
                     onRestart={handleRestartWithSettings}
                     showFastMode={effectiveMode === "flip"}
                     onEditCurrentCard={
@@ -2539,6 +2535,7 @@ const Study = () => {
                 onFlowModeChange={handleFlowModeChange}
                 gameMode={normalizedMode}
                 showDirection={isListRoute}
+                directionLabels={{ labelA: effectiveStudySettings.labelsA, labelB: effectiveStudySettings.labelsB }}
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
@@ -2556,16 +2553,14 @@ const Study = () => {
               
               {/* Direction selector for flip mode — uses dynamic labels */}
               {effectiveMode === "flip" && (
-                <Select value={flipDirection} onValueChange={handleDirectionChange}>
-                  <SelectTrigger className="w-[110px] sm:w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="a-b">{effectiveStudySettings.labelsA} → {effectiveStudySettings.labelsB}</SelectItem>
-                    <SelectItem value="b-a">{effectiveStudySettings.labelsB} → {effectiveStudySettings.labelsA}</SelectItem>
-                    <SelectItem value="any">Misto</SelectItem>
-                  </SelectContent>
-                </Select>
+                <StudyDirectionSelector
+                  direction={flipDirection}
+                  labels={{ labelA: effectiveStudySettings.labelsA, labelB: effectiveStudySettings.labelsB }}
+                  disabled={isDirectionLockedByFlowMode(studySettings.studyFlowMode)}
+                  className="w-[110px] sm:w-[140px]"
+                  label=""
+                  onChange={handleDirectionChange}
+                />
               )}
               
               {/* Video button */}

@@ -25,9 +25,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   editorialMeta,
+  getEditorialAlternates,
+  getEditorialLocaleCopy,
+  getEditorialLocaleSwitch,
   getEditorialRouteLabel,
   getEditorialSecondaryHref,
-  getPairedEditorialRoute,
   requireEditorialPage,
   splitEditorialHighlight,
   type EditorialPageDefinition,
@@ -47,7 +49,8 @@ interface EditorialContentProps {
 
 function formatDate(value: string, locale: EditorialPageDefinition["locale"]) {
   const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "pt-BR", {
+  const intlLocale = { "pt-BR": "pt-BR", en: "en-US", es: "es-ES", fr: "fr-FR", it: "it-IT", de: "de-DE" }[locale];
+  return new Intl.DateTimeFormat(intlLocale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -72,8 +75,8 @@ function linkElement(
 }
 
 function EditorialAuthorCard({ page }: { page: EditorialPageDefinition }) {
-  const english = page.locale === "en";
-  const lessonClaim = english
+  const copy = getEditorialLocaleCopy(page.locale);
+  const lessonClaim = page.locale === "en"
     ? "more than 1,900 lessons taught"
     : editorialMeta.preply.stableLessonClaim;
 
@@ -86,25 +89,25 @@ function EditorialAuthorCard({ page }: { page: EditorialPageDefinition }) {
           </div>
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wider text-foreground">
-              {english ? "Authorship and professional context" : "Autoria e contexto profissional"}
+              {copy.author}
             </p>
             <h2 className="mt-1 text-xl font-black">{page.author.name}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{page.author.role}</p>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">
-              {english
+              {page.locale === "en"
                 ? `Pedro Luis is a Brazilian English tutor and the creator of APE. His public Preply profile documents ${lessonClaim} and a verified teaching certificate. These credentials describe the creator, not a scientific rating of the software.`
                 : `Pedro Luis é professor brasileiro de inglês e criador do APE. Seu perfil público na Preply registra ${lessonClaim} e certificado de ensino verificado. Essas credenciais descrevem o criador, não uma avaliação científica do software.`}
             </p>
             <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
-              {english ? "Page reviewed" : "Página revisada em"} {formatDate(page.dateModified, page.locale)}.
+              {copy.reviewed} {formatDate(page.dateModified, page.locale)}.
             </p>
           </div>
         </div>
         <Button asChild variant="outline" className="shrink-0">
           <a href={editorialMeta.preply.url} target="_blank" rel="noreferrer">
             <BadgeCheck className="mr-2 h-4 w-4" />
-            {english ? "Verify on Preply" : "Verificar na Preply"}
+            {copy.verify}
             <ExternalLink className="ml-2 h-3.5 w-3.5" />
           </a>
         </Button>
@@ -164,7 +167,7 @@ function EditorialSections({ page }: { page: EditorialPageDefinition }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                    {page.locale === "en" ? `Section ${sectionIndex + 1}` : `Seção ${sectionIndex + 1}`}
+                    {getEditorialLocaleCopy(page.locale).section} {sectionIndex + 1}
                   </p>
                   <h2 className="mt-1 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
                     {section.heading}
@@ -202,7 +205,7 @@ function EditorialSections({ page }: { page: EditorialPageDefinition }) {
 
 function EditorialFaq({ page }: { page: EditorialPageDefinition }) {
   if (page.faq.length === 0) return null;
-  const english = page.locale === "en";
+  const copy = getEditorialLocaleCopy(page.locale);
 
   return (
     <section className="border-y border-border/60 bg-muted/15 py-12 sm:py-16" aria-labelledby={`faq-${page.path}`}>
@@ -210,12 +213,10 @@ function EditorialFaq({ page }: { page: EditorialPageDefinition }) {
         <div className="mx-auto mb-7 max-w-3xl text-center">
           <p className="text-xs font-extrabold uppercase tracking-wider text-primary">FAQ</p>
           <h2 id={`faq-${page.path}`} className="mt-2 text-3xl font-black tracking-tight">
-            {english ? "Frequently asked questions" : "Perguntas frequentes"}
+            {copy.faq}
           </h2>
           <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
-            {english
-              ? "Direct answers based on the visible, reviewed content of this page."
-              : "Respostas diretas baseadas no conteúdo visível e revisado desta página."}
+            {copy.faqIntro}
           </p>
         </div>
         <div className="space-y-3">
@@ -278,17 +279,15 @@ function EditorialReferences({ page }: { page: EditorialPageDefinition }) {
 
 function EditorialRelatedLinks({ page }: { page: EditorialPageDefinition }) {
   if (page.relatedLinks.length === 0) return null;
-  const english = page.locale === "en";
+  const copy = getEditorialLocaleCopy(page.locale);
 
   return (
-    <nav className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6" aria-label={english ? "Related pages" : "Páginas relacionadas"}>
+    <nav className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6" aria-label={copy.related}>
       <Card>
         <CardContent className="p-5 sm:p-7">
-          <h2 className="text-2xl font-black">{english ? "Continue exploring" : "Continue explorando"}</h2>
+          <h2 className="text-2xl font-black">{copy.explore}</h2>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            {english
-              ? "These pages deepen the product, methodology and public-content information."
-              : "Estas páginas aprofundam informações sobre o produto, a metodologia e o conteúdo público."}
+            {copy.faqIntro}
           </p>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {page.relatedLinks.map((link) => (
@@ -296,7 +295,7 @@ function EditorialRelatedLinks({ page }: { page: EditorialPageDefinition }) {
                 {linkElement(
                   link.href,
                   <>
-                    <span>{getEditorialRouteLabel(link.href, page.locale)}</span>
+                    <span>{getEditorialRouteLabel(link.href, page.locale) === link.href ? link.label : getEditorialRouteLabel(link.href, page.locale)}</span>
                     {/^(https?:)?\/\//i.test(link.href)
                       ? <ExternalLink className="h-4 w-4 shrink-0" />
                       : <ArrowRight className="h-4 w-4 shrink-0" />}
@@ -335,23 +334,11 @@ export function EditorialContent({ page, compact = false, includeAuthor = true }
 
 export function EditorialPage({ path, afterHero, includeLandingStickyCta = false }: EditorialPageProps) {
   const page = requireEditorialPage(path);
-  const english = page.locale === "en";
-  const pairedRoute = getPairedEditorialRoute(page.path);
+  const copy = getEditorialLocaleCopy(page.locale);
+  const languageSwitchRoute = getEditorialLocaleSwitch(page.path);
   const secondaryHref = getEditorialSecondaryHref(page);
   const structuredData = buildEditorialStructuredData(page);
-  const alternates = pairedRoute
-    ? [
-        { hrefLang: page.locale, href: page.path },
-        { hrefLang: english ? "pt-BR" : "en", href: pairedRoute },
-        { hrefLang: "x-default", href: page.path === "/" ? "/" : english ? pairedRoute : page.path },
-      ]
-    : page.path === "/"
-      ? [
-          { hrefLang: "pt-BR", href: "/" },
-          { hrefLang: "en", href: "/en" },
-          { hrefLang: "x-default", href: "/" },
-        ]
-      : [];
+  const alternates = getEditorialAlternates(page.path);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -361,12 +348,12 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
         path={page.path}
         canonicalPath={page.path}
         language={page.locale}
-        imageAlt={english ? "APE editorial public page" : "Página editorial pública do APE"}
+        imageAlt={copy.imageAlt}
         alternates={alternates}
         jsonLd={structuredData}
         ogType={page.schema.includes("Article") ? "article" : "website"}
       />
-      <PublicNav compact={page.path === "/"} />
+      <PublicNav compact={page.path === "/"} locale={page.locale} />
       {page.path !== "/" && <PublicBackBar />}
 
       <main>
@@ -409,17 +396,17 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
                 <Button asChild size="lg" variant="outline" className="min-h-12 px-6 text-base font-bold">
                   <Link to={secondaryHref}>{page.cta.secondary}</Link>
                 </Button>
-                {pairedRoute && (
+                {languageSwitchRoute && (
                   <Button asChild size="lg" variant="ghost" className="min-h-12 px-5">
-                    <Link to={pairedRoute}>
+                    <Link to={languageSwitchRoute}>
                       <Languages className="mr-2 h-4 w-4" />
-                      {english ? "Português" : "English"}
+                      {copy.language}
                     </Link>
                   </Button>
                 )}
               </div>
               <p className="mt-5 text-xs leading-6 text-muted-foreground">
-                {english ? "Published" : "Publicada em"} {formatDate(page.datePublished, page.locale)} · {english ? "last reviewed" : "última revisão"} {formatDate(page.dateModified, page.locale)}
+                {copy.published} {formatDate(page.datePublished, page.locale)} · {copy.reviewed} {formatDate(page.dateModified, page.locale)}
               </p>
             </div>
           </div>
@@ -430,7 +417,7 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
         </>}
       </main>
 
-      <PublicFooter />
+      <PublicFooter locale={page.locale} />
       {includeLandingStickyCta && page.path !== "/" && <LandingStickyCTA />}
     </div>
   );

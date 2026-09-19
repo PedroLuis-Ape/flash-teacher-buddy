@@ -1,5 +1,8 @@
 import {
   editorialMeta,
+  getEditorialAlternates,
+  getEditorialHomePath,
+  getEditorialLocaleCopy,
   getPairedEditorialRoute,
   type EditorialPageDefinition,
 } from "@/content/public/editorialMaster";
@@ -28,22 +31,25 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
   const faqId = `${canonical}#faq`;
   const articleId = `${canonical}#article`;
   const resourceId = `${canonical}#learning-resource`;
-  const english = page.locale === "en";
+  const copy = getEditorialLocaleCopy(page.locale);
   const pairedRoute = getPairedEditorialRoute(page.path);
+  const localeAlternates = getEditorialAlternates(page.path);
+  const translatedRoute = localeAlternates.find((alternate) => alternate.hrefLang !== page.locale && alternate.hrefLang !== "x-default")?.href ?? pairedRoute;
+  const supportedLanguages = ["pt-BR", "en", "es", "fr", "it", "de"];
 
   const graph: Record<string, unknown>[] = [
     {
       "@type": "Person",
       "@id": PERSON_ID,
       name: "Pedro Luis",
-      jobTitle: english ? "English tutor and creator of APE" : "Professor de inglês e criador do APE",
-      url: absolute(english ? "/en/about" : "/about"),
+      jobTitle: copy.jobTitle,
+      url: absolute(getEditorialHomePath(page.locale)),
       sameAs: [
         editorialMeta.preply.url,
         "https://github.com/PedroLuis-Ape",
         "https://github.com/PedroLuis-Ape/flash-teacher-buddy",
       ],
-      knowsLanguage: ["pt-BR", "en"],
+      knowsLanguage: supportedLanguages,
     },
     {
       "@type": "Organization",
@@ -60,7 +66,7 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
       name: "APE — Apprentice Practice & Enhancement",
       alternateName: "App Piteco",
       url: `${SITE_URL}/`,
-      inLanguage: ["pt-BR", "en"],
+      inLanguage: supportedLanguages,
       publisher: { "@id": ORGANIZATION_ID },
     },
     {
@@ -71,12 +77,10 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
       url: `${SITE_URL}/`,
       applicationCategory: "EducationalApplication",
       operatingSystem: "Web",
-      inLanguage: ["pt-BR", "en"],
+      inLanguage: supportedLanguages,
       creator: { "@id": PERSON_ID },
       publisher: { "@id": ORGANIZATION_ID },
-      description: english
-        ? "A Brazilian web-based educational platform for organizing content and reusing it across active-practice activities."
-        : "Plataforma educacional web brasileira para organizar conteúdo e reutilizá-lo em diferentes atividades de prática ativa.",
+      description: page.description,
     },
   ];
 
@@ -97,9 +101,9 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
       author: { "@id": PERSON_ID },
       publisher: { "@id": ORGANIZATION_ID },
       about: [
-        { "@type": "Thing", name: english ? "Retrieval practice" : "Prática de recuperação" },
-        { "@type": "Thing", name: english ? "Distributed practice" : "Prática distribuída" },
-        { "@type": "Thing", name: english ? "Learning transfer" : "Transferência de aprendizagem" },
+        { "@type": "Thing", name: page.locale === "pt-BR" ? "Prática de recuperação" : "Retrieval practice" },
+        { "@type": "Thing", name: page.locale === "pt-BR" ? "Prática distribuída" : "Distributed practice" },
+        { "@type": "Thing", name: page.locale === "pt-BR" ? "Transferência de aprendizagem" : "Learning transfer" },
         { "@id": APPLICATION_ID },
       ],
       citation: (page.references ?? []).map((reference) => ({
@@ -129,7 +133,7 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
       provider: { "@id": ORGANIZATION_ID },
       author: { "@id": PERSON_ID },
       mainEntityOfPage: { "@id": pageId },
-      learningResourceType: english ? "Interactive learning resource" : "Recurso interativo de aprendizagem",
+      learningResourceType: page.locale === "pt-BR" ? "Recurso interativo de aprendizagem" : "Interactive learning resource",
     });
     mainEntity.push({ "@id": resourceId });
   }
@@ -155,8 +159,8 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
         {
           "@type": "ListItem",
           position: 1,
-          name: english ? "Home" : "Início",
-          item: absolute(english ? "/en" : "/"),
+          name: copy.breadcrumb,
+          item: absolute(getEditorialHomePath(page.locale)),
         },
         {
           "@type": "ListItem",
@@ -184,11 +188,11 @@ export function buildEditorialStructuredData(page: EditorialPageDefinition) {
     publisher: { "@id": ORGANIZATION_ID },
     ...(page.path !== "/" ? { breadcrumb: { "@id": `${canonical}#breadcrumb` } } : {}),
     ...(mainEntity.length > 0 ? { mainEntity } : { mainEntity: { "@id": APPLICATION_ID } }),
-    ...(pairedRoute
+    ...(translatedRoute
       ? {
           translationOfWork: {
             "@type": "WebPage",
-            "@id": `${absolute(pairedRoute)}#webpage`,
+            "@id": `${absolute(translatedRoute)}#webpage`,
           },
         }
       : {}),

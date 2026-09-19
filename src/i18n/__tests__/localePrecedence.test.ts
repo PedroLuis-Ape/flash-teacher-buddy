@@ -13,7 +13,7 @@ import {
 
 describe('identidade canônica dos idiomas', () => {
   it('expõe exatamente os idiomas suportados', () => {
-    expect([...APP_LOCALE_CODES]).toEqual(['pt-BR', 'en', 'es', 'fr', 'it']);
+    expect([...APP_LOCALE_CODES]).toEqual(['pt-BR', 'en', 'es', 'fr', 'it', 'de']);
   });
 
   it('normaliza códigos legados e variantes regionais', () => {
@@ -23,11 +23,12 @@ describe('identidade canônica dos idiomas', () => {
     expect(normalizeAppLocale('es-MX')).toBe('es');
     expect(normalizeAppLocale('fr-CA')).toBe('fr');
     expect(normalizeAppLocale('it-IT')).toBe('it');
-    expect(normalizeAppLocale('de')).toBeNull();
+    expect(normalizeAppLocale('de')).toBe('de');
+    expect(normalizeAppLocale('de-DE')).toBe('de');
   });
 
   it('cai para pt-BR quando o idioma não é suportado', () => {
-    expect(resolveAppLocale('de')).toBe('pt-BR');
+    expect(resolveAppLocale('de')).toBe('de');
     expect(resolveAppLocale(undefined)).toBe('pt-BR');
   });
 
@@ -37,6 +38,7 @@ describe('identidade canônica dos idiomas', () => {
     expect(getIntlLocale('es')).toBe('es-ES');
     expect(getIntlLocale('fr')).toBe('fr-FR');
     expect(getIntlLocale('it')).toBe('it-IT');
+    expect(getIntlLocale('de')).toBe('de-DE');
   });
 });
 
@@ -60,7 +62,7 @@ describe('precedência de locale', () => {
   });
 
   it('detecta o primeiro idioma compatível do navegador', () => {
-    expect(detectBrowserLocale(['de-DE', 'nl', 'fr-FR'])).toBe('fr');
+    expect(detectBrowserLocale(['de-DE', 'nl', 'fr-FR'])).toBe('de');
     expect(detectBrowserLocale(['ja'])).toBeNull();
   });
 });

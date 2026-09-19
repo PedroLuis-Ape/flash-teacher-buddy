@@ -6,7 +6,7 @@
  * independente e nunca devem ser derivados destes valores.
  */
 
-export type AppLocale = 'pt-BR' | 'en' | 'es' | 'fr' | 'it';
+export type AppLocale = 'pt-BR' | 'en' | 'es' | 'fr' | 'it' | 'de';
 
 export interface AppLocaleDefinition {
   /** Código canônico usado em i18next, <html lang> e persistência. */
@@ -27,6 +27,7 @@ export const APP_LOCALES: readonly AppLocaleDefinition[] = [
   { code: 'es', nativeName: 'Español', intlLocale: 'es-ES', flag: '🇪🇸' },
   { code: 'fr', nativeName: 'Français', intlLocale: 'fr-FR', flag: '🇫🇷' },
   { code: 'it', nativeName: 'Italiano', intlLocale: 'it-IT', flag: '🇮🇹' },
+  { code: 'de', nativeName: 'Deutsch', intlLocale: 'de-DE', flag: '🇩🇪' },
 ] as const;
 
 export const APP_LOCALE_CODES: readonly AppLocale[] = APP_LOCALES.map((locale) => locale.code);
@@ -49,6 +50,8 @@ const LEGACY_ALIASES: Record<string, AppLocale> = {
   'fr-ca': 'fr',
   it: 'it',
   'it-it': 'it',
+  de: 'de',
+  'de-de': 'de',
 };
 
 export function isAppLocale(value: unknown): value is AppLocale {
