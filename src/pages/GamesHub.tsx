@@ -6,6 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection } from "@/features/study/lib/gameCore";
+import {
+  isDirectionLockedByFlowMode,
+  resolveEffectiveStudyDirection,
+} from "@/features/study/lib/studySettingsSnapshotV3";
+import { StudyDirectionSelector } from "@/features/study/components/StudyDirectionSelector";
 import { Button } from "@/components/ui/button";
 import { GameCardMotion } from "@/components/ape/GameCardMotion";
 import {
@@ -134,6 +139,12 @@ const GamesHub = () => {
     return gameOptions.find((option) => normalizeStudyMode(option.mode) === configuredMode)?.title
       ?? "Virar Cartas";
   }, [configuredMode]);
+
+  const directionLockedByFlow = isDirectionLockedByFlowMode(effectivePreset.studyFlowMode);
+  const effectiveDirection = resolveEffectiveStudyDirection(
+    effectivePreset.direction,
+    effectivePreset.studyFlowMode,
+  );
 
   const handleConfiguredModeChange = (value: string) => {
     const next = normalizeStudyMode(value);
@@ -367,20 +378,15 @@ const GamesHub = () => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium">Direção</label>
-                <Select
-                  value={effectivePreset.direction}
-                  onValueChange={(value) => updateForCurrentScope({ direction: normalizeDirection(value) })}
-                >
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
-                    <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
-                    <SelectItem value="any">Alternar lados</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <StudyDirectionSelector
+                direction={effectiveDirection}
+                labels={listLabels}
+                disabled={directionLockedByFlow}
+                lockedMessage={directionLockedByFlow
+                  ? "Direção automática no modo gamificado. Troque para o modo extenso para escolher um lado fixo."
+                  : undefined}
+                onChange={(direction) => updateForCurrentScope({ direction: normalizeDirection(direction) })}
+              />
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium">Ordem dos cards</label>

@@ -49,6 +49,30 @@ Relatório de auditoria versionado:
 - Migration `20260915190000_write_rewrite_prompt_mode.sql` (aditiva, default
   'visible') aplicada em `ymahldldyxvwjeruaxpr`.
 
+### Direção semântica compartilhada (2026-09-19)
+
+- `StudyDirectionSelector` é a superfície comum para GamesHub, configurações
+  da sessão, Study e MixedStudy; a lista de opções e o resumo são derivados de
+  `studyDirectionSelector.ts`, não de textos A/B duplicados em cada tela.
+- Os rótulos exibidos vêm de `labelsA`/`labelsB` do conteúdo estudado. Locale da
+  interface, idioma do conteúdo e locale do TTS continuam sendo dimensões
+  separadas.
+- `a-b`, `b-a` e `any` permanecem o contrato interno. Em `mastery_rounds`, a
+  direção efetiva é automática e a preferência base não é sobrescrita.
+- O contrato regressivo está em
+  `src/features/study/components/studyDirectionSelector.contract.test.ts`.
+
+### Cobertura internacional — limite auditado (2026-09-19)
+
+- O registry de Study/TTS já cobre `de`, `ja`, `zh` e `ko`, incluindo BCP-47,
+  labels e fallback por idioma-base; isso não equivale a interface traduzida.
+- A interface permanece com cinco catálogos (`pt-BR`, `en`, `es`, `fr`, `it`),
+  e o SEO editorial/prerender versionado permanece PT/EN. Não criar catálogo
+  alemão falso nem hreflang para páginas que ainda não existem.
+- A expansão Tier 1 completa (catálogo DE + conteúdo editorial localizado +
+  rotas/canonical/hreflang/sitemap/prerender) permanece uma etapa própria,
+  dependente de traduções editoriais revisadas.
+
 ## Compatibilidade de sessões antigas (P0 desta rodada)
 
 A chave v1 era o JSON do envelope inteiro e embutia o par físico do Play, que
