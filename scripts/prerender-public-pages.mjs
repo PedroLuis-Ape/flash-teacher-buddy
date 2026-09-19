@@ -37,7 +37,11 @@ if (!existsSync(templatePath)) {
   process.exit(1);
 }
 
-const template = readFileSync(templatePath, "utf8");
+const pristineTemplatePath = resolve(distDir, ".prerender-template.html");
+const template = readFileSync(existsSync(pristineTemplatePath) ? pristineTemplatePath : templatePath, "utf8");
+// Preserva o template original: este script sobrescreve dist/index.html com a home renderizada,
+// e os prerenders seguintes ainda precisam do <div id="root"></div> vazio.
+if (!existsSync(pristineTemplatePath)) writeFileSync(pristineTemplatePath, template, "utf8");
 
 function escapeHtml(value) {
   return String(value)
@@ -272,13 +276,35 @@ function buildSchema(page) {
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
+const localizedLocales = JSON.parse(readFileSync(resolve(root, "config/editorial/international-locales.json"), "utf8")).locales;
+const familyKeyByPath = {
+  "/pt-br": "home", "/en": "home",
+  "/pt-br/recursos": "features", "/en/features": "features",
+  "/pt-br/flashcards": "flashcards", "/en/flashcards": "flashcards",
+  "/pt-br/para-professores": "teachers", "/en/for-teachers": "teachers",
+  "/pt-br/sobre": "about", "/en/about": "about",
+  "/pt-br/fonte-oficial": "official", "/en/official-source": "official",
+  "/pt-br/metodologia": "methodology", "/en/methodology": "methodology",
+  "/pt-br/evidencias": "evidence", "/en/evidence": "evidence",
+};
+
+function localizedAlternates(path) {
+  const family = familyKeyByPath[path];
+  if (!family) return [];
+  return Object.entries(localizedLocales)
+    .map(([locale, source]) => [locale, source.paths[family]])
+    .filter(([, href]) => Boolean(href));
+}
+
 function alternateLinks(page) {
   const pair = pairedRoutes[page.path];
   const entries = [];
   if (page.path === "/") {
     entries.push(["pt-BR", "/"], ["en", "/en"], ["x-default", "/"]);
   } else if (pair) {
-    entries.push([page.locale, page.path], [page.locale === "en" ? "pt-BR" : "en", pair], ["x-default", page.locale === "en" ? pair : page.path]);
+    const ptPath = page.locale === "en" ? pair : page.path;
+    const enPath = page.locale === "en" ? page.path : pair;
+    entries.push(["pt-BR", ptPath], ["en", enPath], ...localizedAlternates(page.path), ["x-default", "/"]);
   }
   return entries.map(([lang, path]) => `<link rel="alternate" hreflang="${lang}" href="${absolute(path)}" />`).join("\n");
 }
