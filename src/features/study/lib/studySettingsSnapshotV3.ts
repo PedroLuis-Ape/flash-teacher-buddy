@@ -142,10 +142,13 @@ export function normalizeStudySettingsSnapshotV3(
     ),
   };
 
-  // No modo Reescrever, direção e lado são a MESMA decisão. Snapshots antigos
-  // ou dessincronizados são reparados a partir do lado persistido.
-  if (options.syncRewriteDirection !== false && snapshot.writeActivityMode === "rewrite") {
-    snapshot.direction = rewriteSideToDirection(snapshot.writeRewriteSide) as typeof snapshot.direction;
+  // AUTORIDADE ÚNICA DE LADOS: `direction` decide qual lado é praticado em TODOS
+  // os modos. No Rewrite o lado físico é apenas um ESPELHO derivado dela —
+  // snapshots antigos que traziam um lado independente são reparados a partir da
+  // direção (antes a relação era invertida: o lado sobrescrevia a direção, o que
+  // duplicava a decisão e vazava para Flip/Múltipla Escolha).
+  if (options.syncRewriteDirection !== false) {
+    snapshot.writeRewriteSide = directionToRewriteSide(snapshot.direction);
   }
 
   return snapshot;
@@ -337,23 +340,19 @@ export function applyStudySettingsPatch(
   patch: StudySettingsPatchV3,
 ): StudySettingsSnapshotV3 {
   const requested: StudySettingsPatchV3 = { ...patch };
-  const nextActivityMode = requested.writeActivityMode ?? current.writeActivityMode;
-  const enteringRewrite = requested.writeActivityMode === "rewrite"
-    && current.writeActivityMode !== "rewrite";
 
-  // Sincronização atômica: uma única ação altera os dois campos, nunca um só.
-  if (requested.writeRewriteSide !== undefined) {
+  // AUTORIDADE ÚNICA: quem decide o lado é `direction`. Um chamador legado que
+  // ainda peça só o lado da reescrita é traduzido para direção; o espelho
+  // `writeRewriteSide` nunca é aceito como decisão independente e é sempre
+  // recalculado pela normalização.
+  if (requested.direction === undefined && requested.writeRewriteSide !== undefined) {
     requested.direction = rewriteSideToDirection(requested.writeRewriteSide) as typeof current.direction;
-  } else if (requested.direction !== undefined && nextActivityMode === "rewrite") {
-    requested.writeRewriteSide = directionToRewriteSide(requested.direction) as typeof current.writeRewriteSide;
-  } else if (enteringRewrite) {
-    requested.writeRewriteSide = directionToRewriteSide(current.direction) as typeof current.writeRewriteSide;
   }
+  delete requested.writeRewriteSide;
 
   const merged = normalizeStudySettingsSnapshotV3(
     { ...current, ...requested },
     current,
-    { syncRewriteDirection: false },
   );
   // Foco Vermelho usa fila única e sequencial, no formato extenso; o Modo
   // gamificado força direção automática.

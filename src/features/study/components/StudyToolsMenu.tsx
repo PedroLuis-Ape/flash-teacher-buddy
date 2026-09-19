@@ -66,6 +66,11 @@ interface StudyToolsMenuProps {
   favoritePending?: boolean;
   redListPending?: boolean;
   specialPending?: boolean;
+  /**
+   * Aceitos por compatibilidade com as views de modo, mas NÃO renderizados:
+   * a superfície canônica de Reforço é a toolbar do Study (desktop) e a aba de
+   * ferramentas da sessão (mobile). Renderizar aqui também duplicava o controle.
+   */
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
   difficultyPending?: boolean;
@@ -151,9 +156,6 @@ export function StudyToolsMenu({
   favoritePending,
   redListPending,
   specialPending,
-  isDifficult,
-  onToggleDifficulty,
-  difficultyPending,
   onRestartRound,
   onRestartJourney,
   className,
@@ -266,7 +268,9 @@ export function StudyToolsMenu({
   };
 
   const hasHint = !!combinedHint && combinedHint.trim().length > 0;
-  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial || !!isDifficult);
+  // Reforço saiu daqui: a superfície canônica é a toolbar do Study, então o
+  // indicador de "ferramentas ativas" não depende mais dele.
+  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);
   const hasSessionActions = Boolean(onRestartRound || onRestartJourney);
   const hasFocusContent = Boolean(focusText.trim() || focusTag || focusNote.trim());
   const rateLabel = rate === 1
@@ -488,22 +492,7 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
-          {hasAccount && onToggleDifficulty && (
-            <DropdownMenuItem
-              disabled={difficultyPending}
-              onSelect={(event) => {
-                event.preventDefault();
-                if (!difficultyPending) onToggleDifficulty();
-              }}
-            >
-              <span className="mr-2 inline-flex w-5 justify-center">
-                {difficultyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-              </span>
-              {isDifficult ? "Remover do Reforço" : "Adicionar ao Reforço"}
-            </DropdownMenuItem>
-          )}
-
-          {hasAccount && (onToggleSpecial || onToggleDifficulty) && <DropdownMenuSeparator />}
+          {hasAccount && onToggleSpecial && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
             disabled={!hasHint}
@@ -573,17 +562,6 @@ export function StudyToolsMenu({
           disabled={specialPending}
           onClick={openSpecialFocusDialog}
           icon={specialIcon}
-        />
-      )}
-      {hasAccount && onToggleDifficulty && (
-        <InlineToolButton
-          label={isDifficult ? "Remover do Reforço" : "Adicionar ao Reforço"}
-          visibleLabel={isDifficult ? "Reforço ✓" : "Reforço"}
-          alwaysShowLabel
-          active={isDifficult}
-          disabled={difficultyPending}
-          onClick={onToggleDifficulty}
-          icon={difficultyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
         />
       )}
       <InlineToolButton

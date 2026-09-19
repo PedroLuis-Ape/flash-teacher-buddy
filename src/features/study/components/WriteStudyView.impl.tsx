@@ -31,10 +31,10 @@ import {
   buildLegacyRewriteCardIdentity,
   buildRewriteCardIdentity,
   DEFAULT_WRITE_REWRITE_PROMPT_MODE,
+  directionToRewriteSide,
   resolveRewriteSideForCard,
   type WriteActivityMode,
   type WriteRewritePromptMode,
-  type WriteRewriteSide,
 } from "@/features/study/lib/writeActivityMode";
 import { evaluateRewriteAnswer } from "@/features/study/lib/writeRewriteEvaluation";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
@@ -109,7 +109,6 @@ interface WriteStudyViewProps {
   direction: string;
   /** Configurações controladas pelo dono da sessão (Study/MixedStudy). */
   writeActivityMode: WriteActivityMode;
-  writeRewriteSide: WriteRewriteSide;
   /** Reescrever vendo o texto ("visible") x escrever o que ouviu ("listening"). */
   writeRewritePromptMode: WriteRewritePromptMode;
   writeCorrectionMode: WriteCorrectionMode;
@@ -160,7 +159,6 @@ export const WriteStudyView = ({
   mergedHintsB,
   direction,
   writeActivityMode,
-  writeRewriteSide,
   writeRewritePromptMode = DEFAULT_WRITE_REWRITE_PROMPT_MODE,
   writeCorrectionMode,
   studyFlowMode,
@@ -194,7 +192,10 @@ export const WriteStudyView = ({
   rewriteSnapshotScope,
 }: WriteStudyViewProps) => {
   const cardIdentity = flashcardId ?? `${front}|${back}`;
-  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeRewriteSide);
+  // AUTORIDADE ÚNICA: o lado da reescrita vem da direção do Study, não de uma
+  // preferência paralela. `directionToRewriteSide` respeita a semântica do
+  // resolver canônico (b-a => responder no lado A, a-b => lado B, any => alterna).
+  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, directionToRewriteSide(direction));
   const isRewriteActivity = writeActivityMode === "rewrite";
   const isListeningRewrite = isRewriteActivity && writeRewritePromptMode === "listening";
   const isVisibleRewrite = isRewriteActivity && writeRewritePromptMode === "visible";

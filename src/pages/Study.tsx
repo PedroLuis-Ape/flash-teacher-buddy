@@ -118,7 +118,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
-import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2, Menu as MenuIcon } from "lucide-react";
+import { ArrowLeft, Check, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2, Menu as MenuIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /** Rótulos curtos do modo atual, usados no topo mobile. */
 const STUDY_MODE_LABELS: Record<string, string> = {
@@ -2460,16 +2461,30 @@ const Study = () => {
                   {userId && displayedCard && canToggleReinforcement && (
                     <Button
                       type="button"
-                      variant={isDisplayedReinforcement ? "secondary" : "outline"}
-                      className="min-h-11 justify-start gap-2"
+                      variant={isDisplayedReinforcement ? "default" : "outline"}
+                      className={cn(
+                        "min-h-11 justify-start gap-2",
+                        isDisplayedReinforcement
+                          && "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
+                      )}
                       disabled={reinforcementMutation.isPending}
+                      title={isDisplayedReinforcement
+                        ? "Este card já está na sua área de Reforço."
+                        : "Este card aparecerá na sua área de Reforço."}
+                      aria-label={isDisplayedReinforcement
+                        ? "No Reforço. Toque para remover."
+                        : "Adicionar ao Reforço."}
                       aria-pressed={isDisplayedReinforcement}
                       onClick={handleToggleReinforcement}
                     >
                       {reinforcementMutation.isPending
                         ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <RefreshCcw className="h-4 w-4" />}
-                      {isDisplayedReinforcement ? "No Reforço ✓" : "Adicionar ao Reforço"}
+                        : isDisplayedReinforcement
+                          ? <Check className="h-4 w-4" />
+                          : <RefreshCcw className="h-4 w-4" />}
+                      <span className="whitespace-nowrap">
+                        {isDisplayedReinforcement ? "No Reforço" : "Adicionar ao Reforço"}
+                      </span>
                     </Button>
                   )}
 
@@ -2511,20 +2526,31 @@ const Study = () => {
               {userId && displayedCard && canToggleReinforcement && (
                 <Button
                   type="button"
-                  variant={isDisplayedReinforcement ? "secondary" : "outline"}
+                  variant={isDisplayedReinforcement ? "default" : "outline"}
                   size="sm"
-                  className="min-h-11 gap-1.5 px-2.5"
+                  className={cn(
+                    "min-h-11 gap-1.5 px-3",
+                    isDisplayedReinforcement
+                      && "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
+                  )}
                   disabled={reinforcementMutation.isPending}
-                    title={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
-                    aria-label={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                  data-reinforcement-toggle="true"
+                  title={isDisplayedReinforcement
+                    ? "Este card já está na sua área de Reforço."
+                    : "Este card aparecerá na sua área de Reforço."}
+                  aria-label={isDisplayedReinforcement
+                    ? "No Reforço. Toque para remover."
+                    : "Adicionar ao Reforço."}
                   aria-pressed={isDisplayedReinforcement}
                   onClick={handleToggleReinforcement}
                 >
                   {reinforcementMutation.isPending
                     ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <RefreshCcw className="h-4 w-4" />}
-                  <span className="text-xs">
-                    {isDisplayedReinforcement ? "No Reforço ✓" : "Reforço"}
+                    : isDisplayedReinforcement
+                      ? <Check className="h-4 w-4" />
+                      : <RefreshCcw className="h-4 w-4" />}
+                  <span className="whitespace-nowrap text-xs font-semibold">
+                    {isDisplayedReinforcement ? "No Reforço" : "Adicionar ao Reforço"}
                   </span>
                 </Button>
               )}
@@ -2697,7 +2723,6 @@ const Study = () => {
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               writeActivityMode={writeSessionSettings.writeActivityMode}
-              writeRewriteSide={writeSessionSettings.writeRewriteSide}
               writeRewritePromptMode={writeSessionSettings.writeRewritePromptMode}
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}

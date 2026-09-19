@@ -17,7 +17,6 @@ interface WriteActivitySettingsProps {
   rewritePromptMode: StudyWriteRewritePromptModePreset;
   onChange: (patch: {
     writeActivityMode?: StudyWriteActivityModePreset;
-    writeRewriteSide?: StudyWriteRewriteSidePreset;
     writeRewritePromptMode?: StudyWriteRewritePromptModePreset;
   }) => void;
 }
@@ -80,12 +79,6 @@ export function WriteActivitySettings({
     });
   };
 
-  const sideOptions: { value: StudyWriteRewriteSidePreset; label: string }[] = [
-    { value: "a", label: playRuntime.labelA },
-    { value: "b", label: playRuntime.labelB },
-    { value: "alternating", label: "Alternar" },
-  ];
-
   return (
     <div className="rounded-xl border bg-background/40">
       <button
@@ -135,23 +128,12 @@ export function WriteActivitySettings({
           </div>
 
           {activityMode === "rewrite" && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Qual lado você quer praticar?</p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {sideOptions.map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    variant={rewriteSide === option.value ? "secondary" : "outline"}
-                    aria-pressed={rewriteSide === option.value}
-                    onClick={() => onChange({ writeRewriteSide: option.value })}
-                    className="min-h-[44px] min-w-0"
-                  >
-                    <span className="truncate">{option.label}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
+            // A escolha de lado NÃO se repete aqui: ela pertence à direção
+            // única do Study. Este bloco só informa o lado efetivo derivado.
+            <p className="text-sm text-muted-foreground">
+              Lado praticado: <span className="font-medium text-foreground">{sideSummary}</span>.
+              A direção é definida nas configurações de direção do Study.
+            </p>
           )}
         </div>
       )}

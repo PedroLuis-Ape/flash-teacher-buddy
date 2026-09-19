@@ -1432,7 +1432,6 @@ export default function MixedStudy() {
             <WriteStudyView
               {...sharedProps}
               writeActivityMode={writeSessionSettings.writeActivityMode}
-              writeRewriteSide={writeSessionSettings.writeRewriteSide}
               writeRewritePromptMode={writeSessionSettings.writeRewritePromptMode}
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}

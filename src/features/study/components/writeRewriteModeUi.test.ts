@@ -21,10 +21,13 @@ describe("write rewrite activity UI", () => {
     expect(settingsSource).toContain('writeRewritePromptMode: option === "rewrite-listening" ? "listening" : "visible"');
     expect(settingsSource).toContain("Reescrever vendo o texto");
     expect(settingsSource).toContain("Escrever o que ouviu");
-    // Componente controlado: os lados usam os rótulos dinâmicos do runtime.
-    expect(settingsSource).toContain('{ value: "a", label: playRuntime.labelA }');
-    expect(settingsSource).toContain('{ value: "b", label: playRuntime.labelB }');
-    expect(settingsSource).toContain("Alternar");
+    // AUTORIDADE ÚNICA: a Escrita não pergunta de novo qual lado praticar — ela
+    // apenas informa o lado derivado da direção do Study.
+    expect(settingsSource).not.toContain("Qual lado você quer praticar?");
+    expect(settingsSource).not.toContain("writeRewriteSide: option.value");
+    expect(settingsSource).not.toContain('value: "alternating"');
+    expect(settingsSource).toContain("A direção é definida nas configurações de direção do Study");
+    expect(settingsSource).toContain("Lado praticado:");
     expect(settingsSource).not.toContain("useWriteStudyPreferences");
     expect(modalSource).toContain("<WriteActivitySettings");
     expect(modalSource).toContain("rewritePromptMode={settings.writeRewritePromptMode}");
@@ -33,7 +36,9 @@ describe("write rewrite activity UI", () => {
   it("keeps the write view fully controlled by the session owner", () => {
     expect(writeSource).not.toContain("useWriteStudyPreferences");
     expect(writeSource).toContain("writeActivityMode: WriteActivityMode");
-    expect(writeSource).toContain("writeRewriteSide: WriteRewriteSide");
+    // O lado vem da direção; a view não recebe preferência paralela.
+    expect(writeSource).not.toContain("writeRewriteSide: WriteRewriteSide");
+    expect(writeSource).toContain("directionToRewriteSide(direction)");
     expect(writeSource).toContain("writeRewritePromptMode: WriteRewritePromptMode");
     expect(writeSource).toContain('const isRewriteActivity = writeActivityMode === "rewrite"');
     expect(writeSource).toContain('const isListeningRewrite = isRewriteActivity && writeRewritePromptMode === "listening"');

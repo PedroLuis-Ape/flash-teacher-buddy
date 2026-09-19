@@ -27,9 +27,10 @@ describe("contrato único de configurações v3", () => {
       version: 1, subset: "favorites", direction: "b-a", order: "sequential",
       writeActivityMode: "rewrite", writeRewriteSide: "b", writeCorrectionMode: "flexible",
     }, fallback)).toMatchObject({
-      // Reescrever: a direção é reparada a partir do lado persistido (b => a-b).
-      version: 3, scope: "favorites", direction: "a-b", order: "sequential",
-      playTarget: "answer", writeActivityMode: "rewrite", writeRewriteSide: "b",
+      // Direção é a autoridade única: o lado persistido é reparado a partir dela
+      // (b-a => responder no lado A).
+      version: 3, scope: "favorites", direction: "b-a", order: "sequential",
+      playTarget: "answer", writeActivityMode: "rewrite", writeRewriteSide: "a",
     });
   });
 
@@ -93,36 +94,33 @@ describe("contrato único de configurações v3", () => {
     )).toEqual({ scope: "favorites", playTarget: "answer" });
   });
 
-  it("sincroniza direção e lado da reescrita numa única ação", () => {
-    const DEFAULT_STUDY_SETTINGS_SNAPSHOT = {
-      ...BASE_CONTINUOUS,
-    };
-    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "b" }))
-      .toMatchObject({ writeRewriteSide: "b", direction: "a-b" });
-    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "a" }))
-      .toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
-
-    const rewrite = applyStudySettingsPatch(
-      DEFAULT_STUDY_SETTINGS_SNAPSHOT,
-      { writeActivityMode: "rewrite", writeRewriteSide: "a" },
-    );
-    expect(applyStudySettingsPatch(rewrite, { direction: "a-b" }))
+  it("a direção é a autoridade e o lado da reescrita é espelho derivado", () => {
+    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { direction: "a-b" }))
       .toMatchObject({ direction: "a-b", writeRewriteSide: "b" });
+    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { direction: "b-a" }))
+      .toMatchObject({ direction: "b-a", writeRewriteSide: "a" });
+    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { direction: "any" }))
+      .toMatchObject({ direction: "any", writeRewriteSide: "alternating" });
   });
 
-  it("herda o lado ao entrar no modo Reescrever e repara snapshots dessincronizados", () => {
-    const translate = { ...BASE_CONTINUOUS, direction: "b-a" as const };
-    expect(applyStudySettingsPatch(translate, { writeActivityMode: "rewrite" }))
-      .toMatchObject({ writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "b-a" });
+  it("mantém o espelho coerente independentemente do modo de escrita", () => {
+    // Traduzir, Reescrever e Escrever o que ouviu leem a MESMA direção.
+    const rewrite = applyStudySettingsPatch(BASE_CONTINUOUS, { writeActivityMode: "rewrite" });
+    expect(rewrite).toMatchObject({ direction: BASE_CONTINUOUS.direction, writeRewriteSide: "alternating" });
+    expect(applyStudySettingsPatch(rewrite, { direction: "b-a" }))
+      .toMatchObject({ direction: "b-a", writeRewriteSide: "a" });
+    expect(applyStudySettingsPatch(rewrite, { writeActivityMode: "translate" }))
+      .toMatchObject({ direction: rewrite.direction, writeRewriteSide: "alternating" });
+  });
+
+  it("aceita patch legado só de lado traduzindo para direção, e repara dessincronizados pela direção", () => {
+    // Compatibilidade: quem ainda pedir apenas o lado não cria uma decisão paralela.
+    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { writeRewriteSide: "a" }))
+      .toMatchObject({ direction: "b-a", writeRewriteSide: "a" });
 
     expect(normalizeStudySettingsSnapshotV3({
       version: 2, studyFlowMode: "continuous", writeActivityMode: "rewrite",
       writeRewriteSide: "a", direction: "a-b",
-    })).toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
-  });
-
-  it("não sincroniza direção no modo Traduzir", () => {
-    expect(applyStudySettingsPatch(BASE_CONTINUOUS, { direction: "b-a" }))
-      .toMatchObject({ direction: "b-a", writeRewriteSide: BASE_CONTINUOUS.writeRewriteSide });
+    })).toMatchObject({ direction: "a-b", writeRewriteSide: "b" });
   });
 });
