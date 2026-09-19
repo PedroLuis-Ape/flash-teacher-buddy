@@ -14,11 +14,6 @@ if (!existsSync(templatePath)) throw new Error("dist/index.html não encontrado.
 
 const pristineTemplatePath = resolve(distDir, ".prerender-template.html");
 const template = readFileSync(existsSync(pristineTemplatePath) ? pristineTemplatePath : templatePath, "utf8");
-const legacyPages = [
-  ...JSON.parse(readFileSync(pagesPath, "utf8")),
-  ...JSON.parse(readFileSync(officialSourcesPath, "utf8")),
-  ...JSON.parse(readFileSync(methodologyEvidencePath, "utf8")),
-];
 const localizedSource = JSON.parse(readFileSync(localizedEditorialPath, "utf8"));
 const baseRoutes = {
   home: { "pt-BR": "/pt-br", en: "/en" },
