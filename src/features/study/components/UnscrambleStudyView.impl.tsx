@@ -40,9 +40,6 @@ interface UnscrambleStudyViewProps {
   reviewFlagPending?: boolean;
   onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
-  isDifficult?: boolean;
-  onToggleDifficulty?: () => void;
-  difficultyPending?: boolean;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   onCorrect: () => void;
@@ -98,9 +95,6 @@ export const UnscrambleStudyView = ({
   reviewFlagPending = false,
   onToggleReviewFlag,
   onToggleSpecial,
-  isDifficult = false,
-  onToggleDifficulty,
-  difficultyPending = false,
   onRestartRound,
   onRestartJourney,
   onCorrect,
@@ -216,9 +210,6 @@ export const UnscrambleStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
-            isDifficult={isDifficult}
-            onToggleDifficulty={onToggleDifficulty}
-            difficultyPending={difficultyPending}
             onRestartRound={onRestartRound}
             onRestartJourney={onRestartJourney}
           />

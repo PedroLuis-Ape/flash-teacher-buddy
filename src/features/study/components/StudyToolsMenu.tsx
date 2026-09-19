@@ -66,14 +66,6 @@ interface StudyToolsMenuProps {
   favoritePending?: boolean;
   redListPending?: boolean;
   specialPending?: boolean;
-  /**
-   * Aceitos por compatibilidade com as views de modo, mas NÃO renderizados:
-   * a superfície canônica de Reforço é a toolbar do Study (desktop) e a aba de
-   * ferramentas da sessão (mobile). Renderizar aqui também duplicava o controle.
-   */
-  isDifficult?: boolean;
-  onToggleDifficulty?: () => void;
-  difficultyPending?: boolean;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   className?: string;

@@ -2694,9 +2694,6 @@ const Study = () => {
               isReviewFlagged={isDisplayedReviewFlagged}
               reviewFlagPending={reviewFlagMutation.isPending}
               onToggleReviewFlag={reviewFlagToggleHandler}
-              isDifficult={isDisplayedReinforcement}
-              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
-              difficultyPending={reinforcementMutation.isPending}
               studyFlowMode={effectivePreset.studyFlowMode === "mastery_rounds" ? "mastery_rounds" : "continuous"}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
@@ -2741,9 +2738,6 @@ const Study = () => {
               isReviewFlagged={isDisplayedReviewFlagged}
               reviewFlagPending={reviewFlagMutation.isPending}
               onToggleReviewFlag={reviewFlagToggleHandler}
-              isDifficult={isDisplayedReinforcement}
-              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
-              difficultyPending={reinforcementMutation.isPending}
               isSavingAttentionPoint={isSystemCollection ? false : setSpecialLayer.isPending}
               onSaveAttentionPoint={userId && !isSystemCollection ? handleSaveAttentionPoint : undefined}
               onCorrect={() => handleNext(true)}
@@ -2779,9 +2773,6 @@ const Study = () => {
               isReviewFlagged={isDisplayedReviewFlagged}
               reviewFlagPending={reviewFlagMutation.isPending}
               onToggleReviewFlag={reviewFlagToggleHandler}
-              isDifficult={isDisplayedReinforcement}
-              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
-              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2814,9 +2805,6 @@ const Study = () => {
               isReviewFlagged={isDisplayedReviewFlagged}
               reviewFlagPending={reviewFlagMutation.isPending}
               onToggleReviewFlag={reviewFlagToggleHandler}
-              isDifficult={isDisplayedReinforcement}
-              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
-              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2848,9 +2836,6 @@ const Study = () => {
               isReviewFlagged={isDisplayedReviewFlagged}
               reviewFlagPending={reviewFlagMutation.isPending}
               onToggleReviewFlag={reviewFlagToggleHandler}
-              isDifficult={isDisplayedReinforcement}
-              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
-              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}

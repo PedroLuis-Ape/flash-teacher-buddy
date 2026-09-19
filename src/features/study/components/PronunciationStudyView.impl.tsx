@@ -38,9 +38,6 @@ interface PronunciationStudyViewProps {
   reviewFlagPending?: boolean;
   onToggleReviewFlag?: () => void;
   onToggleSpecial?: () => void;
-  isDifficult?: boolean;
-  onToggleDifficulty?: () => void;
-  difficultyPending?: boolean;
   onNext?: () => void;
   onCorrect?: () => void;
   onIncorrect?: () => void;
@@ -73,9 +70,6 @@ export function PronunciationStudyView({
   reviewFlagPending = false,
   onToggleReviewFlag,
   onToggleSpecial,
-  isDifficult = false,
-  onToggleDifficulty,
-  difficultyPending = false,
   onNext,
   onCorrect,
   onIncorrect,
@@ -215,9 +209,6 @@ export function PronunciationStudyView({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
-            isDifficult={isDifficult}
-            onToggleDifficulty={onToggleDifficulty}
-            difficultyPending={difficultyPending}
           />
             {onToggleReviewFlag && (
               <StudyReviewFlagButton

@@ -229,9 +229,6 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
-        isDifficult={props.isDifficult}
-        onToggleDifficulty={props.onToggleDifficulty}
-        difficultyPending={props.difficultyPending}
         onCorrect={props.onKnew}
         onIncorrect={props.onDidntKnow}
         onPrevious={props.onPrevious}
