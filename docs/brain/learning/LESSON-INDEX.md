@@ -26,6 +26,10 @@ duplica o conteúdo das lições.
 - `VALIDATED_LESSON`: [[learning/lessons/2026-09-12-browser-first-tts]] — usar `speechSynthesis`
   do navegador como motor principal e `chrome.tts` só como fallback; lista de vozes vazia não é sucesso.
 
+- `CANDIDATE_LESSON`: [[learning/lessons/2026-09-19-flashcard-derived-state-soft-delete]] —
+  soft delete não dispara cascata; a leitura precisa exigir entidade viva e o
+  pruning de órfãos reais é uma camada separada.
+
 ## Status aceitos
 
 `OBSERVATION`, `CANDIDATE_LESSON`, `VALIDATED_LESSON`, `STANDARD` e `RETIRED`.

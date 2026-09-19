@@ -36,6 +36,21 @@ function resolveResumeStorage(): Storage | null {
   }
 }
 
+/**
+ * "Voltar para onde parou" so faz sentido enquanto a lista ainda tem card vivo.
+ * Depois de Delete All / reimportacao, a sessao antiga nao pode ressuscitar.
+ */
+async function listHasLiveCards(listId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("flashcards")
+    .select("id", { count: "exact", head: true })
+    .eq("list_id", listId)
+    .is("deleted_at", null);
+  // Falha de transporte nao autoriza esconder a retomada: mantem o card.
+  if (error) return true;
+  return (count ?? 0) > 0;
+}
+
 export function useLatestStudyResume() {
   const { userId } = useAuthUser();
   const { selectedInstitution } = useInstitution();
@@ -48,15 +63,19 @@ export function useLatestStudyResume() {
 
   const query = useQuery<ResumableStudySession | null>({
     queryKey,
-    queryFn: () => fetchLatestStudyResume({
-      userId: userId as string,
-      institutionId,
-      client: resumeClient,
-      // P0 2026-09-15: o hook real da Home PRECISA fornecer a fonte local. Sem
-      // isso o ponteiro do aparelho não participava da seleção e o card podia
-      // ignorar a sessão que o usuário acabou de jogar.
-      storage: resolveResumeStorage(),
-    }),
+    queryFn: async () => {
+      const resume = await fetchLatestStudyResume({
+        userId: userId as string,
+        institutionId,
+        client: resumeClient,
+        // P0 2026-09-15: o hook real da Home PRECISA fornecer a fonte local. Sem
+        // isso o ponteiro do aparelho não participava da seleção e o card podia
+        // ignorar a sessão que o usuário acabou de jogar.
+        storage: resolveResumeStorage(),
+      });
+      if (!resume || resume.resourceKind !== "list") return resume;
+      return (await listHasLiveCards(resume.resourceId)) ? resume : null;
+    },
     enabled: !!userId,
     // A Home deve refletir imediatamente a última sessão praticada. Uma janela
     // de staleTime aqui fazia o card "Voltar para onde parou" reaproveitar o

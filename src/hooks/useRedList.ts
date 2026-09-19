@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
+import { retainLiveFlashcardIds } from '@/features/cards/lib/liveFlashcardIds';
 import { toast } from 'sonner';
 
 /**
@@ -21,7 +22,8 @@ async function fetchRedList(
         .range(from, to),
     );
 
-    return data.map((row) => row.flashcard_id);
+    // A Lista Vermelha so vale enquanto o card existir e estiver vivo.
+    return retainLiveFlashcardIds(data.map((row) => row.flashcard_id));
   }
 
   // CLARA MASTER P0 — server-side RPC returns canonical group ids only.

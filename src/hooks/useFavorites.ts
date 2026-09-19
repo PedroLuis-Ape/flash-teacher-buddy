@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
+import { retainLiveFlashcardIds } from '@/features/cards/lib/liveFlashcardIds';
 import { toast } from 'sonner';
 import { removeFromRedListIfNeeded } from '@/hooks/useRedList';
 
@@ -65,7 +66,10 @@ async function fetchFavoritesByScope(
         .range(from, to),
     );
 
-    return data.map((favorite) => favorite.resource_id);
+    const ids = data.map((favorite) => favorite.resource_id);
+    // Favorito de flashcard e estado derivado do card: some quando o card
+    // deixa de existir (delete definitivo) ou e enviado para a lixeira.
+    return resourceType === 'flashcard' ? retainLiveFlashcardIds(ids) : ids;
   }
 
   return fetchScopedFlashcardGroupIds(scope!);

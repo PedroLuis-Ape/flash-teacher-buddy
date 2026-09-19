@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchLiveFlashcardIdSet } from '@/features/cards/lib/liveFlashcardIds';
 import {
   setAttentionPoint,
   useAttentionPointsMutation,
@@ -45,12 +46,13 @@ async function resolveLegacyGroupIds(userId: string): Promise<string[]> {
     .select('flashcard_id')
     .eq('user_id', userId);
   if (error) throw error;
-  const ids = ((data as any[]) ?? []).map((row) => row.flashcard_id).filter(Boolean);
+  const ids = ((data as any[]) ?? []).map((row) => row.flashcard_id).filter(Boolean) as string[];
   if (!ids.length) return [];
   const { data: cards, error: cardsError } = await supabase
     .from('flashcards')
     .select('id, status_group_uid, parent_card_id')
-    .in('id', ids);
+    .in('id', ids)
+    .is('deleted_at', null);
   if (cardsError) throw cardsError;
   return Array.from(new Set(((cards as any[]) ?? []).map((card) =>
     card.status_group_uid ?? card.parent_card_id ?? card.id
@@ -78,9 +80,14 @@ export function useSpecialFlashcards(
         if (!isMissingAttentionColumns(enhanced.error)) throw enhanced.error;
         return resolveLegacyGroupIds(userId);
       }
-      return Array.from(new Set(((enhanced.data as any[]) ?? []).flatMap((row) => [
-        row.source_group_id ?? row.flashcard_id,
-      ]).filter(Boolean)));
+      const rows = ((enhanced.data as any[]) ?? []).filter((row) => Boolean(row.flashcard_id));
+      // Card soft-deleted ou inexistente nao e referencia valida: a fila de
+      // atencao nunca deve sobreviver ao card de origem.
+      const live = await fetchLiveFlashcardIdSet(rows.map((row) => row.flashcard_id as string));
+      return Array.from(new Set(rows
+        .filter((row) => live.has(row.flashcard_id as string))
+        .map((row) => row.source_group_id ?? row.flashcard_id)
+        .filter(Boolean)));
     },
     enabled: !!userId,
     staleTime: 60_000,
@@ -94,19 +101,32 @@ export function useSpecialFlashcardsCount(userId: string | undefined) {
       if (!userId) return 0;
       const enhanced = await supabase
         .from('user_special_flashcards' as any)
-        .select('*', { count: 'exact', head: true })
+        .select('source_group_id, flashcard_id')
         .eq('user_id', userId)
         .eq('is_active', true);
       if (enhanced.error) {
         if (!isMissingAttentionColumns(enhanced.error)) throw enhanced.error;
         const legacy = await supabase
           .from('user_special_flashcards' as any)
-          .select('*', { count: 'exact', head: true })
+          .select('flashcard_id')
           .eq('user_id', userId);
         if (legacy.error) throw legacy.error;
-        return legacy.count ?? 0;
+        const legacyIds = ((legacy.data as any[]) ?? [])
+          .map((row) => row.flashcard_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0);
+        const legacyLive = await fetchLiveFlashcardIdSet(legacyIds);
+        return new Set(legacyIds.filter((id) => legacyLive.has(id))).size;
       }
-      return enhanced.count ?? 0;
+      // O contador precisa ser derivado das mesmas referencias vivas que a
+      // lista usa; contar linhas ativas cruas exibiria orfaos.
+      const rows = ((enhanced.data as any[]) ?? []).filter((row) => Boolean(row.flashcard_id));
+      const live = await fetchLiveFlashcardIdSet(rows.map((row) => row.flashcard_id as string));
+      const groups = new Set<string>();
+      for (const row of rows) {
+        if (!live.has(row.flashcard_id as string)) continue;
+        groups.add(row.source_group_id ?? row.flashcard_id);
+      }
+      return groups.size;
     },
     enabled: !!userId,
     staleTime: 60_000,
@@ -226,7 +246,8 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
       const { data: cards, error: cardsErr } = await supabase
         .from('flashcards')
         .select('id, term, translation, hint, context_tag, example_text, example_translation, layer_index, parent_card_id, list_id')
-        .in('id', flashcardIds);
+        .in('id', flashcardIds)
+        .is('deleted_at', null);
       if (cardsErr) throw cardsErr;
 
       const listIds = Array.from(

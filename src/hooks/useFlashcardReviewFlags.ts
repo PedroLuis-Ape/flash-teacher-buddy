@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchLiveFlashcardIdSet,
+  retainLiveFlashcardIds,
+} from "@/features/cards/lib/liveFlashcardIds";
 
 /**
  * “Revisar cards / Revisar depois” — QA de CONTEÚDO do flashcard.
@@ -84,11 +88,13 @@ export function useFlashcardReviewFlags(userId?: string | null) {
         if (isMissingReviewFlagsTable(error)) return [];
         throw error;
       }
-      return Array.from(new Set(
+      const ids = Array.from(new Set(
         (Array.isArray(data) ? data : [])
           .map((row: { flashcard_id?: unknown }) => (typeof row.flashcard_id === "string" ? row.flashcard_id : null))
           .filter((id: string | null): id is string => Boolean(id)),
       ));
+      // Card inexistente ou na lixeira nao e referencia valida para a fila.
+      return retainLiveFlashcardIds(ids);
     },
   });
 
@@ -113,7 +119,10 @@ export function useFlashcardReviewFlagDetails(userId?: string | null) {
         if (isMissingReviewFlagsTable(error)) return [];
         throw error;
       }
-      return (Array.isArray(data) ? data : []) as FlashcardReviewFlag[];
+      const rows = (Array.isArray(data) ? data : []) as FlashcardReviewFlag[];
+      if (rows.length === 0) return rows;
+      const live = await fetchLiveFlashcardIdSet(rows.map((row) => row.flashcard_id));
+      return rows.filter((row) => live.has(row.flashcard_id));
     },
   });
 }

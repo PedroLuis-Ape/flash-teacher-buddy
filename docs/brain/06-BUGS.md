@@ -235,3 +235,31 @@ rota mista em studyResumeIntegration.test.ts.
 1809 testes verdes, build exit 0 e SEO 100/100). Sem commit, merge, deploy ou
 escrita no Supabase. Ver [[areas/study-resume]] e
 [[sessions/2026-09-13-resume-card-ultima-sessao]].
+
+## P1 — estado derivado sobrevive ao card que saiu do deck — corrigido em 2026-09-19
+
+- [ROOT-CAUSE] Flashcards usam soft delete (`deleted_at`). As FKs
+  `ON DELETE CASCADE` de `user_red_list`, `user_special_flashcards`,
+  `user_flashcard_review_flags`, `user_reinforcement_points` e
+  `flashcard_progress` só disparam em DELETE físico, então não limpam nada no
+  fluxo normal de exclusão.
+- [ROOT-CAUSE] `user_favorites` virou tabela genérica sem FK para flashcards:
+  o favorito sobrevivia à exclusão definitiva do card.
+- [ROOT-CAUSE] Leituras globais (`useFavorites` sem escopo, `useRedList` sem
+  escopo, `useSpecialFlashcards*` e a fila de revisão) devolviam ids e
+  contagens de cards mortos, enquanto o RPC escopado equivalente já filtrava
+  `deleted_at IS NULL`.
+- [FIX] Regra única de identidade em `src/features/cards/lib/liveFlashcardIds.ts`
+  aplicada a favoritos, Lista Vermelha, Pontos de atenção, Reforço e Revisar
+  cards; contagem de atenção derivada das mesmas referências vivas.
+- [FIX] `useLatestStudyResume` só oferece retomada quando a lista ainda tem
+  card vivo, cobrindo Delete All e reimportação.
+- [FIX] Migration `20260919120000_flashcard_derived_state_invalidation_v1.sql`
+  com pruning de órfãos reais e trigger de limpeza no DELETE físico.
+- [FIX] Invalidação imediata de cache em exclusão simples, bulk, desfazer e
+  lixeira via `src/features/cards/lib/derivedStateInvalidation.ts`.
+- [REGRESSION-CONTRACT] `src/features/cards/lib/__tests__/derivedStateInvalidation.test.ts`.
+- [PENDING] Migration ainda não aplicada em `ymahldldyxvwjeruaxpr`; o conector
+  Supabase desta sessão não tem permissão nesse projeto.
+
+Related: [[sessions/2026-09-19-flashcard-derived-state-invalidation]] · [[07-TESTS]] · [[08-RISKS]] · [[areas/supabase-runtime]] · [[areas/study-resume]]

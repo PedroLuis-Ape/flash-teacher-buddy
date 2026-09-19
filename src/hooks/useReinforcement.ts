@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchLiveFlashcardIdSet } from "@/features/cards/lib/liveFlashcardIds";
 import { toast } from "sonner";
 
 export interface ReinforcementArea {
@@ -97,6 +98,14 @@ export async function fetchReinforcementSnapshot(
   const points = (pointData as any[]) ?? [];
   if (!points.length) return { area, items: [] };
 
+  // Reforco e materializacao de um card de origem: se o original nao existe
+  // mais, o ponto ativo e uma referencia orfa e nao pode produzir item.
+  const liveSourceIds = await fetchLiveFlashcardIdSet(
+    points.map((point) => point.source_card_id).filter((id): id is string => typeof id === "string" && id.length > 0),
+  );
+  const livePoints = points.filter((point) => liveSourceIds.has(point.source_card_id));
+  if (!livePoints.length) return { area, items: [] };
+
   const { data: cards, error: cardsError } = await supabase
     .from("flashcards")
     .select("id, list_id, term, translation, parent_card_id, status_group_uid, deleted_at")
@@ -106,7 +115,7 @@ export async function fetchReinforcementSnapshot(
   if (cardsError) throw cardsError;
 
   const cloneCards = (cards as any[]) ?? [];
-  const items: ReinforcementItem[] = points
+  const items: ReinforcementItem[] = livePoints
     .map((point) => {
       const groupCards = cloneCards.filter((card) =>
         card.id === point.materialization_group_id

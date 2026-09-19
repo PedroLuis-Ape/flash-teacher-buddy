@@ -29,6 +29,10 @@ import { useFavorites, useFavoritesCount } from "@/hooks/useFavorites";
 import { useRedList } from "@/hooks/useRedList";
 import { resolveLegacyFlashcardGroupId } from "@/lib/resolveFlashcardGroupId";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import {
+  invalidateFlashcardDerivedState,
+  pruneOrphanFlashcardDerivedState,
+} from "@/features/cards/lib/derivedStateInvalidation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -585,15 +589,18 @@ const ListDetail = () => {
 
       if (error) throw error;
       loadFlashcards();
+      // O card mudou de estado: nenhum estado derivado pode sobreviver a ele.
+      invalidateFlashcardDerivedState(queryClient);
+      void pruneOrphanFlashcardDerivedState();
       const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
       showUndoDeleteToast(
         { id: flashcardId, type: "flashcard" },
-        () => { loadFlashcards(); },
+        () => { loadFlashcards(); invalidateFlashcardDerivedState(queryClient); },
       );
     } catch (error: any) {
       toast.error(t("library.list.toast.deleteError", { message: error.message }));
     }
-  }, [loadFlashcards]);
+  }, [loadFlashcards, queryClient]);
 
   const handleBulkDelete = async () => {
     if (isBulkDeletingRef.current) return;
@@ -633,9 +640,11 @@ const ListDetail = () => {
       }
       setSelectedCards([]);
       loadFlashcards();
+      invalidateFlashcardDerivedState(queryClient);
+      void pruneOrphanFlashcardDerivedState();
       const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
       const undoItems = visibleSelection.map((id) => ({ id, type: "flashcard" as const }));
-      showBulkUndoDeleteToast(undoItems, () => { loadFlashcards(); });
+      showBulkUndoDeleteToast(undoItems, () => { loadFlashcards(); invalidateFlashcardDerivedState(queryClient); });
     } catch (error: any) {
       toast.error(t("library.list.toast.deleteError", { message: error?.message || "" }));
     } finally {

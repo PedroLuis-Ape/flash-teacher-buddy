@@ -1,6 +1,11 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  invalidateFlashcardDerivedState,
+  pruneOrphanFlashcardDerivedState,
+} from "@/features/cards/lib/derivedStateInvalidation";
 import { toast } from "sonner";
 
 export interface TrashItem {
@@ -12,6 +17,7 @@ export interface TrashItem {
 }
 
 export function useTrash() {
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<TrashItem[]>([]);
   const [folders, setFolders] = useState<TrashItem[]>([]);
   const [lists, setLists] = useState<TrashItem[]>([]);
@@ -142,12 +148,14 @@ export function useTrash() {
       const result = data as any;
       if (result && !result.success) throw new Error(result.error || "Erro ao restaurar");
 
+      invalidateFlashcardDerivedState(queryClient);
+
       toast.success("✅ Item restaurado!");
       await loadTrash();
     } catch (err: any) {
       toast.error("❌ Erro ao restaurar: " + (err.message || ""));
     }
-  }, [loadTrash]);
+  }, [loadTrash, queryClient]);
 
   const permanentDelete = useCallback(async (item: TrashItem) => {
     try {
@@ -155,12 +163,16 @@ export function useTrash() {
       const { error } = await supabase.from(table).delete().eq("id", item.id);
       if (error) throw error;
 
+      // Exclusao definitiva: estado derivado do card nao pode sobreviver.
+      await pruneOrphanFlashcardDerivedState();
+      invalidateFlashcardDerivedState(queryClient);
+
       toast.success("🗑️ Item excluído permanentemente!");
       await loadTrash();
     } catch (err: any) {
       toast.error("❌ Erro ao excluir: " + (err.message || ""));
     }
-  }, [loadTrash]);
+  }, [loadTrash, queryClient]);
 
   const emptyTrash = useCallback(async () => {
     try {
@@ -173,12 +185,15 @@ export function useTrash() {
       await supabase.from("lists").delete().eq("owner_id", userId).not("deleted_at", "is", null);
       await supabase.from("folders").delete().eq("owner_id", userId).not("deleted_at", "is", null);
 
+      await pruneOrphanFlashcardDerivedState();
+      invalidateFlashcardDerivedState(queryClient);
+
       toast.success("🗑️ Lixeira esvaziada!");
       setItems([]);
     } catch (err: any) {
       toast.error("❌ Erro ao esvaziar lixeira: " + (err.message || ""));
     }
-  }, []);
+  }, [queryClient]);
 
   return {
     items,
