@@ -12,7 +12,8 @@ const siteUrl = "https://www.apeeducation.org";
 
 if (!existsSync(templatePath)) throw new Error("dist/index.html não encontrado.");
 
-const template = readFileSync(templatePath, "utf8");
+const pristineTemplatePath = resolve(distDir, ".prerender-template.html");
+const template = readFileSync(existsSync(pristineTemplatePath) ? pristineTemplatePath : templatePath, "utf8");
 const legacyPages = [
   ...JSON.parse(readFileSync(pagesPath, "utf8")),
   ...JSON.parse(readFileSync(officialSourcesPath, "utf8")),
