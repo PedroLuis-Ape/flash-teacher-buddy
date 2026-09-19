@@ -10,7 +10,7 @@ import { resolvePublicDirectoryRuntime } from "./public-directory-data.mjs";
 const REQUEST_TIMEOUT_MS = 8_000;
 const SAMPLE_CONCURRENCY = 4;
 
-export const MATERIAL_LOCALES = ["pt-BR", "en", "es", "fr", "it"];
+export const MATERIAL_LOCALES = ["pt-BR", "en", "es", "fr", "it", "de"];
 
 const URL_SEGMENT = {
   "pt-BR": "pt-br",
@@ -18,6 +18,7 @@ const URL_SEGMENT = {
   es: "es",
   fr: "fr",
   it: "it",
+  de: "de",
 };
 
 export function localeUrlSegment(locale) {

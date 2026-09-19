@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "network": "Keine Verbindung zum Server. Prüfe deine Internetverbindung.",
+    "permission": "Du hast keine Berechtigung für diese Aktion.",
+    "notFound": "Wir konnten das Gesuchte nicht finden.",
+    "loadCards": "Die Karten konnten nicht geladen werden.",
+    "prepareSession": "Diese Sitzung konnte nicht vorbereitet werden.",
+    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "saveFailed": "Speichern fehlgeschlagen.",
+    "technicalCode": "Technischer Code: {{code}}"
+  }
+}

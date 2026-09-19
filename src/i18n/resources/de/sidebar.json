@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menü",
+    "mainNav": "Hauptbereich",
+    "tools": "Werkzeuge",
+    "myNotes": "Meine Notizen",
+    "search": "Suchen",
+    "classes": "Klassen",
+    "trash": "Papierkorb",
+    "landing": "Landingpage",
+    "hubs": "Hubs / Institutionen",
+    "newHub": "Neu",
+    "createNewHub": "Neuen Hub erstellen",
+    "hubName": "Name",
+    "hubNamePlaceholder": "Z. B.: Chinesisch, Deutsch, Kinderenglisch…",
+    "hubDescription": "Beschreibung",
+    "hubDescriptionPlaceholder": "Beschreibe den Zweck dieses Hubs…",
+    "hubColor": "Farbe",
+    "creating": "Wird erstellt…",
+    "createHub": "Hub erstellen",
+    "allNoFilter": "Alle (kein Filter)",
+    "noHubsYet": "Noch keine Hubs erstellt",
+    "enterHubName": "Gib einen Namen für den Hub ein",
+    "hubCreatedSuccess": "Hub erfolgreich erstellt!",
+    "hubCreateError": "Fehler beim Erstellen des Hubs",
+    "deleteHubTitle": "Hub löschen?",
+    "deleteHubDescription": "Ordner in diesem Hub werden nach „Allgemein“ verschoben. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "hubDeletedSuccess": "Hub gelöscht! Ordner wurden nach „Allgemein“ verschoben.",
+    "hubDeleteError": "Fehler beim Löschen des Hubs"
+  }
+}

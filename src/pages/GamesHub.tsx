@@ -380,7 +380,7 @@ const GamesHub = () => {
             <div className="grid gap-3 sm:grid-cols-3">
               <StudyDirectionSelector
                 direction={effectiveDirection}
-                labels={listLabels}
+                labels={{ labelA: listLabels.labelsA, labelB: listLabels.labelsB }}
                 disabled={directionLockedByFlow}
                 lockedMessage={directionLockedByFlow
                   ? "Direção automática no modo gamificado. Troque para o modo extenso para escolher um lado fixo."

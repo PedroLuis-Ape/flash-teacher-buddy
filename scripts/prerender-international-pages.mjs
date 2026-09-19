@@ -2,19 +2,68 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const root = process.cwd();
-const distDir = resolve(root, "dist");
+const distDir = resolve(root, process.env.PITECO_DIST_DIR ?? "dist");
 const templatePath = resolve(distDir, "index.html");
 const pagesPath = resolve(root, "config/public-seo-pages-international.json");
 const officialSourcesPath = resolve(root, "config/public-seo-official-sources.json");
+const methodologyEvidencePath = resolve(root, "config/public-seo-methodology-evidence.json");
+const localizedEditorialPath = resolve(root, "config/editorial/international-locales.json");
 const siteUrl = "https://www.apeeducation.org";
 
 if (!existsSync(templatePath)) throw new Error("dist/index.html não encontrado.");
 
 const template = readFileSync(templatePath, "utf8");
-const pages = [
+const legacyPages = [
   ...JSON.parse(readFileSync(pagesPath, "utf8")),
   ...JSON.parse(readFileSync(officialSourcesPath, "utf8")),
+  ...JSON.parse(readFileSync(methodologyEvidencePath, "utf8")),
 ];
+const localizedSource = JSON.parse(readFileSync(localizedEditorialPath, "utf8"));
+const baseRoutes = {
+  home: { "pt-BR": "/pt-br", en: "/en" },
+  features: { "pt-BR": "/pt-br/recursos", en: "/en/features" },
+  flashcards: { "pt-BR": "/pt-br/flashcards", en: "/en/flashcards" },
+  teachers: { "pt-BR": "/pt-br/para-professores", en: "/en/for-teachers" },
+  about: { "pt-BR": "/pt-br/sobre", en: "/en/about" },
+  official: { "pt-BR": "/pt-br/fonte-oficial", en: "/en/official-source" },
+  methodology: { "pt-BR": "/pt-br/metodologia", en: "/en/methodology" },
+  evidence: { "pt-BR": "/pt-br/evidencias", en: "/en/evidence" },
+};
+const familyLabels = {
+  es: { home: "Inicio", features: "Recursos de APE", flashcards: "Sistema de flashcards", teachers: "Para profesores", about: "Sobre el proyecto", official: "Fuente oficial", methodology: "Metodología", evidence: "Evidencias y límites" },
+  fr: { home: "Accueil", features: "Fonctionnalités d’APE", flashcards: "Système de flashcards", teachers: "Pour enseignants", about: "À propos du projet", official: "Source officielle", methodology: "Méthodologie", evidence: "Preuves et limites" },
+  it: { home: "Home", features: "Funzioni di APE", flashcards: "Sistema di flashcard", teachers: "Per insegnanti", about: "Informazioni sul progetto", official: "Fonte ufficiale", methodology: "Metodologia", evidence: "Prove e limiti" },
+  de: { home: "Startseite", features: "APE-Funktionen", flashcards: "Lernkartensystem", teachers: "Für Lehrkräfte", about: "Über das Projekt", official: "Offizielle Quelle", methodology: "Methodik", evidence: "Belege und Grenzen" },
+};
+const localizedPages = Object.entries(localizedSource.locales).flatMap(([locale, localeSource]) => Object.entries(localeSource.pages).map(([key, page]) => {
+  const routes = { ...baseRoutes[key], [locale]: localeSource.paths[key] };
+  const alternates = [...Object.entries(routes).map(([hrefLang, href]) => ({ hrefLang, href })), { hrefLang: "x-default", href: "/" }];
+  return {
+    path: localeSource.paths[key],
+    language: locale,
+    title: page.title,
+    description: page.description,
+    h1: page.h1,
+    intro: page.intro.join(" "),
+    sections: page.sections,
+    links: Object.entries(localeSource.paths).filter(([relatedKey]) => relatedKey !== key).slice(0, 3).map(([relatedKey, href]) => ({ href, label: familyLabels[locale][relatedKey] ?? relatedKey })),
+    alternates,
+    schemaType: page.schema,
+    dateModified: localizedSource.dateModified,
+    faqs: page.faq,
+  };
+}));
+const familyRoutes = Object.fromEntries(Object.entries(baseRoutes).map(([key, routes]) => [key, {
+  ...routes,
+  ...Object.fromEntries(Object.entries(localizedSource.locales).map(([locale, source]) => [locale, source.paths[key]])),
+}]));
+const routeFamily = new Map(Object.entries(familyRoutes).flatMap(([key, routes]) => Object.values(routes).map((path) => [path, key])));
+const withFamilyAlternates = (page) => {
+  const family = routeFamily.get(page.path);
+  if (!family) return page;
+  return { ...page, alternates: [...Object.entries(familyRoutes[family]).map(([hrefLang, href]) => ({ hrefLang, href })), { hrefLang: "x-default", href: "/" }] };
+};
+const pages = [...legacyPages.map(withFamilyAlternates), ...localizedPages.map(withFamilyAlternates)];
 
 const escapeHtml = (value) => String(value)
   .replaceAll("&", "&amp;")
@@ -49,7 +98,13 @@ function renderCitation(page) {
 
 function renderFaqs(page) {
   if (!page.faqs?.length) return "";
-  const heading = page.language === "en" ? "Frequently asked factual questions" : "Perguntas factuais frequentes";
+  const heading = {
+    en: "Frequently asked factual questions",
+    es: "Preguntas frecuentes",
+    fr: "Questions fréquentes",
+    it: "Domande frequenti",
+    de: "Häufige Fragen",
+  }[page.language] ?? "Perguntas factuais frequentes";
   const entries = page.faqs
     .map((faq) => `<section class="seo-static-faq"><h3>${escapeHtml(faq.question)}</h3><p>${escapeHtml(faq.answer)}</p></section>`)
     .join("\n");
@@ -57,9 +112,17 @@ function renderFaqs(page) {
 }
 
 function renderContent(page) {
-  const relatedLabel = page.language === "en" ? "Related pages" : "Explore também";
-  const homeHref = page.language === "en" ? "/en" : "/pt-br";
-  const updatedLabel = page.language === "en" ? "Last editorial review" : "Última revisão editorial";
+  const labels = {
+    "pt-BR": { related: "Explore também", home: "/pt-br", updated: "Última revisão editorial", homeLabel: "Início" },
+    en: { related: "Related pages", home: "/en", updated: "Last editorial review", homeLabel: "Home" },
+    es: { related: "Páginas relacionadas", home: "/es", updated: "Última revisión editorial", homeLabel: "Inicio" },
+    fr: { related: "Pages associées", home: "/fr", updated: "Dernière relecture éditoriale", homeLabel: "Accueil" },
+    it: { related: "Pagine correlate", home: "/it", updated: "Ultima revisione editoriale", homeLabel: "Home" },
+    de: { related: "Verwandte Seiten", home: "/de", updated: "Letzte redaktionelle Prüfung", homeLabel: "Startseite" },
+  }[page.language] ?? { related: "Explore também", home: "/pt-br", updated: "Última revisão editorial", homeLabel: "Início" };
+  const relatedLabel = labels.related;
+  const homeHref = labels.home;
+  const updatedLabel = labels.updated;
   const sections = page.sections.map(renderSection).join("\n");
   const updated = page.dateModified
     ? `<p class="seo-static-updated">${escapeHtml(updatedLabel)}: <time datetime="${escapeHtml(page.dateModified)}">${escapeHtml(page.dateModified)}</time></p>`
@@ -74,8 +137,8 @@ function renderContent(page) {
 
 function buildJsonLd(page) {
   const canonical = absolute(page.path);
-  const homePath = page.language === "en" ? "/en" : "/pt-br";
-  const homeLabel = page.language === "en" ? "Home" : "Início";
+  const homePath = { "pt-BR": "/pt-br", en: "/en", es: "/es", fr: "/fr", it: "/it", de: "/de" }[page.language] ?? "/pt-br";
+  const homeLabel = { "pt-BR": "Início", en: "Home", es: "Inicio", fr: "Accueil", it: "Home", de: "Startseite" }[page.language] ?? "Início";
   const organizationId = `${siteUrl}/#organization`;
   const personId = `${siteUrl}/#pedro-luis`;
   const applicationId = `${siteUrl}/#application`;
@@ -111,7 +174,7 @@ function buildJsonLd(page) {
       url: `${siteUrl}/`,
       applicationCategory: "EducationalApplication",
       operatingSystem: "Web",
-      inLanguage: ["pt-BR", "en"],
+      inLanguage: ["pt-BR", "en", "es", "fr", "it", "de"],
       creator: { "@id": personId },
       publisher: { "@id": organizationId },
       featureList: page.featureList ?? [],
@@ -124,7 +187,7 @@ function buildJsonLd(page) {
     name: "APE — Apprentice Practice & Enhancement",
     alternateName: "App Piteco",
     url: `${siteUrl}/`,
-    inLanguage: ["pt-BR", "en"],
+    inLanguage: ["pt-BR", "en", "es", "fr", "it", "de"],
     publisher: { "@id": organizationId },
   });
 

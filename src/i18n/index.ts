@@ -84,6 +84,18 @@ import itErrors from './resources/it/errors.json';
 import itStudy from './resources/it/study.json';
 import itLibrary from './resources/it/library.json';
 
+import deCommon from './resources/de/common.json';
+import deNav from './resources/de/nav.json';
+import deSidebar from './resources/de/sidebar.json';
+import deHome from './resources/de/home.json';
+import deFlashcards from './resources/de/flashcards.json';
+import deClasses from './resources/de/classes.json';
+import deDates from './resources/de/dates.json';
+import deLanguage from './resources/de/language.json';
+import deErrors from './resources/de/errors.json';
+import deStudy from './resources/de/study.json';
+import deLibrary from './resources/de/library.json';
+
 type Catalog = Record<string, unknown>;
 
 const merge = (...parts: Catalog[]): Catalog => Object.assign({}, ...parts);
@@ -94,6 +106,7 @@ const catalogs: Record<AppLocale, Catalog> = {
   es: merge(esCommon, esNav, esSidebar, esHome, esFlashcards, esClasses, esDates, esLanguage, esErrors, esStudy, esLibrary),
   fr: merge(frCommon, frNav, frSidebar, frHome, frFlashcards, frClasses, frDates, frLanguage, frErrors, frStudy, frLibrary),
   it: merge(itCommon, itNav, itSidebar, itHome, itFlashcards, itClasses, itDates, itLanguage, itErrors, itStudy, itLibrary),
+  de: merge(deCommon, deNav, deSidebar, deHome, deFlashcards, deClasses, deDates, deLanguage, deErrors, deStudy, deLibrary),
 };
 
 const resources = Object.fromEntries(

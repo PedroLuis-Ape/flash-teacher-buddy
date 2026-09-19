@@ -62,16 +62,26 @@ Relatório de auditoria versionado:
 - O contrato regressivo está em
   `src/features/study/components/studyDirectionSelector.contract.test.ts`.
 
-### Cobertura internacional — limite auditado (2026-09-19)
+### Cobertura internacional — estado final da camada editorial (2026-09-19)
 
 - O registry de Study/TTS já cobre `de`, `ja`, `zh` e `ko`, incluindo BCP-47,
   labels e fallback por idioma-base; isso não equivale a interface traduzida.
-- A interface permanece com cinco catálogos (`pt-BR`, `en`, `es`, `fr`, `it`),
-  e o SEO editorial/prerender versionado permanece PT/EN. Não criar catálogo
-  alemão falso nem hreflang para páginas que ainda não existem.
-- A expansão Tier 1 completa (catálogo DE + conteúdo editorial localizado +
-  rotas/canonical/hreflang/sitemap/prerender) permanece uma etapa própria,
-  dependente de traduções editoriais revisadas.
+- A interface agora possui seis catálogos (`pt-BR`, `en`, `es`, `fr`, `it`,
+  `de`), com o registro alemão cobrindo as 595 chaves base e aliases `de`/
+  `de-DE`.
+- `config/editorial/international-locales.json` é a fonte editorial localizada
+  de ES/FR/IT/DE. Ela alimenta o master editorial React, a navegação pública,
+  JSON-LD, o prerender e os validadores; não criar uma segunda tabela de cópia.
+- As oito famílias editoriais têm 32 novas rotas localizadas, além das rotas
+  PT/EN existentes. Cada família emite os seis alternates BCP-47 mais
+  `x-default` para `/`, com canonical próprio e reciprocidade validada.
+- O build chama `scripts/prerender-international-pages.mjs`; o script também
+  inclui metodologia/evidências e aceita `PITECO_DIST_DIR` para validação
+  isolada. O contrato foi validado com 48 HTMLs prerenderizados e 48 páginas
+  internacionais no verificador. O sitemap e `_redirects` incluem as 32 novas
+  rotas.
+- O catálogo de Study/TTS continua cobrindo `de`, `ja`, `zh` e `ko`; Tier 2
+  permanece Study/TTS/importação sem páginas SEO até haver conteúdo editorial.
 
 ## Compatibilidade de sessões antigas (P0 desta rodada)
 

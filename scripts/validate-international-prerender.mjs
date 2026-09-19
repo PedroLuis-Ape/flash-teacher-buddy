@@ -2,10 +2,36 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
-const pages = [
+const legacyPages = [
   ...JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8")),
   ...JSON.parse(readFileSync(resolve(root, "config/public-seo-official-sources.json"), "utf8")),
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-methodology-evidence.json"), "utf8")),
 ];
+const localizedSource = JSON.parse(readFileSync(resolve(root, "config/editorial/international-locales.json"), "utf8"));
+const baseRoutes = {
+  home: { "pt-BR": "/pt-br", en: "/en" },
+  features: { "pt-BR": "/pt-br/recursos", en: "/en/features" },
+  flashcards: { "pt-BR": "/pt-br/flashcards", en: "/en/flashcards" },
+  teachers: { "pt-BR": "/pt-br/para-professores", en: "/en/for-teachers" },
+  about: { "pt-BR": "/pt-br/sobre", en: "/en/about" },
+  official: { "pt-BR": "/pt-br/fonte-oficial", en: "/en/official-source" },
+  methodology: { "pt-BR": "/pt-br/metodologia", en: "/en/methodology" },
+  evidence: { "pt-BR": "/pt-br/evidencias", en: "/en/evidence" },
+};
+const localizedPages = Object.entries(localizedSource.locales).flatMap(([locale, localeSource]) => Object.entries(localeSource.pages).map(([key, page]) => {
+  const routes = { ...baseRoutes[key], [locale]: localeSource.paths[key] };
+  return { path: localeSource.paths[key], language: locale, h1: page.h1, alternates: [...Object.entries(routes).map(([hrefLang, href]) => ({ hrefLang, href })), { hrefLang: "x-default", href: "/" }] };
+}));
+const familyRoutes = Object.fromEntries(Object.entries(baseRoutes).map(([key, routes]) => [key, {
+  ...routes,
+  ...Object.fromEntries(Object.entries(localizedSource.locales).map(([locale, source]) => [locale, source.paths[key]])),
+}]));
+const routeFamily = new Map(Object.entries(familyRoutes).flatMap(([key, routes]) => Object.values(routes).map((path) => [path, key])));
+const withFamilyAlternates = (page) => {
+  const family = routeFamily.get(page.path);
+  return family ? { ...page, alternates: [...Object.entries(familyRoutes[family]).map(([hrefLang, href]) => ({ hrefLang, href })), { hrefLang: "x-default", href: "/" }] } : page;
+};
+const pages = [...legacyPages.map(withFamilyAlternates), ...localizedPages.map(withFamilyAlternates)];
 const errors = [];
 
 const escapeHtml = (value) => String(value)
@@ -16,7 +42,7 @@ const escapeHtml = (value) => String(value)
   .replaceAll("'", "&#39;");
 
 for (const page of pages) {
-  const path = resolve(root, "dist", page.path.slice(1), "index.html");
+  const path = resolve(root, process.env.PITECO_DIST_DIR ?? "dist", page.path.slice(1), "index.html");
   if (!existsSync(path)) {
     errors.push(`Arquivo ausente: ${page.path}`);
     continue;

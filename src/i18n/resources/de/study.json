@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Lernen",
+    "settings": "Sitzungseinstellungen",
+    "practiceDirection": "Übungsrichtung",
+    "modeFlip": "Karteikarten",
+    "modeWrite": "Schreiben",
+    "modeRewrite": "Umschreiben",
+    "modeTranslate": "Übersetzen",
+    "modeMultipleChoice": "Multiple Choice",
+    "modeUnscramble": "Satz ordnen",
+    "modePronunciation": "Aussprache",
+    "modeMixed": "Gemischt",
+    "scopeAll": "Alle Karten",
+    "scopeFavorites": "Nur Favoriten",
+    "scopeRed": "Rote Liste",
+    "round": "Runde {{current}} von {{total}}",
+    "progress": "{{current}} von {{total}}",
+    "noCards": "Keine Karten verfügbar",
+    "noFavorites": "Du hast in dieser Liste noch keine Favoriten markiert",
+    "loadingCards": "Deine Sitzung wird vorbereitet…",
+    "finishSession": "Sitzung beenden",
+    "continueSession": "Sitzung fortsetzen",
+    "tryAgain": "Erneut versuchen",
+    "showHint": "Hinweis anzeigen",
+    "playAudio": "Anhören",
+    "checkAnswer": "Prüfen"
+  }
+}

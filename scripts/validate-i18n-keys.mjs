@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Paridade dos catálogos de interface (pt-BR, en, es, fr, it).
+ * Paridade dos catálogos de interface (pt-BR, en, es, fr, it, de).
  *
  * Detecta:
  * - chave ausente em algum idioma;
@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
 const root = process.cwd();
 const resourcesDir = resolve(root, 'src/i18n/resources');
 const BASE = 'pt-BR';
-const LOCALES = ['pt-BR', 'en', 'es', 'fr', 'it'];
+const LOCALES = ['pt-BR', 'en', 'es', 'fr', 'it', 'de'];
 
 function flatten(value, prefix = '', out = {}) {
   for (const [key, item] of Object.entries(value)) {
