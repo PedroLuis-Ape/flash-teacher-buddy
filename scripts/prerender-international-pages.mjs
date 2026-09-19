@@ -4,9 +4,6 @@ import { dirname, resolve } from "node:path";
 const root = process.cwd();
 const distDir = resolve(root, process.env.PITECO_DIST_DIR ?? "dist");
 const templatePath = resolve(distDir, "index.html");
-const pagesPath = resolve(root, "config/public-seo-pages-international.json");
-const officialSourcesPath = resolve(root, "config/public-seo-official-sources.json");
-const methodologyEvidencePath = resolve(root, "config/public-seo-methodology-evidence.json");
 const localizedEditorialPath = resolve(root, "config/editorial/international-locales.json");
 const siteUrl = "https://www.apeeducation.org";
 
@@ -59,7 +56,8 @@ const withFamilyAlternates = (page) => {
   if (!family) return page;
   return { ...page, alternates: [...Object.entries(familyRoutes[family]).map(([hrefLang, href]) => ({ hrefLang, href })), { hrefLang: "x-default", href: "/" }] };
 };
-const pages = [...legacyPages.map(withFamilyAlternates), ...localizedPages.map(withFamilyAlternates)];
+// As rotas pt-BR/en sao geradas por scripts/prerender-public-pages.mjs; aqui so criamos es/fr/it/de.
+const pages = localizedPages.map(withFamilyAlternates);
 
 const escapeHtml = (value) => String(value)
   .replaceAll("&", "&amp;")
