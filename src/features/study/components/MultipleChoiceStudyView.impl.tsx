@@ -271,9 +271,9 @@ export const MultipleChoiceStudyView = ({
       </div>
 
       {onSkip && !showFeedback && (
-        <Button type="button" variant="outline" className="w-full" onClick={onSkip}>
-          <SkipForward className="mr-2 h-4 w-4" />
-          Pular card
+        <Button type="button" variant="outline" className="h-11 min-h-11 w-full rounded-xl font-semibold" onClick={onSkip}>
+          <SkipForward className="mr-2 h-4 w-4 shrink-0" />
+          <span className="whitespace-nowrap">Pular card</span>
         </Button>
       )}
 

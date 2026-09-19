@@ -133,7 +133,7 @@ function InlineToolButton({
       }}
     >
       {icon}
-      <span className={alwaysShowLabel ? "text-xs font-semibold" : "hidden 2xl:inline text-xs"}>
+      <span className={cn("whitespace-nowrap", alwaysShowLabel ? "text-xs font-semibold" : "hidden 2xl:inline text-xs")}>
         {visibleLabel ?? label}
       </span>
     </Button>
@@ -415,7 +415,8 @@ export function StudyToolsMenu({
           }}
         >
           {specialIcon}
-          <span className="truncate text-xs font-semibold">Ponto de atenção</span>
+          <span className="hidden truncate text-xs font-semibold min-[360px]:inline">Ponto de atenção</span>
+          <span className="truncate text-xs font-semibold min-[360px]:hidden">Atenção</span>
         </Button>
       )}
 

@@ -117,4 +117,29 @@ describe("APE browser extension contract", () => {
       expect(source).not.toContain("<all_urls>");
     });
   });
+
+  it("keeps a permanent Extension entry in the public navigation", () => {
+    const nav = read("src/components/seo/PublicNav.tsx");
+    const page = read("src/pages/Extension.tsx");
+    const app = read("src/App.tsx");
+
+    // Entrada na navegação: o mesmo array alimenta o menu desktop e o Sheet
+    // mobile, então a aba existe nos dois layouts por construção.
+    expect(nav).toContain('{ to: "/extensao", label: copy.extension }');
+    expect(nav).toContain("extension: string");
+    for (const label of ["Extensão", "Extension", "Extensión", "Estensione", "Erweiterung"]) {
+      expect(nav).toContain(`extension: "${label}"`);
+    }
+    expect(nav).toContain("<SheetContent");
+    expect(nav).toContain("{links.map((link) => (");
+
+    // A página existe como rota própria e NÃO depende do convite automático.
+    expect(app).toContain('path="/extensao"');
+    expect(page).toContain("WEB_STORE_URL");
+    expect(page).toContain("useBrowserExtensionStatus");
+    expect(page).toContain("INSTALL_GUIDE_URL");
+    expect(page).not.toContain("chromewebstore.google.com");
+    expect(page).not.toContain("PROMPT_SNOOZE_KEY");
+    expect(page).not.toContain("PROMPT_SESSION_KEY");
+  });
 });

@@ -16,6 +16,9 @@ const PUBLIC_PREFIXES = [
   '/atividades-de-ingles',
   '/flashcards-de-ingles',
   '/para-professores',
+  // Entrada permanente da extensão: precisa ser pública para que qualquer
+  // visitante (inclusive quem nunca criou conta) consiga reencontrá-la.
+  '/extensao',
   '/pt-br',
   '/en',
 ] as const;

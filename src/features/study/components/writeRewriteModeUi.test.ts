@@ -8,6 +8,7 @@ const modalSource = readFileSync(new URL("./GameSettingsModal.impl.tsx", import.
 const studySource = readFileSync(new URL("../../../pages/Study.tsx", import.meta.url), "utf8");
 const mixedSource = readFileSync(new URL("../../../pages/MixedStudy.tsx", import.meta.url), "utf8");
 const mixedMultipleSource = readFileSync(new URL("./MultipleChoiceStudyView.tsx", import.meta.url), "utf8");
+const actionBarSource = readFileSync(new URL("./StudyActionBar.tsx", import.meta.url), "utf8");
 
 describe("write rewrite activity UI", () => {
   it("exposes translate, visible rewrite and listening as three sibling options", () => {
@@ -121,6 +122,11 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).toContain("navigationLockedRef");
     expect(writeBoundarySource).toContain("onPrevious: props.onPrevious");
     expect(writeBoundarySource).toContain('grid-template-columns", "minmax(4.25rem, .85fr)');
-    expect(writeSource).toContain('<span className="hidden sm:inline">Dica</span>');
+    // A barra de ações passou a ser um primitivo compartilhado: o rótulo
+    // secundário continua escondido no mobile, agora pelo próprio botão.
+    expect(writeSource).toContain("<StudyActionBar");
+    expect(writeSource).toContain('compactLabel="Dica"');
+    expect(actionBarSource).toContain('hideLabelOnMobile && "hidden sm:inline"');
+    expect(actionBarSource).toContain("whitespace-nowrap");
   });
 });

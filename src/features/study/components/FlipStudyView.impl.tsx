@@ -577,32 +577,30 @@ export const FlipStudyView = ({
   );
 
   const actionButtons = !assessmentEnabled ? null : (
-    <div className="flip-action-buttons flex w-full flex-row flex-wrap justify-center gap-2 sm:gap-3">
+    <div className="flip-action-buttons grid w-full grid-cols-2 gap-2 sm:flex sm:flex-row sm:justify-center sm:gap-3">
       <Button
         variant="destructive"
-        size="lg"
         onClick={handleDidntKnow}
         className={cn(
-          "min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base",
+          "h-12 min-h-12 w-full gap-1.5 rounded-xl px-2 text-sm font-semibold sm:w-auto sm:min-w-[160px] sm:px-5 sm:text-base",
           manualAnswer === "didntKnow" && "ring-2 ring-destructive/70 ring-offset-2 ring-offset-background",
         )}
         aria-pressed={manualAnswer === "didntKnow"}
       >
-        <RotateCcw className="mr-2 h-5 w-5" />
-        Não Sabia
+        <RotateCcw className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+        <span className="whitespace-nowrap">Não Sabia</span>
       </Button>
       <Button
         variant="default"
-        size="lg"
         onClick={handleKnew}
         className={cn(
-          "min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base",
+          "h-12 min-h-12 w-full gap-1.5 rounded-xl px-2 text-sm font-semibold sm:w-auto sm:min-w-[160px] sm:px-5 sm:text-base",
           manualAnswer === "knew" && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
         )}
         aria-pressed={manualAnswer === "knew"}
       >
-        <Check className="mr-2 h-5 w-5" />
-        Sabia
+        <Check className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+        <span className="whitespace-nowrap">Sabia</span>
       </Button>
     </div>
   );

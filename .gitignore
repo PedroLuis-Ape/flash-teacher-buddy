@@ -31,3 +31,6 @@ artifacts/preview-smoke
 *.njsproj
 *.sln
 *.sw?
+
+# Artefatos de auditoria visual (screenshots/relatórios locais), não versionados
+artifacts/

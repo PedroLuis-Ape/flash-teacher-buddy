@@ -177,7 +177,9 @@ export function PronunciationStudyView({
         <p className="mt-2 text-sm text-muted-foreground sm:text-base">
           Este navegador não oferece acesso compatível ao microfone nem reconhecimento de voz.
         </p>
-        <Button onClick={onSkip ?? onNext} className="mt-4 sm:mt-6">Pular exercício</Button>
+        <Button onClick={onSkip ?? onNext} className="mt-4 h-11 min-h-11 rounded-xl px-4 font-semibold sm:mt-6">
+          <span className="whitespace-nowrap">Pular exercício</span>
+        </Button>
       </div>
     );
   }

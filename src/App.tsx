@@ -32,6 +32,7 @@ const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes
 const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
 const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
 const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
+const Extension = lazy(() => import("./pages/Extension"));
 const InternationalSEOPage = lazy(() => import("./pages/seo/InternationalSEOPage"));
 const OfficialSourcePage = lazy(() => import("./pages/seo/OfficialSourcePage"));
 const MethodologyEvidencePage = lazy(() => import("./pages/seo/MethodologyEvidencePage"));
@@ -156,6 +157,7 @@ const App = () => {
                           <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
                           <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />
                           <Route path="/para-professores" element={<ParaProfessores />} />
+                          <Route path="/extensao" element={<Extension />} />
                           <Route path="/pt-br" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/recursos" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/flashcards" element={<InternationalSEOPage />} />

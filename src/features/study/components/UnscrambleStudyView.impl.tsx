@@ -284,11 +284,11 @@ export const UnscrambleStudyView = ({
 
       {!submitted && (
         <div className="flex w-full gap-3">
-          <Button variant="outline" onClick={resetExercise} className="min-h-12 flex-1 text-sm">
-            <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
+          <Button variant="outline" onClick={resetExercise} className="h-12 min-h-12 flex-1 rounded-xl text-sm font-semibold">
+            <RotateCcw className="mr-2 h-4 w-4 shrink-0" /> <span className="whitespace-nowrap">Reiniciar</span>
           </Button>
-          <Button onClick={handleSubmit} disabled={selectedWords.length === 0} className="min-h-12 flex-1 text-sm font-semibold">
-            <Check className="mr-2 h-4 w-4" /> Verificar
+          <Button onClick={handleSubmit} disabled={selectedWords.length === 0} className="h-12 min-h-12 flex-1 rounded-xl text-sm font-semibold">
+            <Check className="mr-2 h-4 w-4 shrink-0" /> <span className="whitespace-nowrap">Verificar</span>
           </Button>
         </div>
       )}

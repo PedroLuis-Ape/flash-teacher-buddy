@@ -13,6 +13,7 @@ import { getRedListCardClass } from "./RedListIndicator";
 import { getSpeechRate, SpeechRateControl } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
+import { StudyActionBar, StudyActionButton } from "./StudyActionBar";
 import { AttentionPointSheet } from "./AttentionPointSheet";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
@@ -783,39 +784,41 @@ export const WriteStudyView = ({
 
       {evaluation === null && (
         <div className="sticky bottom-4 z-10 rounded-lg bg-background/95 p-2 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => advance.requestAdvance({ source: "next_button" })}
-              className="h-11 shrink-0 px-3 text-muted-foreground"
-              title="Pular"
-            >
-              <SkipForward className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Pular</span>
-            </Button>
-            {onOpenLayers && (
-              <LayeredCardHintButton
-                layerCount={layerCount}
-                visitedCount={layersVisitedCount}
-                onOpen={onOpenLayers}
+          <StudyActionBar
+            secondary={
+              <>
+                <StudyActionButton
+                  tone="ghost"
+                  icon={<SkipForward className="h-4 w-4" />}
+                  label="Pular"
+                  onClick={() => advance.requestAdvance({ source: "next_button" })}
+                />
+                {onOpenLayers && (
+                  <LayeredCardHintButton
+                    layerCount={layerCount}
+                    visitedCount={layersVisitedCount}
+                    onOpen={onOpenLayers}
+                  />
+                )}
+                <StudyActionButton
+                  tone="ghost"
+                  icon={<Lightbulb className="h-4 w-4" />}
+                  label={isRewriteActivity ? "Mostrar dica gradual" : "Dica"}
+                  compactLabel="Dica"
+                  onClick={handleHint}
+                  disabled={revealed || (isRewriteActivity && (rewriteState.phase !== "LISTENING" || rewriteState.hintLevel >= 2))}
+                />
+              </>
+            }
+            primary={
+              <StudyActionButton
+                tone="primary"
+                label="Corrigir"
+                onClick={handleSubmit}
+                className="w-full text-base shadow-md"
               />
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleHint}
-              disabled={revealed || (isRewriteActivity && (rewriteState.phase !== "LISTENING" || rewriteState.hintLevel >= 2))}
-              className="h-11 shrink-0 px-3 text-muted-foreground"
-              title={isRewriteActivity ? "Mostrar dica gradual" : "Dica"}
-            >
-              <Lightbulb className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Dica</span>
-            </Button>
-            <Button onClick={handleSubmit} size="lg" className="min-h-[50px] flex-1 text-base font-semibold shadow-md">
-              Corrigir
-            </Button>
-          </div>
+            }
+          />
         </div>
       )}
       <SkipCardConfirmDialog

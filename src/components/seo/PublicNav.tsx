@@ -9,13 +9,13 @@ import { PublicThemeToggle } from "@/components/seo/PublicThemeToggle";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getEditorialFamilyRoutes, getEditorialHomePath, type EditorialLocale } from "@/content/public/editorialMaster";
 
-const NAV_COPY: Record<EditorialLocale, { home: string; features: string; flashcards: string; teachers: string; methodology: string; portal: string; login: string; signup: string; menu: string }> = {
-  "pt-BR": { home: "Início", features: "Recursos", flashcards: "Flashcards", teachers: "Professores", methodology: "Metodologia", portal: "Portal", login: "Entrar", signup: "Começar agora", menu: "Abrir menu" },
-  en: { home: "Home", features: "Features", flashcards: "Flashcards", teachers: "Teachers", methodology: "Methodology", portal: "Portal", login: "Sign in", signup: "Get started", menu: "Open menu" },
-  es: { home: "Inicio", features: "Recursos", flashcards: "Flashcards", teachers: "Profesores", methodology: "Metodología", portal: "Portal", login: "Entrar", signup: "Empezar", menu: "Abrir menú" },
-  fr: { home: "Accueil", features: "Ressources", flashcards: "Flashcards", teachers: "Enseignants", methodology: "Méthodologie", portal: "Portail", login: "Se connecter", signup: "Commencer", menu: "Ouvrir le menu" },
-  it: { home: "Home", features: "Risorse", flashcards: "Flashcard", teachers: "Insegnanti", methodology: "Metodologia", portal: "Portale", login: "Accedi", signup: "Inizia ora", menu: "Apri menu" },
-  de: { home: "Startseite", features: "Funktionen", flashcards: "Lernkarten", teachers: "Lehrkräfte", methodology: "Methodik", portal: "Portal", login: "Anmelden", signup: "Jetzt starten", menu: "Menü öffnen" },
+const NAV_COPY: Record<EditorialLocale, { home: string; features: string; flashcards: string; teachers: string; methodology: string; portal: string; extension: string; login: string; signup: string; menu: string }> = {
+  "pt-BR": { home: "Início", features: "Recursos", flashcards: "Flashcards", teachers: "Professores", methodology: "Metodologia", portal: "Portal", extension: "Extensão", login: "Entrar", signup: "Começar agora", menu: "Abrir menu" },
+  en: { home: "Home", features: "Features", flashcards: "Flashcards", teachers: "Teachers", methodology: "Methodology", portal: "Portal", extension: "Extension", login: "Sign in", signup: "Get started", menu: "Open menu" },
+  es: { home: "Inicio", features: "Recursos", flashcards: "Flashcards", teachers: "Profesores", methodology: "Metodología", portal: "Portal", extension: "Extensión", login: "Entrar", signup: "Empezar", menu: "Abrir menú" },
+  fr: { home: "Accueil", features: "Ressources", flashcards: "Flashcards", teachers: "Enseignants", methodology: "Méthodologie", portal: "Portail", extension: "Extension", login: "Se connecter", signup: "Commencer", menu: "Ouvrir le menu" },
+  it: { home: "Home", features: "Risorse", flashcards: "Flashcard", teachers: "Insegnanti", methodology: "Metodologia", portal: "Portale", extension: "Estensione", login: "Accedi", signup: "Inizia ora", menu: "Apri menu" },
+  de: { home: "Startseite", features: "Funktionen", flashcards: "Lernkarten", teachers: "Lehrkräfte", methodology: "Methodik", portal: "Portal", extension: "Erweiterung", login: "Anmelden", signup: "Jetzt starten", menu: "Menü öffnen" },
 };
 
 function getNavLinks(locale: EditorialLocale) {
@@ -28,6 +28,7 @@ function getNavLinks(locale: EditorialLocale) {
     { to: routes.teachers[locale], label: copy.teachers },
     { to: routes.methodology[locale], label: copy.methodology },
     { to: "/portal", label: copy.portal },
+    { to: "/extensao", label: copy.extension },
   ];
 }
 
@@ -35,7 +36,12 @@ export function PublicNav({ compact = false, locale = "pt-BR" }: { compact?: boo
   const [open, setOpen] = useState(false);
   const copy = NAV_COPY[locale];
   const navLinks = getNavLinks(locale);
-  const links = compact ? navLinks.filter(link => [navLinks[1].to, navLinks[3].to, "/portal"].includes(link.to)) : navLinks;
+  // A navegação compacta (landing) mantém menos itens, mas a entrada da
+  // extensão continua nela: é justamente a superfície de quem ainda não tem
+  // conta e precisa reencontrar a extensão depois de dispensar o convite.
+  const links = compact
+    ? navLinks.filter(link => [navLinks[1].to, navLinks[3].to, "/portal", "/extensao"].includes(link.to))
+    : navLinks;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -121,6 +127,7 @@ export function PublicFooter({ locale = "pt-BR" }: { locale?: EditorialLocale })
           <Link to={methodology} className="nav-link-animated hover:text-foreground">{copy.methodology}</Link>
           <Link to={evidence} className="nav-link-animated hover:text-foreground">{locale === "en" ? "Evidence" : locale === "pt-BR" ? "Evidências" : "Evidence"}</Link>
           <Link to={official} className="nav-link-animated hover:text-foreground">{locale === "en" ? "Official source" : locale === "pt-BR" ? "Fonte oficial" : "Official source"}</Link>
+          <Link to="/extensao" className="nav-link-animated hover:text-foreground">{copy.extension}</Link>
           <Link to="/portal" className="nav-link-animated hover:text-foreground">{copy.portal}</Link>
           <Link to="/auth" className="nav-link-animated hover:text-foreground">{copy.login}</Link>
         </nav>
