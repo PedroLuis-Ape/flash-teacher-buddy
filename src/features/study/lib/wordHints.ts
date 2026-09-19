@@ -19,6 +19,12 @@ export interface WordHint {
   translation: string;
   /** Optional note/explanation */
   note?: string;
+  /**
+   * Marca uma camada contextual criada apenas para hospedar uma anotação
+   * pessoal de uso. Quando a anotação é esvaziada, essa camada é removida e
+   * nada é promovido ao glossário global.
+   */
+  noteOnly?: boolean;
   /** Start character index in source text (inclusive) */
   startIndex?: number;
   /** End character index in source text (exclusive) */

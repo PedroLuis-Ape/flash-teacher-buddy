@@ -10,6 +10,7 @@ import {
   type CanonicalPromptOptions,
 } from "./promptConfiguration";
 import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
+import { withFlashcardCompositionRules } from "@/features/import-prompts/flashcardCompositionContract";
 
 export type { CanonicalPromptOptions, PromptFolderConfig } from "./promptConfiguration";
 
@@ -111,5 +112,5 @@ export function buildCanonicalGlobalImportPrompt(options: CanonicalPromptOptions
     `CARD_SCHEMA=${cardShape}`,
     `JSON_TEMPLATE=${template}`,
   ].join("\n\n");
-  return { requestId, prompt, template, manifest };
+  return { requestId, prompt: withFlashcardCompositionRules(prompt), template, manifest };
 }

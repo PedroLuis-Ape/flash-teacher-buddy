@@ -4,6 +4,7 @@ import {
 } from "@/features/smart-import/schema";
 import type { GlobalImportDestinationMode } from "../destinationModes";
 import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
+import { FLASHCARD_COMPOSITION_RULES } from "@/features/import-prompts/flashcardCompositionContract";
 
 export type GlobalImportAiPreset = "batch" | "detailed" | "complete";
 
@@ -222,6 +223,9 @@ export function buildGlobalImportPresetPrompt(
     "- Não junte interpretações no mesmo lado usando barra, pipe, ponto e vírgula ou uma lista de traduções.",
     "- Use context_tag, exemplo ou short_observation para deixar claro o uso de cada interpretação, conforme o modo selecionado.",
     "- O usuário poderá mesclar manualmente os cards depois pela função Mesclar em camadas na tela da lista.",
+    "",
+    "CONTRATO PEDAGÓGICO DE COMPOSIÇÃO DOS FLASHCARDS",
+    FLASHCARD_COMPOSITION_RULES,
     "",
     "GLOSSÁRIO CONTEXTUAL",
     "- word_hints é um array por card.",

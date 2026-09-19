@@ -45,6 +45,16 @@ interface StudyFeedbackPanelProps {
   hiddenCorrectionCount?: number;
   /** 0..100 — se fornecido, aparece como badge no cabeçalho. */
   accuracyPercent?: number;
+  /**
+   * Outro lado do mesmo card/camada (modo Reescrever). Fica visualmente
+   * secundário em relação à resposta correta e nunca substitui o original.
+   */
+  otherSideAnswer?: string | null;
+  /** Rótulo semântico do idioma do outro lado (ex: "English"). */
+  otherSideLabel?: string;
+  onPlayOtherSideAnswer?: () => void;
+  isPlayingOtherSideAnswer?: boolean;
+  playOtherSideAriaLabel?: string;
 }
 
 const STATUS_CONFIG = {
@@ -111,6 +121,11 @@ export function StudyFeedbackPanel({
   correctionMessages,
   hiddenCorrectionCount = 0,
   accuracyPercent,
+  otherSideAnswer,
+  otherSideLabel,
+  onPlayOtherSideAnswer,
+  isPlayingOtherSideAnswer = false,
+  playOtherSideAriaLabel,
 }: StudyFeedbackPanelProps) {
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
@@ -230,6 +245,39 @@ export function StudyFeedbackPanel({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {otherSideAnswer && (
+          <div
+            data-feedback-other-side="true"
+            className="min-w-0 rounded-xl border border-border/60 bg-muted/20 p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                {otherSideLabel ? `Outro lado · ${otherSideLabel}` : "Outro lado"}
+              </span>
+              {onPlayOtherSideAnswer && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={onPlayOtherSideAnswer}
+                  aria-label={playOtherSideAriaLabel ?? "Ouvir o outro lado"}
+                  title={playOtherSideAriaLabel ?? "Ouvir o outro lado"}
+                  aria-pressed={isPlayingOtherSideAnswer}
+                  className={cn(
+                    "min-h-11 min-w-11 shrink-0 rounded-full text-muted-foreground touch-manipulation hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                    isPlayingOtherSideAnswer && "bg-muted/60",
+                  )}
+                >
+                  <Volume2 className={cn("h-4 w-4", isPlayingOtherSideAnswer && "animate-pulse")} />
+                </Button>
+              )}
+            </div>
+            <p className="mt-1 break-words text-sm font-medium leading-snug text-muted-foreground sm:text-base">
+              {otherSideAnswer}
+            </p>
           </div>
         )}
 

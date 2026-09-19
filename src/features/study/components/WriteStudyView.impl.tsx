@@ -508,6 +508,26 @@ export const WriteStudyView = ({
       ? rewriteOppositeText
       : "";
   const showRewriteTranslation = isRewriteActivity && rewriteTranslationText.length > 0;
+  // O outro lado real do card/camada, com o mesmo label semântico do idioma
+  // usado no resto da sessão. Nada é hardcoded para EN/PT.
+  const rewriteOtherSide = isRewriteActivity
+    ? (resolvedRewriteSide === "a" ? sideB : sideA)
+    : undefined;
+  const rewriteOtherSideProps = rewriteOtherSide && showRewriteTranslation
+    ? {
+        otherSideAnswer: rewriteTranslationText,
+        otherSideLabel: rewriteOtherSide.label,
+        onPlayOtherSideAnswer: ttsEnabled
+          ? () => {
+              void speak(rewriteTranslationText, {
+                langOverride: toBCP47(rewriteOtherSide.lang),
+                rate: getSpeechRate(),
+              });
+            }
+          : undefined,
+        playOtherSideAriaLabel: `Ouvir o outro lado em ${rewriteOtherSide.label}`,
+      }
+    : {};
   const rewriteHint = isRewriteActivity ? buildRewriteHint(correctAnswer, rewriteState.hintLevel) : "";
 
   const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
@@ -566,6 +586,7 @@ export const WriteStudyView = ({
                   text={prompt}
                   wordHints={promptWordHints}
                   mergedHints={promptMergedHints}
+                  side={isAFirst ? "A" : "B"}
                   speakOnHintClick={ttsEnabled}
                   speakLang={promptLang}
                 />
@@ -679,6 +700,7 @@ export const WriteStudyView = ({
             onAction={() => advance.requestAdvance({ source: "next_button" })}
             onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
+            {...rewriteOtherSideProps}
           />
         )}
 
@@ -700,6 +722,7 @@ export const WriteStudyView = ({
             onSecondaryAction={handleRetry}
             onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
+            {...rewriteOtherSideProps}
           />
         )}
 
@@ -726,6 +749,7 @@ export const WriteStudyView = ({
             onSecondaryAction={effectiveCorrectionMode === "hard" ? undefined : handleRetry}
             onPlayAnswer={ttsEnabled ? () => { void speak(referenceAnswer, { langOverride: answerSide.lang, rate: getSpeechRate() }); } : undefined}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
+            {...rewriteOtherSideProps}
             tertiaryActionLabel="Marcar dificuldade"
             tertiaryActionHint="Guarde uma palavra sem sair do estudo."
             tertiaryActionDisabled={isSavingAttentionPoint}

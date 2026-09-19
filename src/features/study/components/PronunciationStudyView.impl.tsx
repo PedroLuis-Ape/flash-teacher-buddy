@@ -88,7 +88,7 @@ export function PronunciationStudyView({
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
   // CONTRATO CANÔNICO: nenhum modo escolhe sideA/sideB por conta própria. O
   // aluno pronuncia a RESPOSTA e a PERGUNTA é a dica exibida.
-  const { promptSide, answerSide } = resolveStudySides(
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(
     sideA,
     sideB,
     direction,
@@ -231,10 +231,10 @@ export function PronunciationStudyView({
           Fale em {speakSide.label}
         </p>
         <h2 className="mb-1 text-[clamp(1.75rem,8.5vw,2.5rem)] font-bold leading-tight tracking-tight text-primary sm:mb-2 sm:text-4xl md:text-5xl">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick={ttsEnabled} speakLang={speakLang} />
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} side={isAFirst ? "B" : "A"} speakOnHintClick={ttsEnabled} speakLang={speakLang} />
         </h2>
         <p className="mb-4 text-xs italic text-muted-foreground/60 sm:mb-8 sm:text-sm">
-          “<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick={ttsEnabled} speakLang={hintLang} />”
+          “<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} side={isAFirst ? "A" : "B"} speakOnHintClick={ttsEnabled} speakLang={hintLang} />”
         </p>
         <Button variant="secondary" size="sm" onClick={handlePlayPronunciation} disabled={!ttsEnabled} className="h-10 gap-2 rounded-full px-5 sm:px-6">
           <Volume2 className="h-4 w-4" /> Ouvir original

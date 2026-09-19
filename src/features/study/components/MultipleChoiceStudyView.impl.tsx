@@ -230,6 +230,7 @@ export const MultipleChoiceStudyView = ({
                 text={prompt}
                 wordHints={promptWordHints}
                 mergedHints={promptMergedHints}
+                side={isAFirst ? "A" : "B"}
                 speakOnHintClick={ttsEnabled}
                 speakLang={promptLang}
               />

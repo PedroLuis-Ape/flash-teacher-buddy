@@ -31,6 +31,12 @@ Exemplo válido:
   "hint": "Think about changing connection strength."
 }
 
+## Composição pedagógica canônica
+
+Máximo de vocabulário útil dentro de uma frase natural, enxuta e fácil de revisar. Os geradores oficiais devem preferir 2 ou 3 termos que combinem naturalmente na mesma frase, reduzir para 1 ou 2 quando a naturalidade exigir e nunca transformar o card em parágrafo. Tradução fiel ao vocabulário-alvo e natural no idioma de destino; polissemia em cards contextualmente inequívocos; famílias lexicais e formas verbais relacionadas conectadas; nenhuma cópia de card quase idêntico só para ensinar uma palavra por vez.
+
+A fonte única dessa regra é FLASHCARD_COMPOSITION_RULES em src/features/import-prompts/flashcardCompositionContract.ts, consumida por Smart Import 2.0, prompt simples, Super Importador legado/1.0, presets, final, owner/canário, layered e canonical. Não duplicar o texto do contrato em outros builders: prompts compostos herdam o contrato do builder de base.
+
 ## Verbos e cards layered
 
 Formas do mesmo verbo MUST ficar no mesmo grupo lógico. Cada layer deve ter front e back não vazios e pode ter seus próprios exemplos, tradução, explicação, notas e word_hints. Usar o formato layered do importador; não simular camadas com inserts avulsos.

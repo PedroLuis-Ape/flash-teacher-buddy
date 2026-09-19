@@ -234,7 +234,7 @@ export const UnscrambleStudyView = ({
         <p className="mb-4 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:mb-3 sm:text-xs">Organize as palavras</p>
         <div className="flex items-start justify-center gap-2">
           <p className={cn("flex-1 break-words px-1 text-center font-bold leading-tight [text-wrap:balance] sm:text-2xl", questionSizeClass)}>
-            <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick={ttsEnabled} speakLang={questionLang} />
+            <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} side={isAFirst ? "A" : "B"} speakOnHintClick={ttsEnabled} speakLang={questionLang} />
           </p>
           <Button variant="ghost" size="icon" onClick={handlePlayAudio} disabled={!ttsEnabled} className="mt-0.5 h-10 w-10 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
             <Volume2 className="h-5 w-5" />

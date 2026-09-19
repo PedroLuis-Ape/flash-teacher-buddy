@@ -51,6 +51,7 @@ type RenderedSide = "first" | "second";
 
 interface SidePanelProps {
   side: ResolvedSide;
+  glossarySide: "A" | "B";
   imageUrl?: string | null;
   wordHints?: unknown;
   mergedHints?: MergedHint[];
@@ -64,6 +65,7 @@ interface SidePanelProps {
 
 function SidePanel({
   side,
+  glossarySide,
   imageUrl,
   wordHints,
   mergedHints,
@@ -116,6 +118,7 @@ function SidePanel({
             text={side.text}
             wordHints={wordHints}
             mergedHints={mergedHints}
+            side={glossarySide}
             speakOnHintClick={ttsEnabled}
             speakLang={speakLang}
           />
@@ -639,6 +642,7 @@ export const FlipStudyView = ({
           {singleSidePlay ? (
             <SidePanel
               side={selectedSide}
+              glossarySide={playFixedSide === "a" ? "A" : "B"}
               imageUrl={selectedImage}
               wordHints={selectedHints}
               mergedHints={selectedMergedHints}
@@ -650,9 +654,9 @@ export const FlipStudyView = ({
           ) : (
             <>
               <div className="border-b border-border">
-                <SidePanel side={firstSide} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} compact />
+                <SidePanel side={firstSide} glossarySide={isAFirst ? "A" : "B"} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} compact />
               </div>
-              <SidePanel side={secondSide} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} compact accent />
+                <SidePanel side={secondSide} glossarySide={isAFirst ? "B" : "A"} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} compact accent />
             </>
           )}
         </Card>
@@ -682,12 +686,12 @@ export const FlipStudyView = ({
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           <div className="flip-card-front">
             <Card className="h-full w-full overflow-hidden">
-              <SidePanel side={firstSide} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} showRevealHint />
+              <SidePanel side={firstSide} glossarySide={isAFirst ? "A" : "B"} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} showRevealHint />
             </Card>
           </div>
           <div className="flip-card-back">
             <Card className="h-full w-full overflow-hidden">
-              <SidePanel side={secondSide} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} accent />
+              <SidePanel side={secondSide} glossarySide={isAFirst ? "B" : "A"} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} accent />
             </Card>
           </div>
         </div>

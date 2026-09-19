@@ -1,4 +1,5 @@
 import { withJsonFileDeliveryContract } from "../import-prompts/deliveryContract";
+import { FLASHCARD_COMPOSITION_RULES } from "../import-prompts/flashcardCompositionContract";
 
 export interface SimpleFlashcardPromptOptions {
   listName: string;
@@ -28,6 +29,9 @@ export function buildSimpleFlashcardPrompt(options: SimpleFlashcardPromptOptions
     "- Não gere cards em camadas, glossário, IDs de banco ou campos desconhecidos.",
     "- front e back nunca podem ficar vazios.",
     "- Não repita cards nem use texto fora do JSON.",
+    "",
+    "CONTRATO PEDAGÓGICO DE COMPOSIÇÃO DOS FLASHCARDS",
+    FLASHCARD_COMPOSITION_RULES,
     "",
     "EXEMPLO DE ESTRUTURA",
     '{"schema":"app-piteco-super-import","version":"2.0","package":{"name":"Lista atual","folders":[{"name":"Lista atual","lists":[{"name":"Lista atual","front_language":"en","back_language":"pt-BR","primary_side":"a","study_type":"language","glossary":[],"cards":[{"type":"normal","front":"Hello","back":"Olá"}]}]}]}}',

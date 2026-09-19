@@ -3,6 +3,7 @@ import {
   APP_PITECO_SUPER_IMPORT_VERSION,
 } from "./schema/appPitecoSuperImportSchema";
 import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
+import { FLASHCARD_COMPOSITION_RULES } from "@/features/import-prompts/flashcardCompositionContract";
 
 export function buildUniversalGlobalImportPrompt(): string {
   return [
@@ -56,6 +57,9 @@ export function buildUniversalGlobalImportPrompt(): string {
     "- Se o usuário pedir criação de conteúdo, produza cards coerentes com tema, nível e quantidade.",
     "- Não repita cards e não use frases quase idênticas apenas para completar quantidade.",
     "- Não deixe front ou back vazios.",
+    "",
+    "CONTRATO PEDAGÓGICO DE COMPOSIÇÃO DOS FLASHCARDS",
+    FLASHCARD_COMPOSITION_RULES,
     "",
     "QUANTIDADES E CONTAGEM",
     "- Respeite exatamente a quantidade solicitada para cada lista.",

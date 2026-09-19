@@ -1,5 +1,6 @@
 import { JSON_FILE_DELIVERY_CONTRACT, withJsonFileDeliveryContract } from "@/features/import-prompts/deliveryContract";
 import { CONTEXTUAL_GLOSSARY_RULES } from "@/features/import-prompts/contextualGlossaryContract";
+import { FLASHCARD_COMPOSITION_RULES } from "@/features/import-prompts/flashcardCompositionContract";
 
 export type SmartImportOutputFormat = "json" | "csv" | "text";
 
@@ -85,6 +86,9 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
     "",
     "OBJETIVO",
     ...rules.map((rule) => `- ${rule}`),
+    "",
+    "CONTRATO PEDAGÓGICO DE COMPOSIÇÃO DOS FLASHCARDS",
+    FLASHCARD_COMPOSITION_RULES,
     "",
     "CONTRATO OBRIGATÓRIO DE SAÍDA",
     "- Responda com exatamente um objeto JSON puro e válido.",
