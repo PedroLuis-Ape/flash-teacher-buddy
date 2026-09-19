@@ -6347,6 +6347,91 @@ function withJsonFileDeliveryContract(prompt) {
 ${JSON_FILE_DELIVERY_CONTRACT}`;
 }
 
+// src/features/import-prompts/flashcardCompositionContract.ts
+init_define_import_meta_env();
+var FLASHCARD_COMPOSITION_RULES = `M\xC1XIMO DE VOCABUL\xC1RIO \xDATIL DENTRO DE UMA FRASE NATURAL, ENXUTA E F\xC1CIL DE REVISAR
+M\xE1ximo de vocabul\xE1rio \xFAtil dentro de uma frase natural e f\xE1cil de revisar. N\xE3o queremos palavra solta sem contexto e n\xE3o queremos um livro em cada flashcard.
+
+OBJETIVO DOS FLASHCARDS
+- Aprender mais vocabul\xE1rio \xFAtil com menos redund\xE2ncia, sem transformar cada card em um par\xE1grafo.
+- Sempre que fizer sentido, combine 2 ou 3 palavras, express\xF5es ou unidades lexicais importantes na mesma frase.
+- N\xE3o existe obriga\xE7\xE3o de sempre usar 2 ou 3 termos.
+- Prioridade, nesta ordem: naturalidade, clareza, valor pedag\xF3gico e densidade lexical.
+- Nunca sacrifique a naturalidade apenas para colocar mais palavras no card.
+
+DENSIDADE LEXICAL
+- Quando 2 ou 3 termos importantes combinarem naturalmente, prefira uma \xFAnica frase que ensine esses termos juntos.
+- Exemplo de qualidade (n\xE3o \xE9 template obrigat\xF3rio): The new method substantially reduced the evaluation bottleneck.
+- Exemplo de qualidade (n\xE3o \xE9 template obrigat\xF3rio): He resigned to study abroad and improve his English.
+- Se tr\xEAs termos juntos produzirem frase artificial, improv\xE1vel, semanticamente estranha, excessivamente longa ou confusa, use 1 ou 2 termos e distribua o restante em outros cards.
+
+TAMANHO IDEAL
+- N\xE3o crie frase sem contexto, como He resigned., nem mini-par\xE1grafos cheios de informa\xE7\xE3o lateral.
+- A frase deve ser curta ou m\xE9dia, autossuficiente, semanticamente clara, r\xE1pida de ler, r\xE1pida de recordar e suficientemente contextualizada.
+- N\xE3o imponha limite r\xEDgido de palavras que prejudique a linguagem natural.
+- Heur\xEDstica: FLASHCARD n\xE3o \xE9 palavra isolada e FLASHCARD n\xE3o \xE9 par\xE1grafo. Prefira uma senten\xE7a simples ou moderadamente composta.
+- Se a frase exigir v\xE1rias ora\xE7\xF5es subordinadas, muitos detalhes, contexto hist\xF3rico, explica\xE7\xF5es ou m\xFAltiplas ideias independentes, quebre em mais de um card.
+
+UMA IDEIA PRINCIPAL POR CARD
+- Mesmo com 2 ou 3 termos importantes, o card deve ensinar uma situa\xE7\xE3o ou ideia coerente.
+- Evite juntar conceitos que exigiriam tr\xEAs contextos diferentes.
+- A densidade precisa vir de vocabul\xE1rio que realmente mere\xE7a ser aprendido, combine semanticamente, seja reutiliz\xE1vel e apare\xE7a naturalmente na constru\xE7\xE3o.
+- Palavras triviais podem compor a frase, mas n\xE3o devem ser tratadas artificialmente como alvo.
+
+FAM\xCDLIAS LEXICAIS E VERBOS
+- Quando houver fam\xEDlia lexical pedagogicamente relevante, mantenha as formas relacionadas conectadas: psychology, psychologist, psychological.
+- Vale tamb\xE9m para verbos e formas relacionadas: solicit, solicited, soliciting, solicitation.
+- Quando o modo atual permitir cards layered, fam\xEDlias lexicais e formas verbais intimamente relacionadas podem ser organizadas em camadas, quando semanticamente adequado.
+- Respeite o modo atual: se ele aceitar somente cards normais, n\xE3o introduza type=layered, mantenha as formas relacionadas coerentes na mesma lista e preserve contexto suficiente para futura mesclagem.
+- N\xE3o transforme sin\xF4nimos independentes em camadas automaticamente. Use rela\xE7\xE3o morfol\xF3gica ou sem\xE2ntica real.
+
+POLISSEMIA
+- Quando a mesma palavra tiver sentidos diferentes, cada sentido deve aparecer em contexto inequ\xEDvoco.
+- Nunca crie um \xFAnico card amb\xEDguo como charge \u2192 cobrar / carregar / taxa quando o objetivo \xE9 ensinar usos distintos.
+- O contexto \xE9 o que resolve o sentido.
+
+PHRASES, COLLOCATIONS E CHUNKS
+- Preserve unidades lexicais \xFAteis como uma unidade pedag\xF3gica: study abroad, take at face value, follow suit, walk away from, evaluation bottleneck.
+- N\xE3o desmonte express\xE3o \xFAtil em tradu\xE7\xE3o palavra por palavra quando a unidade completa tem valor lexical pr\xF3prio.
+- Tamb\xE9m n\xE3o invente express\xE3o onde ela n\xE3o existe.
+
+TRADU\xC7\xC3O
+- Otimize ao mesmo tempo fidelidade ao significado e \xE0 estrutura relevante do idioma de origem e naturalidade no idioma de destino.
+- Prioridade: fidelidade ao vocabul\xE1rio-alvo somada a tradu\xE7\xE3o natural.
+- Evite par\xE1frases desnecessariamente interpretativas: She walked away from the job. \u2192 Ela deixou o emprego. (e n\xE3o uma interpreta\xE7\xE3o que perca a rela\xE7\xE3o lexical com walk away from).
+- Fidelidade n\xE3o significa tradu\xE7\xE3o palavra por palavra quando isso soa errado: use o equivalente natural mais pr\xF3ximo, preservando o sentido pedag\xF3gico.
+- Frente e verso devem continuar alinhados: n\xE3o adicione informa\xE7\xE3o importante apenas na tradu\xE7\xE3o e n\xE3o omita o vocabul\xE1rio-alvo quando ele puder ser representado naturalmente.
+
+CONTEXTO E CAMPOS ENRIQUECIDOS
+- O contexto deve esclarecer sentido, reg\xEAncia, collocation, phrasal verb, classe ou fun\xE7\xE3o e uso t\xEDpico, sem virar explica\xE7\xE3o.
+- Quando o schema permitir detalhes, use detailed_explanation, usage_notes, common_mistakes, short_observation, hint, example e word_hints.
+- N\xE3o despeje essas explica\xE7\xF5es em front e back: front e back precisam continuar r\xE1pidos de revisar.
+
+REDUND\xC2NCIA
+- Evite v\xE1rios cards praticamente iguais s\xF3 para ensinar uma palavra diferente em cada um quando os termos podem coexistir naturalmente.
+- Card n\xE3o \xE9 gloss\xE1rio: gloss\xE1rio \xE9 consulta lexical r\xE1pida, flashcard \xE9 uso contextual e recupera\xE7\xE3o ativa.
+- N\xE3o transforme card em termo seguido de lista de cinco tradu\xE7\xF5es quando o contexto for necess\xE1rio.
+- Os exemplos deste contrato s\xE3o exemplos de qualidade, n\xE3o categorias fixas. N\xE3o repita sempre os mesmos termos em todos os pacotes.
+
+RESUMO OPERACIONAL
+1. identificar o vocabul\xE1rio realmente importante;
+2. agrupar termos que combinem naturalmente;
+3. preferir 2 ou 3 termos \xFAteis por frase quando apropriado;
+4. reduzir para 1 ou 2 se a naturalidade exigir;
+5. criar frase curta ou m\xE9dia;
+6. garantir contexto suficiente;
+7. traduzir com fidelidade e naturalidade;
+8. separar sentidos poliss\xEAmicos;
+9. organizar fam\xEDlias lexicais e formas relacionadas;
+10. usar layers quando o modo suportar e for apropriado;
+11. n\xE3o duplicar cards quase iguais;
+12. n\xE3o transformar card em par\xE1grafo.
+
+LIMITES DESTE CONTRATO
+- Esta regra \xE9 para CONTE\xDADO GERADO. Se o usu\xE1rio j\xE1 forneceu cards, frases ou gloss\xE1rio e pediu apenas organiza\xE7\xE3o, importa\xE7\xE3o, convers\xE3o ou reestrutura\xE7\xE3o t\xE9cnica, N\xC3O reescreva o conte\xFAdo para encaixar 2 ou 3 palavras.
+- Pedidos expl\xEDcitos do usu\xE1rio t\xEAm prioridade sobre a otimiza\xE7\xE3o de densidade.
+- Aplique a regra somente dentro das capacidades do formato atual. Se o schema n\xE3o permitir gloss\xE1rio, word_hints, explica\xE7\xF5es ou camadas, respeite o schema e n\xE3o invente campos; aplique o contrato a front e back.`;
+
 // src/features/smart-import/simplePrompt.ts
 var clean2 = (value, fallback) => value.trim() || fallback;
 function buildSimpleFlashcardPrompt(options) {
@@ -6368,6 +6453,9 @@ function buildSimpleFlashcardPrompt(options) {
     "- N\xE3o gere cards em camadas, gloss\xE1rio, IDs de banco ou campos desconhecidos.",
     "- front e back nunca podem ficar vazios.",
     "- N\xE3o repita cards nem use texto fora do JSON.",
+    "",
+    "CONTRATO PEDAG\xD3GICO DE COMPOSI\xC7\xC3O DOS FLASHCARDS",
+    FLASHCARD_COMPOSITION_RULES,
     "",
     "EXEMPLO DE ESTRUTURA",
     '{"schema":"app-piteco-super-import","version":"2.0","package":{"name":"Lista atual","folders":[{"name":"Lista atual","lists":[{"name":"Lista atual","front_language":"en","back_language":"pt-BR","primary_side":"a","study_type":"language","glossary":[],"cards":[{"type":"normal","front":"Hello","back":"Ol\xE1"}]}]}]}}',

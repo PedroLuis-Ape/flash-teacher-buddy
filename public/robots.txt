@@ -17,6 +17,8 @@ Allow: /fr/materiais
 Allow: /fr/material/
 Allow: /it/materiais
 Allow: /it/material/
+Allow: /de/materiais
+Allow: /de/material/
 Disallow: /auth
 Disallow: /dashboard
 Disallow: /profile
