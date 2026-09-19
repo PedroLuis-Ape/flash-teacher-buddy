@@ -37,7 +37,11 @@ if (!existsSync(templatePath)) {
   process.exit(1);
 }
 
-const template = readFileSync(templatePath, "utf8");
+const pristineTemplatePath = resolve(distDir, ".prerender-template.html");
+const template = readFileSync(existsSync(pristineTemplatePath) ? pristineTemplatePath : templatePath, "utf8");
+// Preserva o template original: este script sobrescreve dist/index.html com a home renderizada,
+// e os prerenders seguintes ainda precisam do <div id="root"></div> vazio.
+if (!existsSync(pristineTemplatePath)) writeFileSync(pristineTemplatePath, template, "utf8");
 
 function escapeHtml(value) {
   return String(value)
