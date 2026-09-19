@@ -385,7 +385,7 @@ const GamesHub = () => {
                 lockedMessage={directionLockedByFlow
                   ? "Direção automática no modo gamificado. Troque para o modo extenso para escolher um lado fixo."
                   : undefined}
-                onChange={(direction) => updateForCurrentScope({ direction: normalizeDirection(direction) })}
+                onChange={(value) => updateForCurrentScope({ direction: normalizeDirection(value) })}
               />
 
               <div>
